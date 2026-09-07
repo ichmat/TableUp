@@ -1,0 +1,277 @@
+<style>
+  .c2 { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --cor:#B4674F; --vio:#5B4A8A; --bleu:#3D6E8E; }
+  .c2-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .c2-note b { color:#2E2A26; }
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:16px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .verdict b { color:#2E2A26; }
+  .fix { display:inline-block; font-size:9px; letter-spacing:.07em; font-weight:700; background:#2E2A26; color:#fff; padding:2px 7px; border-radius:4px; vertical-align:middle; margin-right:6px; }
+
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; margin:14px 0 6px; }
+  .fr-rail { width:34px; flex:none; background:#FBFAF8; border-radius:8px; padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .ic { width:17px; height:17px; border:1.6px solid #B5ADA2; border-radius:4px; }
+  .ic.on { background:#F5A04A; border-color:#F5A04A; }
+  .fr-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+  .sp { flex:1; }
+
+  .lst { background:#FBFAF8; border-radius:9px; overflow:hidden; }
+  .hdr { display:flex; align-items:center; gap:8px; background:#F1ECE5; padding:5px 12px; font-size:9.5px; letter-spacing:.07em; color:#6E675E; font-weight:600; }
+  .hdr .hl2 { color:#2E2A26; background:#E5DED4; border-radius:4px; padding:2px 6px; margin:-2px -6px; }
+  .row { display:flex; align-items:center; gap:8px; padding:7px 12px; border-top:1px solid #F0EBE4; font-size:11.5px; color:#2E2A26; }
+  .row.sel { background:#FDF6EE; box-shadow:inset 3px 0 0 #F5A04A; }
+  .c-nom { flex:1; min-width:0; overflow:hidden; white-space:nowrap; }
+  .c-nom b { font-weight:600; }
+  .c-tel { width:105px; color:#8A8177; font-variant-numeric:tabular-nums; }
+  .c-tag { width:150px; display:flex; gap:4px; }
+  .c-vis { width:66px; text-align:right; font-variant-numeric:tabular-nums; }
+  .c-der { width:88px; color:#8A8177; }
+  .c-ris { width:112px; display:flex; justify-content:flex-end; font-variant-numeric:tabular-nums; }
+
+  .b { font-size:9px; letter-spacing:.05em; padding:2.5px 8px; border-radius:20px; white-space:nowrap; font-weight:700; }
+  .b.vip  { background:#F6EEDD; color:#8A6A2B; }
+  .b.hab  { background:#E7F0E9; color:#4E7C59; }
+  .b.surv { background:transparent; border:1.3px solid #B4674F; color:#B4674F; }
+  .b.alr  { background:#B4674F; color:#fff; }
+  .b.neu  { background:#EDE8E2; color:#8A8177; font-weight:600; }
+  .b.att  { background:#EDE6F5; color:#5B4A8A; }
+  .b.conf { background:#E4EFF7; color:#3D6E8E; }
+  .b.assis{ background:#F7E7E1; color:#B4674F; }
+  .b.fin  { background:#EDE8E2; color:#9A9186; font-weight:600; }
+  .b.ns   { background:#B4674F; color:#fff; }
+
+  /* ---- panneaux ---- */
+  .duo { display:flex; gap:14px; align-items:flex-start; margin:14px 0 4px; }
+  .col { flex:1; min-width:0; }
+  .col > h6 { margin:0 0 7px; font-size:10px; letter-spacing:.08em; color:#8A8177; font-weight:700; }
+  .arrowbox { width:38px; flex:none; align-self:center; text-align:center; color:#B5ADA2; font-size:19px; line-height:1.15; }
+
+  .fiche { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 13px; display:flex; flex-direction:column; gap:9px; }
+  .f-back { font-size:10.5px; color:#6E675E; background:#F1ECE5; margin:-12px -13px 2px; padding:6px 13px; border-radius:10px 10px 0 0; }
+  .f-back b { color:#2E2A26; font-weight:600; }
+  .f-nom h5 { margin:0; font-size:17px; color:#2E2A26; font-weight:700; }
+  .f-sub { font-size:11.5px; color:#6E675E; }
+  .f-tags { display:flex; gap:4px; flex-wrap:wrap; }
+  .f-tel { font-size:11.5px; color:#6E675E; font-variant-numeric:tabular-nums; }
+
+  .alr { background:#F7E7E1; border-left:3px solid #B4674F; border-radius:0 7px 7px 0; padding:7px 10px; }
+  .alr b { font-size:9px; letter-spacing:.07em; color:#B4674F; display:block; margin-bottom:1px; }
+  .alr span { font-size:12px; color:#2E2A26; font-weight:600; }
+
+  .stats { display:flex; gap:6px; }
+  .st { flex:1; background:#F1ECE5; border-radius:7px; padding:6px 8px; text-align:center; }
+  .st b { display:block; font-size:15px; color:#2E2A26; font-variant-numeric:tabular-nums; }
+  .st span { font-size:9px; letter-spacing:.05em; color:#8A8177; }
+  .st.risk b { color:#B4674F; }
+
+  .fld b { font-size:9px; letter-spacing:.07em; color:#8A8177; display:block; margin-bottom:2px; }
+  .fld span { font-size:11.5px; color:#2E2A26; line-height:1.45; display:block; }
+  .fld.priv { background:#EFECE6; border-radius:7px; padding:6px 9px; }
+  .fld.priv b::after { content:' \00b7 interne'; color:#B5ADA2; letter-spacing:0; font-weight:400; }
+  .fld.resa { background:#FDF6EE; border-left:3px solid #F5A04A; border-radius:0 7px 7px 0; padding:6px 10px; }
+
+  .hist { border-top:1px solid #EDE8E2; padding-top:7px; }
+  .hist b.t { font-size:9px; letter-spacing:.07em; color:#8A8177; display:block; margin-bottom:5px; }
+  .hl { display:flex; align-items:center; gap:7px; font-size:11px; color:#2E2A26; padding:3.5px 2px; border-top:1px solid #F4F0EA; border-radius:4px; }
+  .hl.first { border-top:0; }
+  .hl.hot { background:#FDF6EE; box-shadow:inset 2px 0 0 #F5A04A; }
+  .hl .d { width:66px; color:#8A8177; }
+  .hl .p { width:28px; color:#6E675E; }
+  .hl .r { flex:1; text-align:right; }
+  .sepline { display:flex; align-items:center; gap:7px; margin:5px 0 2px; }
+  .sepline i { flex:1; height:1px; background:#E4DDD3; }
+  .sepline span { font-size:8.5px; letter-spacing:.09em; color:#B5ADA2; font-weight:700; font-style:normal; }
+
+  .acts { display:flex; gap:5px; margin-top:2px; }
+  .bt { flex:1; text-align:center; font-size:11px; padding:6px 0; border-radius:7px; font-weight:600; }
+  .bt.pri { background:#F5A04A; color:#fff; }
+  .bt.ink { background:#2E2A26; color:#fff; }
+  .bt.sec { background:#FBFAF8; border:1px solid #D8D0C6; color:#2E2A26; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx.cor { border-left:3px solid #B4674F; }
+  .bx.ok { border-left:3px solid #4E7C59; }
+
+  table.k { width:100%; border-collapse:collapse; margin:12px 0 4px; background:#FBFAF8; border-radius:10px; overflow:hidden; }
+  table.k th { font-size:9.5px; letter-spacing:.07em; color:#8A8177; text-align:left; padding:8px 12px; background:#F1ECE5; font-weight:600; }
+  table.k td { font-size:12.5px; color:#2E2A26; padding:8px 12px; border-top:1px solid #F0EBE4; vertical-align:top; }
+  table.k td.d { color:#8A8177; font-size:12px; }
+  code { background:#EDE8E2; padding:1px 5px; border-radius:4px; font-size:11.5px; color:#5A5248; }
+  del { color:#B5ADA2; }
+</style>
+
+<div class="c2">
+
+<h1>Clients &mdash; corrections</h1>
+<p class="subtitle">Cinq points repris. Le deuxi&egrave;me me corrige.</p>
+
+<h2><span class="fix">1</span> La colonne s&rsquo;appelle &laquo;&nbsp;No-show / Visites&nbsp;&raquo;</h2>
+
+<div class="fr">
+  <div class="fr-rail">
+    <div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic on"></div>
+    <div class="sp"></div><div class="ic"></div>
+  </div>
+  <div class="fr-body">
+    <div class="lst">
+      <div class="hdr">
+        <div class="c-nom">NOM</div>
+        <div class="c-tel">T&Eacute;L&Eacute;PHONE</div>
+        <div class="c-tag">TAGS</div>
+        <div class="c-vis">VISITES</div>
+        <div class="c-der">DERNI&Egrave;RE</div>
+        <div class="c-ris"><span class="hl2">NO-SHOW / VISITES</span></div>
+      </div>
+      <div class="row sel">
+        <div class="c-nom"><b>Marchand, Sophie</b></div>
+        <div class="c-tel">06 12 34 56 78</div>
+        <div class="c-tag"><span class="b hab">HABITU&Eacute;E</span><span class="b alr">ALLERGIE</span></div>
+        <div class="c-vis">41</div>
+        <div class="c-der">jeudi</div>
+        <div class="c-ris"><span class="b neu">2 / 41</span></div>
+      </div>
+      <div class="row">
+        <div class="c-nom"><b>Perrin, Antoine</b></div>
+        <div class="c-tel">07 88 21 04 33</div>
+        <div class="c-tag"><span class="b vip">VIP</span></div>
+        <div class="c-vis">12</div>
+        <div class="c-der">28 ao&ucirc;t</div>
+        <div class="c-ris"><span class="b neu">0 / 12</span></div>
+      </div>
+      <div class="row">
+        <div class="c-nom"><b>Da Silva, Marc</b></div>
+        <div class="c-tel">06 45 90 12 77</div>
+        <div class="c-tag"><span class="b surv">&Agrave; SURVEILLER</span></div>
+        <div class="c-vis">3</div>
+        <div class="c-der">14 ao&ucirc;t</div>
+        <div class="c-ris"><span class="b ns">2 / 3</span></div>
+      </div>
+      <div class="row">
+        <div class="c-nom"><b>Nguyen, Claire</b></div>
+        <div class="c-tel">06 70 55 18 02</div>
+        <div class="c-tag"></div>
+        <div class="c-vis">1</div>
+        <div class="c-der">9 ao&ucirc;t</div>
+        <div class="c-ris"><span class="b neu">0 / 1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="c2-note">Tu as raison&nbsp;: <b>un en-t&ecirc;te doit nommer ce qu&rsquo;il y a dans la case</b>, pas la conclusion qu&rsquo;on en tire. &laquo;&nbsp;Fiabilit&eacute;&nbsp;&raquo; oblige &agrave; deviner dans quel sens &ccedil;a se lit &mdash; est-ce que <code>2 / 41</code> est bon ou mauvais&nbsp;? &laquo;&nbsp;No-show / Visites&nbsp;&raquo; r&eacute;pond avant qu&rsquo;on pose la question, et la ligne de doublon a disparu (point&nbsp;5).</p>
+
+<h2><span class="fix">2</span> <code>nb_noshow</code> est stock&eacute; &mdash; et j&rsquo;avais tort de le refuser</h2>
+
+<p class="c2-note">Ma r&egrave;gle du &sect;5 &eacute;tait &laquo;&nbsp;ce qui se d&eacute;duit ne se stocke pas&nbsp;&raquo;. Je l&rsquo;ai appliqu&eacute;e ici par r&eacute;flexe, sans regarder <b>d&rsquo;o&ugrave; venait la lecture</b>. Or ce n&rsquo;est pas la m&ecirc;me situation&nbsp;:</p>
+
+<table class="k">
+  <tr><th style="width:26%"></th><th style="width:37%">Statut d&rsquo;une table (&sect;5)</th><th>Compteurs d&rsquo;un client</th></tr>
+  <tr><td class="d">Combien d&rsquo;objets &agrave; l&rsquo;&eacute;cran</td><td>~20 tables, toujours les m&ecirc;mes</td><td><b>Des centaines de clients</b>, list&eacute;s et filtr&eacute;s</td></tr>
+  <tr><td class="d">Sur quoi porte le calcul</td><td>Les occupations <b>du jour</b></td><td>L&rsquo;historique <b>complet</b>, depuis toujours</td></tr>
+  <tr><td class="d">Co&ucirc;t d&rsquo;affichage</td><td>N&eacute;gligeable</td><td>Un agr&eacute;gat par ligne&nbsp;: la liste devient lente <b>et empire avec le succ&egrave;s du restaurant</b></td></tr>
+</table>
+
+<div class="verdict"><b>Donc&nbsp;: <code>nb_visites</code> et <code>nb_noshow</code> sont stock&eacute;s sur la fiche client.</b> Mais le bug que je pointais est r&eacute;el, alors on le tue par la r&egrave;gle d&rsquo;&eacute;criture plut&ocirc;t qu&rsquo;en refusant le stockage&nbsp;:</div>
+
+<div class="grid2">
+  <div class="bx ok">
+    <b class="t">L&rsquo;&eacute;criture est sym&eacute;trique</b>
+    <span>Tout passage <b>vers</b> <code>no_show</code> incr&eacute;mente&nbsp;; tout passage <b>hors de</b> <code>no_show</code> d&eacute;cr&eacute;mente &mdash; y compris le bouton &laquo;&nbsp;Rouvrir&nbsp;&raquo; du &sect;6.5. Un compteur qui ne sait que monter est un compteur faux&nbsp;; c&rsquo;&eacute;tait &ccedil;a, ma vraie objection, et elle se r&egrave;gle en deux lignes de code au lieu d&rsquo;un agr&eacute;gat &agrave; chaque affichage.</span>
+  </div>
+  <div class="bx ok">
+    <b class="t">Le journal reste l&rsquo;autorit&eacute;</b>
+    <span>Le compteur est un <b>cache</b>, pas la v&eacute;rit&eacute;&nbsp;: la v&eacute;rit&eacute; est dans les r&eacute;servations et le journal (&sect;6.8). D&rsquo;o&ugrave; une action <b>&laquo;&nbsp;Recompter&nbsp;&raquo;</b> sur la fiche client, et un recomptage global la nuit. Si un jour le cache d&eacute;rive &mdash; migration, import, bug &mdash; on le remet d&rsquo;aplomb sans rien perdre.</span>
+  </div>
+</div>
+
+<h2><span class="fix">3</span> et <span class="fix">4</span> La fiche client, all&eacute;g&eacute;e &mdash; et ce qu&rsquo;elle ouvre</h2>
+
+<div class="duo">
+  <div class="col">
+    <h6>FICHE CLIENT</h6>
+    <div class="fiche">
+      <div class="f-back">&larr;&nbsp; <b>R&eacute;servation de jeudi 20:00</b></div>
+      <div class="f-nom"><h5>Sophie Marchand</h5></div>
+      <div class="f-tags"><span class="b hab">HABITU&Eacute;E</span><span class="b vip">VIP</span><span class="b neu">+ tag</span></div>
+      <div class="f-tel">06 12 34 56 78 &nbsp;&middot;&nbsp; s.marchand@&hellip;</div>
+
+      <div class="alr"><b>ALLERGIE</b><span>Fruits &agrave; coque &mdash; s&eacute;v&egrave;re</span></div>
+
+      <div class="stats">
+        <div class="st"><b>41</b><span>VISITES</span></div>
+        <div class="st"><b>3,2</b><span>COUVERTS MOY.</span></div>
+        <div class="st risk"><b>2</b><span>NO-SHOWS</span></div>
+      </div>
+
+      <div class="fld priv"><b>NOTES</b><span>Table au calme, jamais pr&egrave;s de la porte. Anniversaire en octobre. Amie du fournisseur de vin.</span></div>
+
+      <div class="hist">
+        <b class="t">HISTORIQUE &middot; 41 R&Eacute;SERVATIONS</b>
+        <div class="hl hot first"><span class="d">jeudi 20:00</span><span class="p">2p</span><span>T. 6</span><span class="r"><span class="b conf">CONFIRM&Eacute;E</span></span></div>
+        <div class="sepline"><i></i><span>PASS&Eacute;ES</span><i></i></div>
+        <div class="hl first"><span class="d">28 ao&ucirc;t</span><span class="p">2p</span><span>T. 6</span><span class="r"><span class="b fin">TERMIN&Eacute;E</span></span></div>
+        <div class="hl"><span class="d">14 ao&ucirc;t</span><span class="p">4p</span><span>T. 12-13</span><span class="r"><span class="b fin">TERMIN&Eacute;E</span></span></div>
+        <div class="hl"><span class="d">2 ao&ucirc;t</span><span class="p">2p</span><span>&mdash;</span><span class="r"><span class="b ns">NO-SHOW</span></span></div>
+        <div class="hl" style="justify-content:center;color:#8A8177;font-size:10.5px">Voir les 37 autres</div>
+      </div>
+
+      <div class="acts">
+        <div class="bt pri">Nouvelle r&eacute;servation</div>
+        <div class="bt sec">Modifier</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrowbox">&rarr;<br><span style="font-size:9px;letter-spacing:.06em">CLIC</span><br>&larr;</div>
+
+  <div class="col">
+    <h6>FICHE R&Eacute;SERVATION (&sect;6.5) &mdash; PAS LA M&Ecirc;ME FEN&Ecirc;TRE</h6>
+    <div class="fiche">
+      <div class="f-back">&larr;&nbsp; <b>Sophie Marchand</b></div>
+      <div class="f-nom"><h5>Jeudi 4 sept. &middot; 20:00</h5></div>
+      <div class="f-sub">Sophie Marchand &middot; 2 couverts &middot; Table 6</div>
+      <div class="f-tags"><span class="b conf">CONFIRM&Eacute;E</span><span class="b neu">T&Eacute;L&Eacute;PHONE</span></div>
+
+      <div class="alr"><b>ALLERGIE</b><span>Fruits &agrave; coque &mdash; s&eacute;v&egrave;re</span></div>
+
+      <div class="fld resa"><b>COMMENTAIRE DE CETTE R&Eacute;SERVATION</b><span>&laquo;&nbsp;Si possible pas la table pr&egrave;s de l&rsquo;entr&eacute;e. On f&ecirc;te un contrat.&nbsp;&raquo;</span></div>
+
+      <div class="fld"><b>D&Eacute;TAILS</b><span>Dur&eacute;e 1&nbsp;h&nbsp;45 &middot; Salle &middot; Rappel envoy&eacute; hier 18:02 &middot; Confirm&eacute; par la cliente hier 19:14</span></div>
+
+      <div class="hist">
+        <b class="t">JOURNAL</b>
+        <div class="hl first"><span class="d">hier 19:14</span><span class="r" style="text-align:left">Confirmation cliente</span></div>
+        <div class="hl"><span class="d">hier 18:02</span><span class="r" style="text-align:left">Rappel envoy&eacute; &middot; <i style="color:#8A8177;font-style:normal">syst&egrave;me</i></span></div>
+        <div class="hl"><span class="d">29 ao&ucirc;t</span><span class="r" style="text-align:left">Plac&eacute;e table 6 &middot; <i style="color:#8A8177;font-style:normal">Julie</i></span></div>
+      </div>
+
+      <div class="acts">
+        <div class="bt ink">Marquer l&rsquo;arriv&eacute;e</div>
+        <div class="bt sec">Modifier</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<table class="k">
+  <tr><th style="width:30%">Correction</th><th>Ce que &ccedil;a change</th></tr>
+  <tr><td><b>Historique du plus r&eacute;cent au plus ancien</b>, futur en haut</td><td class="d">Le haut de la liste r&eacute;pond &agrave; &laquo;&nbsp;quand est-ce qu&rsquo;on la revoit&nbsp;?&nbsp;&raquo; &mdash; la seule question qu&rsquo;on se pose vraiment en ouvrant une fiche client. Un trait fin marque le passage au pass&eacute;&nbsp;: sans lui, une r&eacute;servation &agrave; venir et une termin&eacute;e se ressemblent trop.</td></tr>
+  <tr><td><b><del>Pr&eacute;f&eacute;rences</del></b> supprim&eacute;</td><td class="d">Juste&nbsp;: le commentaire appartient &agrave; la r&eacute;servation, et ce qui doit durer va dans <b>Notes &middot; interne</b>. Deux champs libres pour la m&ecirc;me chose, c&rsquo;est surtout deux endroits o&ugrave; chercher. Il reste <b>Allergie</b> (structur&eacute;e, corail, jamais repli&eacute;e) et <b>Notes &middot; interne</b> (gris, ne sort jamais du logiciel).</td></tr>
+  <tr><td><b>Cliquer une r&eacute;servation ouvre sa fiche</b>, pas la m&ecirc;me fen&ecirc;tre</td><td class="d">Elle porte <b>son commentaire</b>, son journal et ses propres boutons d&eacute;duits de l&rsquo;&eacute;tat (&sect;6.5)&nbsp;: ici &laquo;&nbsp;Marquer l&rsquo;arriv&eacute;e&nbsp;&raquo; en encre. Sur une r&eacute;servation termin&eacute;e, aucun bouton principal &mdash; seulement &laquo;&nbsp;Rouvrir&nbsp;&raquo;.</td></tr>
+  <tr><td><b>La fl&egrave;che nomme toujours d&rsquo;o&ugrave; l&rsquo;on vient</b></td><td class="d">Un seul panneau &agrave; l&rsquo;&eacute;cran, qui se remplace dans les deux sens. &laquo;&nbsp;&larr; Sophie Marchand&nbsp;&raquo; quand on vient du client, &laquo;&nbsp;&larr; R&eacute;servation de jeudi 20:00&nbsp;&raquo; quand on vient de la r&eacute;servation. Profondeur 2, jamais plus&nbsp;: le troisi&egrave;me clic ram&egrave;ne au premier panneau au lieu d&rsquo;empiler.</td></tr>
+</table>
+
+<h2><span class="fix">5</span> La fusion ne se propose que sur une cl&eacute; exacte</h2>
+
+<table class="k">
+  <tr><th style="width:34%">Cas</th><th>Comportement</th></tr>
+  <tr><td>M&ecirc;me t&eacute;l&eacute;phone <b>exact</b></td><td>Rattachement automatique et silencieux &agrave; la cr&eacute;ation. Aucun doublon ne na&icirc;t.</td></tr>
+  <tr><td>M&ecirc;me e-mail <b>exact</b>, t&eacute;l&eacute;phones diff&eacute;rents</td><td><b>Fusion propos&eacute;e</b> sur la fiche. La fusion conserve les <b>deux</b> num&eacute;ros et concat&egrave;ne les historiques.</td></tr>
+  <tr><td>M&ecirc;me t&eacute;l&eacute;phone exact, e-mails diff&eacute;rents</td><td>Idem&nbsp;: fusion propos&eacute;e, les deux e-mails sont gard&eacute;s.</td></tr>
+  <tr><td><b>M&ecirc;me nom et pr&eacute;nom</b>, aucune cl&eacute; commune</td><td><b>Rien.</b> Pas de badge, pas de suggestion, pas de fusion manuelle possible.</td></tr>
+</table>
+
+<div class="verdict"><b>Ta r&egrave;gle ferme un vrai risque, pas seulement du bruit.</b> Deux &laquo;&nbsp;Paul Lefebvre&nbsp;&raquo; sont souvent deux personnes r&eacute;elles. Les fusionner m&eacute;lange leurs allergies &mdash; et une allergie h&eacute;rit&eacute;e du mauvais client, c&rsquo;est un passage aux urgences. En n&rsquo;autorisant la fusion que sur une cl&eacute; identique, <b>le sc&eacute;nario devient impossible par construction</b> plut&ocirc;t que d&eacute;conseill&eacute; par un avertissement qu&rsquo;on cliquera sans lire.</div>
+
+</div>

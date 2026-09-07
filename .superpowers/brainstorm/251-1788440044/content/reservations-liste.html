@@ -1,0 +1,195 @@
+<style>
+  .rs { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --violet:#5B4A8A; --corail:#B4674F; }
+  .rs-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .rs-verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:18px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; margin:16px 0 6px; }
+  .fr-rail { width:34px; flex:none; background:#FBFAF8; border-radius:8px; padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .ic { width:17px; height:17px; border:1.6px solid #B5ADA2; border-radius:4px; }
+  .ic.on { background:#F5A04A; border-color:#F5A04A; }
+  .fr-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+
+  .top { display:flex; align-items:center; gap:9px; }
+  .top h4 { margin:0; font-size:19px; color:#2E2A26; font-weight:700; letter-spacing:-.01em; }
+  .sp { flex:1; }
+  .srch { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:20px; padding:5px 13px; font-size:11px; color:#A79E93; min-width:210px; }
+  .plus { background:#F5A04A; color:#fff; border-radius:7px; padding:5px 13px; font-size:12px; font-weight:700; }
+
+  .flt { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  .ch { font-size:11px; padding:4px 11px; border-radius:20px; background:#FBFAF8; border:1px solid #E4DDD3; color:#8A8177; }
+  .ch.on { background:#2E2A26; border-color:#2E2A26; color:#fff; font-weight:600; }
+  .ch.dd::after { content:' \25BE'; opacity:.5; }
+
+  .band { background:#F3EFF7; border:1px solid #D9CFE8; border-left:3px solid #5B4A8A; border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:10px; }
+  .band b { font-size:12px; color:#3E3358; }
+  .band span { font-size:11.5px; color:#6C6285; }
+  .band .go { margin-left:auto; font-size:11px; background:#5B4A8A; color:#fff; border-radius:6px; padding:4px 11px; font-weight:600; }
+
+  .lst { background:#FBFAF8; border-radius:9px; padding:0 0 4px; overflow:hidden; }
+  .day { display:flex; align-items:center; gap:9px; background:#F1ECE5; padding:5px 12px; font-size:10px; letter-spacing:.07em; color:#6E675E; font-weight:600; }
+  .day em { font-style:normal; color:#A79E93; letter-spacing:0; font-weight:400; }
+  .row { display:flex; align-items:center; gap:9px; padding:7px 12px; border-top:1px solid #F0EBE4; font-size:11.5px; color:#2E2A26; }
+  .row.sel { background:#FDF6EE; box-shadow:inset 3px 0 0 #F5A04A; }
+  .row .h { width:40px; color:#8A8177; font-variant-numeric:tabular-nums; }
+  .row .n { flex:1; min-width:0; overflow:hidden; white-space:nowrap; }
+  .row .n b { font-weight:600; }
+  .row .n s { text-decoration:none; color:#A79E93; }
+  .tag { font-size:9px; letter-spacing:.05em; padding:2px 7px; border-radius:20px; background:#EDE8E2; color:#8A8177; }
+  .tag.att { background:#EDE6F5; color:#5B4A8A; font-weight:700; }
+  .tag.ns { background:#F6E5E0; color:#B4674F; font-weight:700; }
+  .tbl { width:56px; text-align:center; font-size:10.5px; color:#2E2A26; background:#EDE8E2; border-radius:5px; padding:2px 0; }
+  .tbl.no { color:#C0B8AC; background:transparent; border:1px dashed #D8D0C6; }
+  .st { width:76px; text-align:right; font-size:10.5px; color:#8A8177; }
+
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 4px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+
+  .form { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .form label { display:block; font-size:9.5px; letter-spacing:.07em; color:#8A8177; margin:0 0 5px; font-weight:600; }
+  .srcs { display:flex; gap:5px; }
+  .srcs div { flex:1; text-align:center; font-size:11px; padding:7px 4px; border:1px solid #E4DDD3; border-radius:7px; color:#8A8177; }
+  .srcs div.on { border-color:#F5A04A; background:#FDF3E8; color:#2E2A26; font-weight:700; }
+  .srcs div.emp { border-color:#D8D0C6; }
+  .hintline { font-size:11px; color:#A79E93; margin-top:7px; }
+</style>
+
+<div class="rs">
+
+<h1>L&rsquo;&eacute;cran R&eacute;servations</h1>
+<p class="subtitle">Le travail hors service&nbsp;: confirmer, chercher, cr&eacute;er, d&eacute;placer.</p>
+
+<h2>Anatomie</h2>
+<p class="rs-note">Le rail ne change pas. En revanche l&rsquo;en-t&ecirc;te, si&nbsp;: ici il n&rsquo;y a <b>ni date ni service</b> &mdash; ce contexte appartient &agrave; l&rsquo;&eacute;cran Service. On regarde une p&eacute;riode, pas un moment.</p>
+
+<div class="fr">
+  <div class="fr-rail"><div class="ic"></div><div class="ic"></div><div class="ic on"></div><div class="ic"></div><div class="ic"></div></div>
+  <div class="fr-body">
+
+    <div class="top">
+      <h4>R&eacute;servations</h4>
+      <span class="sp"></span>
+      <span class="srch">Rechercher un nom, un num&eacute;ro&hellip;</span>
+      <span class="plus">+ Nouvelle</span>
+    </div>
+
+    <div class="flt">
+      <span class="ch on">&Agrave; venir</span><span class="ch">Aujourd&rsquo;hui</span><span class="ch">Pass&eacute;es</span>
+      <span class="sp"></span>
+      <span class="ch dd">Statut</span><span class="ch dd">Source</span><span class="ch dd">Salle</span>
+    </div>
+
+    <div class="band">
+      <b>3 demandes attendent une r&eacute;ponse</b>
+      <span>la plus ancienne depuis 4&nbsp;h</span>
+      <span class="go">Les traiter</span>
+    </div>
+
+    <div class="lst">
+      <div class="day">JEUDI 20 AO&Ucirc;T &mdash; AUJOURD&rsquo;HUI <em>&middot; 48 couverts &middot; 3 &agrave; placer</em></div>
+      <div class="row"><span class="h">19:00</span><span class="n"><b>Durand</b> <s>&middot; 4 pers. &middot; 06 12 &hellip;</s></span><span class="tag">WEB</span><span class="tbl">12</span><span class="st">assise</span></div>
+      <div class="row sel"><span class="h">20:30</span><span class="n"><b>Moreau</b> <s>&middot; 4 pers. &middot; &laquo;&nbsp;anniversaire&nbsp;&raquo;</s></span><span class="tag">WEB</span><span class="tbl no">&mdash;</span><span class="st">confirm&eacute;e</span></div>
+      <div class="row"><span class="h">20:45</span><span class="n"><b>Bekkali</b> <s>&middot; 2 pers.</s></span><span class="tag">T&Eacute;L</span><span class="tbl no">&mdash;</span><span class="st">confirm&eacute;e</span></div>
+      <div class="row"><span class="h">21:00</span><span class="n"><b>Chen</b> <s>&middot; 6 pers. &middot; sans gluten</s></span><span class="tag att">EN ATTENTE</span><span class="tbl no">&mdash;</span><span class="st">&agrave; r&eacute;pondre</span></div>
+
+      <div class="day">VENDREDI 21 AO&Ucirc;T <em>&middot; 62 couverts &middot; complet &agrave; 20:30</em></div>
+      <div class="row"><span class="h">19:30</span><span class="n"><b>Lef&egrave;vre</b> <s>&middot; 3 pers.</s></span><span class="tag">WEB</span><span class="tbl no">&mdash;</span><span class="st">confirm&eacute;e</span></div>
+      <div class="row"><span class="h">20:00</span><span class="n"><b>Nguyen</b> <s>&middot; 8 pers. &middot; rapprochement</s></span><span class="tag">T&Eacute;L</span><span class="tbl">12-13</span><span class="st">confirm&eacute;e</span></div>
+      <div class="row"><span class="h">21:15</span><span class="n"><b>Sow</b> <s>&middot; 2 pers.</s></span><span class="tag att">EN ATTENTE</span><span class="tbl no">&mdash;</span><span class="st">&agrave; r&eacute;pondre</span></div>
+
+      <div class="day">SAMEDI 22 AO&Ucirc;T <em>&middot; 78 couverts</em></div>
+      <div class="row"><span class="h">19:00</span><span class="n"><b>Petit</b> <s>&middot; 2 pers.</s></span><span class="tag">GOOGLE</span><span class="tbl no">&mdash;</span><span class="st">confirm&eacute;e</span></div>
+      <div class="row"><span class="h">19:45</span><span class="n"><b>Roux</b> <s>&middot; 5 pers.</s></span><span class="tag ns">NO-SHOW &times;2</span><span class="tbl no">&mdash;</span><span class="st">confirm&eacute;e</span></div>
+    </div>
+
+  </div>
+</div>
+
+<h2>Trois choix qui portent cet &eacute;cran</h2>
+
+<div class="grid3">
+  <div class="bx"><b>Group&eacute; par jour</b><span>Pas une liste plate. L&rsquo;en-t&ecirc;te de jour porte le total de couverts et l&rsquo;&eacute;tat&nbsp;: &laquo;&nbsp;complet &agrave; 20:30&nbsp;&raquo;. C&rsquo;est la seule vue o&ugrave; l&rsquo;on voit venir un samedi charg&eacute; trois semaines &agrave; l&rsquo;avance.</span></div>
+  <div class="bx"><b>Le bandeau, pas un onglet</b><span>Les demandes en attente vivent dans un bandeau violet en haut de liste, pas dans un onglet &laquo;&nbsp;&Agrave; traiter&nbsp;&raquo;. Un onglet, il faut penser &agrave; aller le voir. Un bandeau, il faut penser &agrave; l&rsquo;ignorer &mdash; et il dispara&icirc;t tout seul quand la file est vide.</span></div>
+  <div class="bx"><b>Recherche par num&eacute;ro</b><span>Quand le t&eacute;l&eacute;phone sonne, on a le num&eacute;ro avant le nom, et souvent l&rsquo;orthographe est un pari. La recherche accepte les deux, et tol&egrave;re les espaces.</span></div>
+</div>
+
+<h2>Le champ &laquo;&nbsp;source&nbsp;&raquo; &mdash; obligatoire, mais pas &agrave; n&rsquo;importe quel prix</h2>
+<p class="rs-note">Le cahier des charges le rend obligatoire, et il a raison&nbsp;: sans lui, impossible de savoir ce que le widget rapporte vraiment. Mais un champ obligatoire mal con&ccedil;u ne produit pas de la donn&eacute;e, il produit du bruit &mdash; celui de la premi&egrave;re valeur de la liste, choisie cinquante fois par soir pour passer &agrave; la suite.</p>
+
+<div class="options">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Liste d&eacute;roulante avec valeur par d&eacute;faut</h3>
+      <div class="form" style="margin-top:8px">
+        <label>SOURCE *</label>
+        <div class="srcs"><div class="on" style="flex:none;padding:7px 14px">T&eacute;l&eacute;phone &nbsp;&#9662;</div></div>
+        <p class="hintline">La valeur par d&eacute;faut est la m&ecirc;me partout, quel que soit le contexte.</p>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Le plus rapide &agrave; construire.</li></ul></div>
+        <div><b>Contre</b><ul><li>Personne ne la change jamais. Au bout d&rsquo;un an, 96&nbsp;% des r&eacute;servations sont &laquo;&nbsp;t&eacute;l&eacute;phone&nbsp;&raquo; et le chiffre ne veut plus rien dire.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Aucun d&eacute;faut, choix forc&eacute;</h3>
+      <div class="form" style="margin-top:8px">
+        <label>SOURCE * &mdash; &agrave; choisir</label>
+        <div class="srcs"><div class="emp">T&eacute;l&eacute;phone</div><div class="emp">Web</div><div class="emp">Sur place</div><div class="emp">Autre</div></div>
+        <p class="hintline">Le bouton &laquo;&nbsp;Enregistrer&nbsp;&raquo; reste inactif tant que rien n&rsquo;est choisi.</p>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Impossible de passer &agrave; c&ocirc;t&eacute;.</li></ul></div>
+        <div><b>Contre</b><ul><li>Un geste de plus &agrave; chaque appel, y compris quand la r&eacute;ponse est &eacute;vidente.</li><li>La friction pousse &agrave; taper le premier bouton. On retombe sur A, en plus &eacute;nervant.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="C" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>D&eacute;faut d&eacute;duit du geste, modifiable en un tap</h3>
+      <div class="form" style="margin-top:8px">
+        <label>SOURCE *</label>
+        <div class="srcs"><div class="on">T&eacute;l&eacute;phone</div><div>Web</div><div>Sur place</div><div>Autre</div></div>
+        <p class="hintline">Cr&eacute;&eacute;e depuis R&eacute;servations &rarr; <b>t&eacute;l&eacute;phone</b>. Depuis le plan de salle &rarr; <b>sur place</b>. Par le widget &rarr; <b>web</b>, non modifiable.</p>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Le point d&rsquo;entr&eacute;e conna&icirc;t d&eacute;j&agrave; la r&eacute;ponse dans la quasi-totalit&eacute; des cas.</li><li>Z&eacute;ro geste quand c&rsquo;est juste, un seul quand &ccedil;a ne l&rsquo;est pas.</li><li>Les quatre valeurs restent visibles&nbsp;: on voit qu&rsquo;un choix a &eacute;t&eacute; fait, donc on le corrige.</li></ul></div>
+        <div><b>Contre</b><ul><li>Un d&eacute;faut juste reste un d&eacute;faut&nbsp;: il sera parfois accept&eacute; &agrave; tort.</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rs-verdict">
+  <b>Je recommande C.</b>
+  <p class="rs-note">Une r&eacute;servation cr&eacute;&eacute;e en glissant un client sur une table pendant le service <i>est</i> un walk-in&nbsp;; une r&eacute;servation saisie &agrave; la main depuis cet &eacute;cran <i>est</i> quasiment toujours un appel. Le logiciel sait d&eacute;j&agrave;&nbsp;: le lui faire redemander est une taxe sans contrepartie. Et surtout&nbsp;: <b>les quatre valeurs restent affich&eacute;es</b>, ce qui est ce qui diff&eacute;rencie C de A. Un menu d&eacute;roulant referm&eacute; cache la question&nbsp;; quatre boutons dont un allum&eacute; la posent en permanence, sans co&ucirc;ter un geste.</p>
+</div>
+
+<h2>Un manque dans le mod&egrave;le, r&eacute;v&eacute;l&eacute; par cet &eacute;cran</h2>
+<div class="grid2">
+  <div class="bx">
+    <b>Il manque un statut</b>
+    <span>Le mod&egrave;le (&sect;3.1) liste <i>confirm&eacute;e &middot; assise &middot; termin&eacute;e &middot; no-show &middot; annul&eacute;e</i>. Or le plan de salle porte d&eacute;j&agrave; un badge &laquo;&nbsp;r&eacute;servations en attente&nbsp;&raquo;, et cet &eacute;cran un bandeau &laquo;&nbsp;3 demandes&nbsp;&raquo;.<br><br>Il faut <b><code>en_attente</code></b> en t&ecirc;te de liste&nbsp;: une demande re&ccedil;ue par le widget qui n&rsquo;a pas encore &eacute;t&eacute; accept&eacute;e. Sans lui, une demande non trait&eacute;e est indiscernable d&rsquo;une r&eacute;servation ferme &mdash; et occupe une table qu&rsquo;elle n&rsquo;a pas encore gagn&eacute;e.</span>
+  </div>
+  <div class="bx">
+    <b>Il manque de quoi tenir le no-show</b>
+    <span>Le volet D du cahier des charges (rappel J-1, confirmation par le client) n&rsquo;a aucun champ o&ugrave; s&rsquo;&eacute;crire. &Agrave; ajouter&nbsp;:<br><br>
+    &bull; <code>rappel_envoye_le</code><br>
+    &bull; <code>confirme_par_client_le</code><br>
+    &bull; <code>annule_le</code> et <code>annule_par</code> (client ou restaurant &mdash; ce n&rsquo;est pas le m&ecirc;me &eacute;v&eacute;nement)<br>
+    &bull; <code>source</code> gagne <b>google</b> et <b>plateforme</b><br><br>
+    Sans <code>annule_par</code>, on ne peut pas distinguer un client qui se d&eacute;siste d&rsquo;un restaurant qui refuse &mdash; et le compteur de fiabilit&eacute; du client devient injuste.</span>
+  </div>
+</div>
+
+<p class="rs-note">La <b>fiche r&eacute;servation</b> &mdash; le panneau qui s&rsquo;ouvre &agrave; droite quand on touche une ligne &mdash; vient juste apr&egrave;s&nbsp;: c&rsquo;est l&agrave; que se jouent les actions et le journal de ce qui s&rsquo;est pass&eacute;.</p>
+
+</div>

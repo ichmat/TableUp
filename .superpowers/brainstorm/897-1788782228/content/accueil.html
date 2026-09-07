@@ -1,0 +1,251 @@
+<style>
+  .ac { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --cor:#B4674F; --vio:#5B4A8A; --bleu:#3D6E8E; --vert:#4E7C59; --ambre:#B08628; }
+  .ac-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .ac-note b { color:#2E2A26; }
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:16px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .verdict b { color:#2E2A26; }
+
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; margin:14px 0 6px; }
+  .fr-rail { width:34px; flex:none; background:#FBFAF8; border-radius:8px; padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .ic { width:17px; height:17px; border:1.6px solid #B5ADA2; border-radius:4px; }
+  .ic.on { background:#F5A04A; border-color:#F5A04A; }
+  .sp { flex:1; }
+  .pane { flex:1; min-width:0; background:#FBFAF8; border-radius:10px; padding:14px 16px; }
+
+  /* ---- bandeau horloge ---- */
+  .clock { display:flex; align-items:baseline; gap:20px; padding-bottom:11px; border-bottom:1px solid #E7E1D8; }
+  .clock .h { font-size:36px; font-weight:700; color:#2E2A26; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1; }
+  .clock .cd { font-size:12.5px; color:#8A8177; line-height:1.4; }
+  .clock .cd b { color:#F5A04A; }
+  .clock .dt { font-size:19px; color:#2E2A26; font-weight:700; font-variant-numeric:tabular-nums; }
+  .clock .dt em { display:block; font-style:normal; font-size:12px; color:#8A8177; font-weight:400; }
+  .clock .op { font-size:19px; color:#2E2A26; font-weight:700; font-variant-numeric:tabular-nums; }
+  .clock .op s { text-decoration:none; color:#B5ADA2; }
+  .clock .op em { display:block; font-style:normal; font-size:12px; color:#8A8177; font-weight:400; }
+  .closeday { font-size:11px; color:#8A8177; border:1px solid #D8D0C6; border-radius:7px; padding:5px 11px; background:#FBFAF8; }
+
+  h5.sec { margin:15px 0 8px; font-size:17px; color:#2E2A26; font-weight:700; display:flex; align-items:center; gap:9px; }
+  h5.sec span.cnt { font-size:10px; letter-spacing:.05em; background:#2E2A26; color:#fff; border-radius:20px; padding:2px 9px; font-weight:700; }
+  h5.sec span.cnt.zero { background:#E7F0E9; color:#4E7C59; }
+  h5.sec i { font-style:normal; font-size:11.5px; color:#A79E93; font-weight:400; }
+
+  /* ---- notifications ---- */
+  .nt { background:#fff; border:1px solid #E4DDD3; border-radius:9px; padding:9px 12px; display:flex; align-items:center; gap:11px; margin-bottom:6px; }
+  .nt.vio { border-left:3px solid #5B4A8A; }
+  .nt.cor { border-left:3px solid #B4674F; }
+  .nt.amb { border-left:3px solid #B08628; }
+  .nt.orr { border-left:3px solid #F5A04A; }
+  .nt .txt { flex:1; min-width:0; }
+  .nt .txt b { display:block; font-size:12.5px; color:#2E2A26; }
+  .nt .txt span { font-size:11.5px; color:#8A8177; }
+  .nt .acts { display:flex; gap:5px; align-items:center; }
+  .bt { font-size:11px; padding:5px 11px; border-radius:7px; font-weight:600; white-space:nowrap; }
+  .bt.pri { background:#F5A04A; color:#fff; }
+  .bt.ink { background:#2E2A26; color:#fff; }
+  .bt.sec { background:#FBFAF8; border:1px solid #D8D0C6; color:#2E2A26; }
+  .yn { display:flex; gap:4px; }
+  .yn span { width:26px; height:24px; border-radius:6px; text-align:center; line-height:23px; font-size:12px; font-weight:700; }
+  .yn .y { background:#E7F0E9; border:1px solid #4E7C59; color:#4E7C59; }
+  .yn .n { background:#F9EFEA; border:1px solid #D9B5A6; color:#B4674F; }
+
+  .empty { background:#F1ECE5; border-radius:9px; padding:13px 14px; text-align:center; font-size:12.5px; color:#6E675E; }
+  .empty b { color:#2E2A26; }
+
+  /* ---- recapitulatif ---- */
+  .rec { display:flex; gap:8px; }
+  .card { flex:1; background:#fff; border:1px solid #E4DDD3; border-radius:9px; padding:10px 12px; }
+  .card.now { border-color:#D8D0C6; box-shadow:inset 3px 0 0 #2E2A26; }
+  .card b.t { display:block; font-size:11px; letter-spacing:.05em; color:#8A8177; font-weight:700; margin-bottom:6px; }
+  .card .big { display:flex; align-items:baseline; gap:6px; }
+  .card .big em { font-style:normal; font-size:26px; font-weight:700; color:#2E2A26; font-variant-numeric:tabular-nums; line-height:1; }
+  .card .big span { font-size:11.5px; color:#8A8177; }
+  .card .sub { font-size:11px; color:#8A8177; margin-top:5px; line-height:1.5; }
+  .card .sub b { color:#2E2A26; }
+  .fill { height:7px; border-radius:6px; background:#EDE8E2; margin-top:7px; overflow:hidden; position:relative; }
+  .fill i { position:absolute; left:0; top:0; bottom:0; border-radius:6px; background:#C0B8AC; }
+  .fill i.hi { background:#2E2A26; }
+
+  .att { background:#fff; border:1px solid #E4DDD3; border-radius:9px; padding:10px 12px; margin-top:8px; }
+  .att b.t { display:block; font-size:11px; letter-spacing:.05em; color:#8A8177; font-weight:700; margin-bottom:7px; }
+  .al { display:flex; align-items:center; gap:9px; font-size:11.5px; color:#2E2A26; padding:4px 0; border-top:1px solid #F4F0EA; }
+  .al:first-of-type { border-top:0; }
+  .al .hh { width:44px; color:#8A8177; font-variant-numeric:tabular-nums; }
+  .al .nn { flex:1; }
+  .b { font-size:9px; letter-spacing:.05em; padding:2.5px 8px; border-radius:20px; font-weight:700; white-space:nowrap; }
+  .b.alr { background:#B4674F; color:#fff; }
+  .b.hab { background:#E7F0E9; color:#4E7C59; }
+  .b.vip { background:#F6EEDD; color:#8A6A2B; }
+  .b.grp { background:#EDE8E2; color:#6E675E; }
+  .b.new { background:#E4EFF7; color:#3D6E8E; }
+
+  /* blocs */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx.cor { border-left:3px solid #B4674F; }
+  .bx.vert { border-left:3px solid #4E7C59; }
+
+  table.k { width:100%; border-collapse:collapse; margin:12px 0 4px; background:#FBFAF8; border-radius:10px; overflow:hidden; }
+  table.k th { font-size:9.5px; letter-spacing:.07em; color:#8A8177; text-align:left; padding:8px 12px; background:#F1ECE5; font-weight:600; }
+  table.k td { font-size:12.5px; color:#2E2A26; padding:8px 12px; border-top:1px solid #F0EBE4; vertical-align:top; }
+  table.k td.d { color:#8A8177; font-size:12px; }
+  code { background:#EDE8E2; padding:1px 5px; border-radius:4px; font-size:11.5px; color:#5A5248; }
+</style>
+
+<div class="ac">
+
+<h1>L&rsquo;Accueil</h1>
+<p class="subtitle">Le dernier &eacute;cran. Lu &agrave; un moment pr&eacute;cis&nbsp;: en arrivant, avant d&rsquo;ouvrir.</p>
+
+<h2>1. Il r&eacute;pond &agrave; une seule question</h2>
+<p class="ac-note">Le &sect;4.6 l&rsquo;a d&eacute;j&agrave; cadr&eacute;&nbsp;: c&rsquo;est <b>l&rsquo;&eacute;cran de l&rsquo;avant et de l&rsquo;apr&egrave;s</b>, jamais celui de 20&nbsp;h&nbsp;30. On l&rsquo;ouvre donc toujours dans la m&ecirc;me situation&nbsp;: on vient d&rsquo;arriver, le service commence dans un moment, et on veut savoir <b>&laquo;&nbsp;est-ce que je peux ouvrir tranquille&nbsp;?&nbsp;&raquo;</b></p>
+<p class="ac-note">Ce n&rsquo;est pas la m&ecirc;me question que &laquo;&nbsp;comment va mon restaurant&nbsp;?&nbsp;&raquo; &mdash; celle-l&agrave; appelle un tableau de bord, et <b>un tableau de bord se regarde deux fois puis plus jamais</b>, parce qu&rsquo;il montre des chiffres qui ne demandent rien.</p>
+
+<div class="fr">
+  <div class="fr-rail">
+    <div class="ic on"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div>
+    <div class="sp"></div><div class="ic"></div>
+  </div>
+  <div class="pane">
+
+    <div class="clock">
+      <div class="h">11:12</div>
+      <div class="cd">Ouverture pr&eacute;vue<br>dans <b>18 min</b></div>
+      <div class="sp"></div>
+      <div class="dt">Jeudi 4 sept.<em>Service du midi</em></div>
+      <div class="op">11:30 <s>&ndash; 14:00</s><em>Ouverture &ndash; Fermeture</em></div>
+      <div class="sp"></div>
+      <div class="closeday">Fermer aujourd&rsquo;hui</div>
+    </div>
+
+    <h5 class="sec">&Agrave; traiter <span class="cnt">4</span></h5>
+
+    <div class="nt vio">
+      <div class="txt"><b>Marchand, Sophie &middot; 4 pers. &middot; samedi 20:00</b><span>Demande re&ccedil;ue par le site il y a 2&nbsp;h &middot; cr&eacute;neau sur demande</span></div>
+      <div class="acts"><div class="yn"><span class="y">&#10003;</span><span class="n">&#10007;</span></div><div class="bt sec">Voir</div></div>
+    </div>
+    <div class="nt vio">
+      <div class="txt"><b>Bouvier, famille &middot; 7 pers. &middot; vendredi 20:30</b><span>Demande re&ccedil;ue par le site hier &middot; cr&eacute;neau sur demande</span></div>
+      <div class="acts"><div class="yn"><span class="y">&#10003;</span><span class="n">&#10007;</span></div><div class="bt sec">Voir</div></div>
+    </div>
+
+    <div class="nt cor">
+      <div class="txt"><b>2 tables jamais lib&eacute;r&eacute;es hier soir</b><span>T7 et T12 sont rest&eacute;es &laquo;&nbsp;assises&nbsp;&raquo; depuis 21:15. Le service a d&ucirc; fermer sans clore.</span></div>
+      <div class="acts"><div class="bt ink">Cl&ocirc;turer les deux</div></div>
+    </div>
+
+    <div class="nt orr">
+      <div class="txt"><b>3 r&eacute;servations de ce midi sans table</b><span>14 couverts &agrave; placer avant 11:30.</span></div>
+      <div class="acts"><div class="bt pri">Placer</div></div>
+    </div>
+
+    <h5 class="sec">R&eacute;capitulatif <i>&middot; rien &agrave; faire ici, seulement &agrave; savoir</i></h5>
+
+    <div class="rec">
+      <div class="card now">
+        <b class="t">CE MIDI &middot; 11:30 &ndash; 14:00</b>
+        <div class="big"><em>28</em><span>couverts &middot; 11 r&eacute;servations</span></div>
+        <div class="fill"><i class="hi" style="width:74%"></i></div>
+        <div class="sub"><b>14 tables sur 19</b> occup&eacute;es au plus fort, vers 12:45</div>
+      </div>
+      <div class="card">
+        <b class="t">CE SOIR &middot; 19:00 &ndash; 23:00</b>
+        <div class="big"><em>41</em><span>couverts &middot; 16 r&eacute;servations</span></div>
+        <div class="fill"><i style="width:95%"></i></div>
+        <div class="sub"><b>18 tables sur 19</b> au plus fort, vers 20:30</div>
+      </div>
+      <div class="card">
+        <b class="t">HIER</b>
+        <div class="big"><em>52</em><span>couverts servis</span></div>
+        <div class="sub">1 no-show &middot; 2 annulations tardives &middot; 4 clients de passage</div>
+      </div>
+    </div>
+
+    <div class="att">
+      <b class="t">CE SOIR, CE QUI DEMANDE UNE ATTENTION</b>
+      <div class="al"><span class="hh">19:30</span><span class="nn">Perrin, Antoine &middot; 2 pers.</span><span class="b vip">VIP</span></div>
+      <div class="al"><span class="hh">20:00</span><span class="nn">Marchand, Sophie &middot; 2 pers.</span><span class="b alr">FRUITS &Agrave; COQUE</span><span class="b hab">HABITU&Eacute;E</span></div>
+      <div class="al"><span class="hh">20:30</span><span class="nn">Bouvier, famille &middot; 7 pers. &middot; T12-13</span><span class="b grp">GRANDE TABL&Eacute;E</span></div>
+      <div class="al"><span class="hh">21:00</span><span class="nn">Da Silva, Marc &middot; 2 pers.</span><span class="b alr">SANS GLUTEN</span><span class="b new">1&#8319;&#7497; VISITE</span></div>
+    </div>
+
+  </div>
+</div>
+
+<h2>2. La d&eacute;cision qui tient tout&nbsp;: deux sections, et une seule porte des boutons</h2>
+
+<div class="grid2">
+  <div class="bx">
+    <b class="t">&laquo;&nbsp;&Agrave; traiter&nbsp;&raquo; &mdash; chaque ligne porte son geste</b>
+    <span>Une notification qui dit &laquo;&nbsp;3 demandes en attente&nbsp;&raquo; sans permettre d&rsquo;y r&eacute;pondre est <b>une liste de corv&eacute;es, pas un outil</b>&nbsp;: elle ajoute une navigation au lieu d&rsquo;en retirer une. Ici on accepte, on refuse, on cl&ocirc;ture, on place &mdash; sur place, avec les gestes rapides d&eacute;j&agrave; d&eacute;finis au &sect;6.4.</span>
+  </div>
+  <div class="bx">
+    <b class="t">&laquo;&nbsp;R&eacute;capitulatif&nbsp;&raquo; &mdash; aucun bouton, jamais</b>
+    <span>Ce qui est simplement vrai. Si un chiffre appelait une action, il serait au-dessus. <b>Cette s&eacute;paration stricte est ce qui emp&ecirc;che l&rsquo;&eacute;cran de devenir un tableau de bord</b> &mdash; et elle rend la premi&egrave;re section cr&eacute;dible&nbsp;: ce qui y figure m&eacute;rite vraiment qu&rsquo;on s&rsquo;arr&ecirc;te.</span>
+  </div>
+</div>
+
+<div class="verdict"><b>Et la premi&egrave;re section doit pouvoir &ecirc;tre vide.</b> Un &eacute;cran d&rsquo;accueil qui a <i>toujours</i> quelque chose &agrave; montrer apprend &agrave; &ecirc;tre ignor&eacute;. Quand il n&rsquo;y a rien, il faut le dire &mdash; et c&rsquo;est une information qui vaut d&rsquo;&ecirc;tre lue&nbsp;:</div>
+
+<div style="max-width:560px;margin:10px 0 4px">
+  <h5 class="sec" style="margin-top:4px">&Agrave; traiter <span class="cnt zero">0</span></h5>
+  <div class="empty"><b>Rien &agrave; traiter.</b> Les demandes sont r&eacute;pondues, les tables d&rsquo;hier cl&ocirc;tur&eacute;es, et les 11 r&eacute;servations de ce midi ont toutes une table.</div>
+</div>
+
+<h2>3. Quatre choses &agrave; traiter, et pourquoi celles-l&agrave;</h2>
+
+<table class="k">
+  <tr><th style="width:26%">Ligne</th><th>Pourquoi elle m&eacute;rite d&rsquo;interrompre</th></tr>
+  <tr>
+    <td><b>Les demandes en attente</b> <span style="color:#5B4A8A">&#9646;</span></td>
+    <td class="d">Le widget en cr&eacute;e (&sect;11.2) et personne ne les voit s&rsquo;il faut aller les chercher. <b>Elles sont d&eacute;taill&eacute;es une par une, pas compt&eacute;es</b>&nbsp;: &laquo;&nbsp;3 demandes&nbsp;&raquo; oblige &agrave; cliquer pour d&eacute;cider, &laquo;&nbsp;Bouvier, 7 pers., vendredi&nbsp;&raquo; se tranche en lisant.</td>
+  </tr>
+  <tr>
+    <td><b>Les tables jamais lib&eacute;r&eacute;es hier</b> <span style="color:#B4674F">&#9646;</span></td>
+    <td class="d">La ligne la moins &eacute;vidente, et peut-&ecirc;tre la plus utile. &Agrave; 23&nbsp;h on ferme sans clore les derni&egrave;res tables&nbsp;: elles restent <code>assise</code> pour toujours. Cons&eacute;quences r&eacute;elles &mdash; <b>le plan ment demain matin, les couverts servis sont faux, et le &laquo;&nbsp;termin&eacute;&nbsp;&raquo; qui alimente les compteurs client (&sect;7.4) n&rsquo;arrive jamais.</b> Le matin est le seul moment o&ugrave; l&rsquo;on peut r&eacute;parer &ccedil;a, et il faut deux secondes.</td>
+  </tr>
+  <tr>
+    <td><b>Les r&eacute;servations sans table</b> <span style="color:#F5A04A">&#9646;</span></td>
+    <td class="d">Placer &agrave; froid, avant l&rsquo;ouverture, prend une minute&nbsp;; placer &agrave; 12:40 avec des gens debout dans l&rsquo;entr&eacute;e en prend cinq et se fait mal. <b>Cette ligne d&eacute;place le travail au moment o&ugrave; il co&ucirc;te le moins.</b></td>
+  </tr>
+  <tr>
+    <td><b>Les rapprochements &agrave; pr&eacute;parer</b> <span style="color:#B08628">&#9646;</span></td>
+    <td class="d">Le &sect;3.4 pr&eacute;voit <code>a_active_le</code>&nbsp;: &laquo;&nbsp;coller 12 et 13 avant 20:00&nbsp;&raquo;. C&rsquo;est du <b>travail physique &agrave; faire dans la salle</b>, et il n&rsquo;a de sens qu&rsquo;annonc&eacute; &agrave; l&rsquo;avance &mdash; personne ne d&eacute;place une table pendant le coup de feu. Absent de l&rsquo;exemple ci-dessus parce qu&rsquo;il n&rsquo;y en a pas aujourd&rsquo;hui.</td>
+  </tr>
+</table>
+
+<h2>4. &laquo;&nbsp;Ce qui demande une attention&nbsp;&raquo; &mdash; le rendement du &sect;7</h2>
+
+<p class="ac-note">Le &sect;7.9 renvoyait ici la question &laquo;&nbsp;qui vient ce soir qui m&eacute;rite une attention&nbsp;?&nbsp;&raquo;. C&rsquo;est <b>la seule chose que ce logiciel sait et qu&rsquo;un carnet ne saura jamais</b>&nbsp;: il croise les r&eacute;servations du soir avec les fiches clients et n&rsquo;en garde que ce qui change un geste.</p>
+
+<div class="grid3">
+  <div class="bx cor"><b class="t">Les allergies d&rsquo;abord</b><span>Elles sont ici pour une raison qui n&rsquo;est pas l&rsquo;affichage&nbsp;: <b>c&rsquo;est le seul moment o&ugrave; l&rsquo;on peut encore pr&eacute;venir la cuisine.</b> Lues &agrave; 20:00 sur la fiche, elles arrivent apr&egrave;s la mise en place.</span></div>
+  <div class="bx"><b class="t">Puis ce qui se pr&eacute;pare</b><span>Grande tabl&eacute;e, anniversaire, VIP, premi&egrave;re visite. Chacune appelle un geste concret &mdash; une table, un dessert, un mot &agrave; l&rsquo;arriv&eacute;e.</span></div>
+  <div class="bx vert"><b class="t">Et rien d&rsquo;autre</b><span>Pas la liste des seize r&eacute;servations&nbsp;: elle est dans l&rsquo;Agenda, et la recopier ici <b>noierait les quatre lignes qui comptent</b>. Un bloc qui s&rsquo;allonge est un bloc qu&rsquo;on cesse de lire.</span></div>
+</div>
+
+<h2>5. Trois d&eacute;tails d&eacute;cid&eacute;s</h2>
+
+<table class="k">
+  <tr><th style="width:26%">Point</th><th>D&eacute;cision</th></tr>
+  <tr>
+    <td><b>Le r&eacute;capitulatif couvre la journ&eacute;e</b></td>
+    <td class="d">Midi, soir, et la veille. &Agrave; 11:12 on pr&eacute;pare le midi, mais <b>c&rsquo;est aussi le seul moment calme pour d&eacute;couvrir que le soir est &agrave; 18 tables sur 19.</b> Le service en cours est soulign&eacute; d&rsquo;un trait d&rsquo;encre, pas d&rsquo;une couleur.</td>
+  </tr>
+  <tr>
+    <td><b>Le remplissage se dit en tables</b></td>
+    <td class="d">&laquo;&nbsp;18 tables sur 19 au plus fort, vers 20:30&nbsp;&raquo;. Les couverts sont l&agrave; aussi, mais comme volume de travail pour la cuisine &mdash; <b>jamais comme jauge de remplissage</b> (&sect;9.4). Et le pic est nomm&eacute; avec son heure&nbsp;: c&rsquo;est le seul chiffre qui change quelque chose &agrave; la fa&ccedil;on dont on organise sa soir&eacute;e.</td>
+  </tr>
+  <tr>
+    <td><b>&laquo;&nbsp;Fermer aujourd&rsquo;hui&nbsp;&raquo; est discret</b></td>
+    <td class="d">En haut &agrave; droite, en gris, jamais en rouge. <b>Ce n&rsquo;est pas une alerte&nbsp;: c&rsquo;est une action rare qu&rsquo;il faut pouvoir trouver sans jamais la craindre.</b> Elle ouvre le panneau du &sect;9.7 &mdash; motif interne, message aux clients, confrontation des r&eacute;servations &mdash; et reste accessible au r&ocirc;le Service (&sect;9.8).</td>
+  </tr>
+</table>
+
+<h2>6. Et apr&egrave;s le service&nbsp;?</h2>
+<p class="ac-note">Le &sect;4.6 dit que l&rsquo;Accueil est l&rsquo;&eacute;cran de l&rsquo;avant <i>et de l&rsquo;apr&egrave;s</i>. &Agrave; 23&nbsp;h&nbsp;40, le compte &agrave; rebours n&rsquo;a plus d&rsquo;objet et le bandeau change de phrase&nbsp;: <b>&laquo;&nbsp;Service termin&eacute; &middot; prochain service demain 11:30&nbsp;&raquo;</b>.</p>
+<p class="ac-note">Le reste ne bouge pas, et c&rsquo;est voulu&nbsp;: <b>les tables non lib&eacute;r&eacute;es apparaissent alors <i>avant</i> qu&rsquo;on parte</b>, au moment o&ugrave; les clore est encore naturel &mdash; plut&ocirc;t que le lendemain matin, comme une r&eacute;paration. La m&ecirc;me ligne rend deux services &agrave; deux moments&nbsp;: un rappel le soir, un rattrapage au matin.</p>
+
+</div>

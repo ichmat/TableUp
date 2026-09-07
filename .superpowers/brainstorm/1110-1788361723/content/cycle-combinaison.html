@@ -1,0 +1,206 @@
+<h2>Le cycle de vie d'une table virtuelle</h2>
+<p class="subtitle">Une soirée complète pour <b>12-13</b>&nbsp;: deux réservations séparées, puis un groupe de&nbsp;8. Le logiciel prévoit, l'utilisateur confirme.</p>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@600;700&display=swap');
+
+.g { --font:'Exo 2',sans-serif; --mono:'IBM Plex Mono',monospace;
+     --bg:#EDE8E2; --card:#FBFAF8; --edge:#DFD9D1; --ink:#3A3A38; --dim:#9A968F;
+     --accent:#F5A04A; --slate:#2E2A26; --go:#5FBF7A; --meh:#B3BE4E; --vio:#5B4A8A; }
+.g * { box-sizing:border-box; }
+.g { font-family:var(--font); }
+
+.step { font:700 10px/1 var(--font); letter-spacing:.12em; text-transform:uppercase;
+        color:var(--dim); margin:0 0 9px 2px; }
+.step b { color:var(--accent); }
+
+/* ── frise ── */
+.tl { background:var(--slate); border:1px solid #241F1B; border-radius:14px; padding:18px 18px 15px; }
+.axis { position:relative; height:14px; margin-bottom:9px; }
+.axis span { position:absolute; transform:translateX(-50%); font:500 10.5px/1 var(--mono); color:#8A8073; }
+.row { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.rl { width:106px; flex:none; text-align:right; font:600 10.5px/1.3 var(--font); color:#A69C8E; }
+.rl s { display:block; text-decoration:none; font:italic 300 9.5px/1.3 var(--font); color:#6E655A; margin-top:1px; }
+.tr { position:relative; flex:1; height:32px; background:rgba(255,255,255,.035); border-radius:7px; }
+.blk { position:absolute; top:4px; height:24px; border-radius:6px; border:1.5px solid;
+       display:flex; align-items:center; padding:0 9px; font:600 10.5px/1 var(--font); white-space:nowrap; overflow:hidden; }
+.b-res  { background:rgba(120,190,230,.18); border-color:#6FA8CC; color:#A8D5F0; }
+.b-grp  { background:rgba(120,190,230,.24); border-color:#6FA8CC; color:#CDE7F6; }
+.b-plan { background:repeating-linear-gradient(135deg,rgba(245,160,74,.20) 0 6px,transparent 6px 12px);
+          border:1.5px dashed var(--accent); color:#F8CE9C; }
+.b-act  { background:rgba(95,191,122,.20); border-color:var(--go); color:#BFE9CC; }
+.mark { position:absolute; top:-6px; bottom:-6px; width:2px; background:var(--accent); z-index:3; }
+.mark.off { background:var(--vio); }
+.mlbl { position:absolute; top:-17px; transform:translateX(-50%); white-space:nowrap;
+        font:700 9px/1 var(--font); letter-spacing:.05em; }
+.bell { position:absolute; top:2px; width:26px; height:26px; border-radius:8px; background:var(--accent);
+        color:#fff; display:flex; align-items:center; justify-content:center; z-index:4;
+        border:2px solid var(--slate); transform:translateX(-50%); }
+.bell svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:13px; font:600 9.5px/1 var(--font);
+          letter-spacing:.04em; text-transform:uppercase; color:#8A8073; }
+.legend span { display:flex; align-items:center; gap:6px; }
+.legend i { width:16px; height:11px; border-radius:3px; border:1.5px solid; display:inline-block; }
+
+/* ── popups ── */
+.two { display:flex; gap:13px; flex-wrap:wrap; }
+.two > * { flex:1 1 300px; min-width:290px; }
+.stagepop { position:relative; background:var(--slate); border:1px solid #241F1B; border-radius:13px;
+            padding:22px 16px; display:flex; justify-content:center; align-items:center; }
+.stagepop::before { content:''; position:absolute; inset:0; background:rgba(20,17,14,.5); border-radius:13px; }
+.pop { position:relative; width:100%; max-width:355px; background:var(--card); border-radius:15px;
+       box-shadow:0 18px 40px rgba(30,24,16,.45); padding:16px 16px 14px; }
+.pop .kicker { display:flex; align-items:center; gap:7px; font:700 9.5px/1 var(--font);
+               letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:9px; }
+.pop .kicker svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+.pop h4 { margin:0 0 4px; font:700 15.5px/1.28 var(--font); color:var(--ink); }
+.pop .sub { font:italic 300 11.5px/1.45 var(--font); color:var(--dim); margin-bottom:13px; }
+.mini { display:flex; gap:9px; align-items:center; background:#F4EFE7; border-radius:10px;
+        padding:9px 11px; margin-bottom:13px; }
+.mini .sq { width:26px; height:20px; border:1.5px solid #B7AE9F; border-radius:4px; flex:none; }
+.mini .pl { font:700 15px/1 var(--font); color:#B7AE9F; }
+.mini span { font:500 11.5px/1.4 var(--font); color:#6E675C; }
+.opt { display:flex; align-items:center; gap:9px; border:1.5px solid #E4DED6; background:#fff;
+       border-radius:11px; padding:10px 11px; margin-bottom:7px; font:600 12.5px/1.3 var(--font); color:var(--ink); }
+.opt.prim { border-color:var(--accent); background:#FDF2E4; color:#8A5210; }
+.opt s { display:block; text-decoration:none; font:italic 300 10.5px/1.35 var(--font); color:var(--dim); margin-top:2px; }
+.opt .dot { width:15px; height:15px; border-radius:50%; border:1.5px solid #C9C1B4; flex:none; }
+.opt.prim .dot { border-color:var(--accent); box-shadow:inset 0 0 0 3.5px #FDF2E4, inset 0 0 0 9px var(--accent); }
+
+/* ── modèle ── */
+.ent { background:var(--card); border:1px solid var(--edge); border-radius:12px; padding:13px 14px 12px; }
+.ent.new { border-color:var(--accent); box-shadow:0 0 0 2px rgba(245,160,74,.18); }
+.ent h4 { margin:0 0 2px; font:700 13.5px/1.2 var(--font); color:var(--ink); }
+.ent .tag { font:italic 300 11px/1.35 var(--font); color:var(--dim); display:block; margin-bottom:9px; }
+.f { display:flex; gap:7px; align-items:baseline; font:500 11.5px/1.62 var(--font); color:#5F584D; }
+.f code { font:500 10.5px/1 var(--mono); color:#2f2b26; background:#F1ECE4; padding:2px 5px; border-radius:4px; }
+.f s { text-decoration:none; font:italic 300 11px/1.5 var(--font); color:var(--dim); }
+.f.pk code { background:#FDF2E4; color:#8A5210; }
+.f.hi code { background:#E9F3EC; color:#2C6B41; }
+
+.q { margin-top:15px; background:rgba(245,160,74,.10); border:1px solid rgba(245,160,74,.4);
+     border-radius:12px; padding:14px 15px; font:400 12.5px/1.65 var(--font); color:#5F584D; }
+.q b { color:#8A5210; font-weight:700; }
+.q code { font:500 11px/1 var(--mono); background:#F1ECE4; padding:2px 5px; border-radius:4px; color:#2f2b26; }
+.why { margin-top:13px; font:400 12.5px/1.62 var(--font); color:#5f584d; }
+.why b { color:#2f2b26; font-weight:700; }
+</style>
+
+<div class="g">
+
+<!-- ═══════ FRISE ═══════ -->
+<p class="step">La soirée de jeudi · <b>tables 12 et 13</b></p>
+<div class="tl">
+  <div class="axis">
+    <span style="left:0%">19:00</span><span style="left:22.2%">20:00</span><span style="left:44.4%">21:00</span>
+    <span style="left:66.7%">22:00</span><span style="left:88.9%">23:00</span>
+  </div>
+
+  <div class="row">
+    <div class="rl">Table 12<s>4 places</s></div>
+    <div class="tr"><div class="blk b-res" style="left:11.1%;width:38.9%">Durand · 4p</div></div>
+  </div>
+
+  <div class="row">
+    <div class="rl">Table 13<s>4 places</s></div>
+    <div class="tr"><div class="blk b-res" style="left:11.1%;width:38.9%">Martin · 4p</div></div>
+  </div>
+
+  <div class="row">
+    <div class="rl">12-13<s>virtuelle · 8 places</s></div>
+    <div class="tr"><div class="blk b-grp" style="left:55.6%;width:38.9%">Nguyen · 8p</div></div>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <div class="rl" style="color:#F0EAE0">Lien physique<s>ce que dit <b style="color:#A69C8E">active</b></s></div>
+    <div class="tr" style="height:34px">
+      <div class="mlbl" style="left:50%;color:var(--accent)">a_active_le 21:15</div>
+      <div class="mark" style="left:50%"></div>
+      <div class="mlbl" style="left:94.4%;color:var(--vio)">a_desactive_le 23:15</div>
+      <div class="mark off" style="left:94.4%"></div>
+
+      <div class="blk b-plan" style="left:50%;width:8%;top:5px">prévu</div>
+      <div class="blk b-act"  style="left:58%;width:36.4%;top:5px">active = vrai</div>
+
+      <div class="bell" style="left:50%"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+      <div class="bell" style="left:94.4%"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:rgba(120,190,230,.2);border-color:#6FA8CC"></i>Réservation</span>
+    <span><i style="background:rgba(245,160,74,.2);border-color:var(--accent);border-style:dashed"></i>Prévu, pas confirmé</span>
+    <span><i style="background:rgba(95,191,122,.2);border-color:var(--go)"></i>Lien physique confirmé</span>
+    <span style="color:var(--accent)">🔔 = rappel à l'utilisateur</span>
+  </div>
+</div>
+
+<p class="why"><b>Ce que la frise raconte&nbsp;:</b> à 19:30, Durand et Martin dînent sur deux tables séparées — la combinaison existe en base mais <code style="font:500 11px/1 var(--mono);background:#F1ECE4;padding:2px 5px;border-radius:4px">active = faux</code>, donc 12 et 13 sont réservables séparément. En plaçant Nguyen, le logiciel a inscrit <b>a_active_le&nbsp;= 21:15</b> (un quart d'heure avant l'arrivée, le temps de pousser les tables) et <b>a_desactive_le&nbsp;= 23:15</b>. À 21:15 il ne bascule rien&nbsp;: <b>il sonne</b>. Entre le rappel et la confirmation, la bande reste hachurée — le logiciel dit «&nbsp;je crois que&nbsp;», pas «&nbsp;c'est fait&nbsp;».</p>
+
+<!-- ═══════ POPUPS ═══════ -->
+<p class="step" style="margin-top:26px">Les deux rappels · <b>et le cas du no-show</b></p>
+<div class="two">
+
+  <div class="stagepop">
+    <div class="pop">
+      <div class="kicker"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>21:15 · Rappel</div>
+      <h4>Les tables 12 et 13 ont-elles été rapprochées&nbsp;?</h4>
+      <div class="sub">Nguyen · 8 pers. arrive à 21:30.</div>
+      <div class="mini"><div class="sq"></div><div class="pl">+</div><div class="sq"></div>
+        <span>12-13 · 8 places<br>Salle</span></div>
+      <div class="opt prim"><div class="dot"></div><div>Oui, c'est fait<s>La combinaison passe active</s></div></div>
+      <div class="opt"><div class="dot"></div><div>Pas encore<s>Me redemander dans 10 minutes</s></div></div>
+      <div class="opt"><div class="dot"></div><div>Finalement non<s>Nguyen sera replacé ailleurs</s></div></div>
+    </div>
+  </div>
+
+  <div class="stagepop">
+    <div class="pop">
+      <div class="kicker" style="color:#B5563C"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>21:47 · No-show</div>
+      <h4>Nguyen ne s'est pas présenté. Séparer 12 et 13&nbsp;?</h4>
+      <div class="sub">Les tables sont rapprochées depuis 21:22 et plus rien ne les attend ce soir.</div>
+      <div class="opt prim"><div class="dot"></div><div>Oui, les séparer<s><code style="font:500 10.5px/1 var(--mono);background:#F1ECE4;padding:1px 4px;border-radius:3px">active = faux</code> · 12 et 13 redeviennent réservables tout de suite</s></div></div>
+      <div class="opt"><div class="dot"></div><div>Non, les laisser ensemble<s>Je peux encore prendre un groupe en walk-in</s></div></div>
+    </div>
+  </div>
+</div>
+
+<p class="why"><b>Le no-show est exactement le cas que tu décrivais</b>, et il montre pourquoi le rappel vaut mieux que l'automatisme. Le logiciel sait que la réservation est tombée&nbsp;; il ne sait pas si le restaurateur préfère récupérer deux tables de&nbsp;4 pour le coup de feu ou garder sa grande table pour un groupe qui passe. Il pose la question, et <b>c'est la réponse qui fait basculer <code style="font:500 11px/1 var(--mono);background:#F1ECE4;padding:2px 5px;border-radius:4px">active</code></b> — jamais l'horloge.</p>
+
+<!-- ═══════ MODÈLE ═══════ -->
+<h3 style="margin-top:28px">La combinaison, complète</h3>
+<div class="two">
+  <div class="ent new">
+    <h4>Combinaison</h4><span class="tag">la table virtuelle — jamais supprimée, seulement désactivée</span>
+    <div class="f pk"><code>id</code> <code>zone_id</code></div>
+    <div class="f"><code>nom</code> <s>« 12-13 », auto puis modifiable</s></div>
+    <div class="f"><code>capacite</code> <s>saisie</s></div>
+    <div class="f"><code>tables[]</code> <s>l'ensemble — sert au calcul de conflit</s></div>
+    <div class="f hi"><code>active</code> <s>collées <b style="color:#2C6B41">en ce moment</b>, oui ou non</s></div>
+    <div class="f hi"><code>a_active_le</code> <s>quand le lien est <b style="color:#2C6B41">prévu</b> — déclenche le rappel</s></div>
+    <div class="f hi"><code>a_desactive_le</code> <s>quand la séparation est prévue — déclenche l'autre rappel</s></div>
+    <div class="f" style="margin-top:6px"><s>Aucune géométrie&nbsp;: elle se dessine à partir des <code style="font:500 10.5px/1 var(--mono);background:#F1ECE4;padding:1px 4px;border-radius:3px">x/y</code> de ses membres.</s></div>
+  </div>
+
+  <div>
+    <div class="ent" style="margin-bottom:11px">
+      <h4>Les deux horloges, séparées</h4>
+      <div class="f" style="display:block;margin-bottom:7px"><b style="color:#2f2b26;font-weight:700">Le lien physique</b> — <code>active</code>, <code>a_active_le</code>, <code>a_desactive_le</code>. Décrit la salle telle qu'elle est. Ne bascule que sur réponse humaine.</div>
+      <div class="f" style="display:block"><b style="color:#2f2b26;font-weight:700">Le conflit de réservation</b> — intervalle + intersection des ensembles de tables. Décide de ce qui est libre à l'heure&nbsp;T de la frise, <em>indépendamment</em> de l'état physique actuel.</div>
+      <div class="f" style="display:block;margin-top:8px"><s>C'est ce cloisonnement qui permet à Durand et Martin de dîner à 19:30 sur 12 et 13 alors que Nguyen a déjà 12-13 pour 21:30.</s></div>
+    </div>
+    <div class="ent">
+      <h4>L'invariant</h4>
+      <div class="f" style="display:block">Une table physique appartient à <b style="color:#2f2b26;font-weight:700">au plus une combinaison active</b> à la fois. Vérifié avant chaque activation&nbsp;— manuelle ou par rappel.</div>
+      <div class="f" style="display:block;margin-top:7px"><s>Si 13 est déjà collée à 14, le rappel «&nbsp;12 et 13 sont-elles rapprochées&nbsp;?&nbsp;» ne peut pas aboutir&nbsp;: il faut d'abord séparer 13-14.</s></div>
+    </div>
+  </div>
+</div>
+
+<div class="q">
+  <b>Un seul point à trancher.</b> Deux champs ne décrivent qu'<em>une</em> fenêtre. Si 12-13 est réservée deux fois dans la même soirée — un groupe à 19:00 <em>et</em> Nguyen à 21:30 — <code>a_active_le</code> ne peut pas contenir les deux.
+  <br><br>Le plus sûr&nbsp;: ces deux dates ne sont pas saisies à la main, elles sont <b>recalculées à partir de la prochaine affectation</b> de la combinaison, à chaque placement ou annulation. Elles décrivent toujours «&nbsp;la fenêtre en cours ou la suivante&nbsp;», et le rappel se redéclenche autant de fois qu'il y a de groupes. La vérité reste dans les réservations&nbsp;; ces deux champs ne sont que ce qui alimente la sonnerie.
+  <br><br>Sinon on aura, un soir de deux banquets, un <code>a_active_le</code> qui pointe la mauvaise heure — et personne ne saura pourquoi la sonnerie n'a pas retenti.
+</div>
+
+</div>

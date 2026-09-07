@@ -1,0 +1,212 @@
+<style>
+  .rb { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --noir:#26231F; }
+  .rb-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .rb-verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:18px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+
+  /* --- ossature d'essai --- */
+  .demo { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px;
+          position:relative; height:210px; overflow:hidden; }
+  .demo .plan { flex:1; background:#26231F; border-radius:9px; position:relative; min-width:0; }
+  .demo .plan .t { position:absolute; border:1.5px solid #6E6860; border-radius:6px; width:44px; height:30px;
+                   display:flex; align-items:center; justify-content:center; font-size:10px; color:#B5AEA4; }
+  .demo .plan .t.r { border-radius:50%; width:34px; height:34px; }
+  .demo .plan .t.occ { border-color:#B4674F; color:#D89478; }
+
+  .rail { width:40px; flex:none; }
+  .rail-in { position:absolute; top:8px; bottom:8px; left:8px; width:40px; background:#FBFAF8; border-radius:9px;
+             padding:8px 5px; display:flex; flex-direction:column; gap:5px; overflow:hidden;
+             transition:width .14s ease, box-shadow .14s ease; z-index:6; }
+  .rail-in .e { display:flex; align-items:center; gap:8px; padding:6px 5px; border-radius:6px; font-size:11px;
+                color:#8A8177; white-space:nowrap; }
+  .rail-in .e.on { background:#F5A04A; color:#fff; font-weight:600; }
+  .rail-in .e i { width:16px; height:16px; border:1.6px solid currentColor; border-radius:4px; flex:none; opacity:.85; }
+  .rail-in .e span { opacity:0; transition:opacity .1s ease; }
+  .demo.pc .rail-in:hover, .rail-in.open { width:128px; box-shadow:6px 0 22px rgba(46,42,38,.16); }
+  .demo.pc .rail-in:hover .e span, .rail-in.open .e span { opacity:1; }
+
+  /* variante fautive : le rail pousse le contenu */
+  .demo.push .rail-in { position:static; width:40px; }
+  .demo.push:hover .rail-in { width:128px; box-shadow:none; }
+  .demo.push:hover .rail-in .e span { opacity:1; }
+
+  .cap { font-size:11px; color:#8A8177; text-align:center; margin-top:6px; line-height:1.4; }
+  .cap b { color:#2E2A26; }
+  .cap.ko b { color:#B4674F; }
+  .cap.ok b { color:#3E7A50; }
+
+  .tapme { position:absolute; right:12px; bottom:10px; font-size:10px; color:#7C766C; letter-spacing:.06em;
+           background:rgba(38,35,31,.75); padding:3px 9px; border-radius:20px; z-index:7; }
+
+  /* --- chronologie --- */
+  .tl { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:14px 16px; margin:14px 0 4px; }
+  .tl-ax { position:relative; height:52px; margin:22px 0 6px; }
+  .tl-ax .bar { position:absolute; top:22px; left:0; right:0; height:3px; background:#E4DDD3; border-radius:2px; }
+  .tl-ax .fill { position:absolute; top:22px; height:3px; background:#F5A04A; border-radius:2px; }
+  .tl-ax .pt { position:absolute; top:16px; width:15px; height:15px; border-radius:50%; background:#FBFAF8;
+               border:3px solid #F5A04A; transform:translateX(-50%); }
+  .tl-ax .pt.gr { border-color:#B5ADA2; }
+  .tl-ax .lb { position:absolute; top:-16px; font-size:10px; color:#2E2A26; transform:translateX(-50%); white-space:nowrap; font-weight:600; }
+  .tl-ax .sub { position:absolute; top:40px; font-size:10px; color:#8A8177; transform:translateX(-50%); white-space:nowrap; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0 4px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx code { background:#EDE8E2; border-radius:4px; padding:1px 5px; font-size:11.5px; color:#2E2A26; }
+</style>
+
+<div class="rb">
+
+<h1>Le rail &mdash; comportement d&eacute;taill&eacute;</h1>
+<p class="subtitle">Ic&ocirc;nes seules au repos. Les libell&eacute;s apparaissent au survol (PC) ou 3&nbsp;s apr&egrave;s un contact (tablette).</p>
+
+<h2>La r&egrave;gle qui d&eacute;cide de tout&nbsp;: le rail <i>recouvre</i>, il ne pousse pas</h2>
+<p class="rb-note">Le rail d&eacute;ploy&eacute; est un calque flottant. La largeur r&eacute;serv&eacute;e dans la mise en page reste celle des ic&ocirc;nes, toujours. Sinon, chaque passage de souris relaie tout le plan de salle&nbsp;: les tables glissent de 88&nbsp;px sous le curseur, et si un glisser-d&eacute;poser est en cours, la table vis&eacute;e n&rsquo;est plus l&agrave; o&ugrave; on la l&acirc;che.</p>
+
+<div class="grid2">
+  <div>
+    <div class="demo push">
+      <div class="rail-in">
+        <div class="e"><i></i><span>Accueil</span></div>
+        <div class="e on"><i></i><span>Service</span></div>
+        <div class="e"><i></i><span>R&eacute;servations</span></div>
+        <div class="e"><i></i><span>Clients</span></div>
+        <div class="e"><i></i><span>R&eacute;glages</span></div>
+      </div>
+      <div class="plan">
+        <div class="t r" style="left:22px;top:24px">1</div>
+        <div class="t" style="left:96px;top:22px">3</div>
+        <div class="t r occ" style="left:180px;top:24px">4</div>
+        <div class="t occ" style="left:30px;top:100px">11</div>
+        <div class="t" style="left:120px;top:104px">12</div>
+        <div class="t r" style="left:212px;top:100px">8</div>
+      </div>
+    </div>
+    <p class="cap ko"><b>&Agrave; &eacute;viter</b> &mdash; le rail pousse&nbsp;: toute la salle se d&eacute;cale. <i>Survole&nbsp;:</i> les tables bougent.</p>
+  </div>
+  <div>
+    <div class="demo pc">
+      <div class="rail"></div>
+      <div class="rail-in">
+        <div class="e"><i></i><span>Accueil</span></div>
+        <div class="e on"><i></i><span>Service</span></div>
+        <div class="e"><i></i><span>R&eacute;servations</span></div>
+        <div class="e"><i></i><span>Clients</span></div>
+        <div class="e"><i></i><span>R&eacute;glages</span></div>
+      </div>
+      <div class="plan">
+        <div class="t r" style="left:22px;top:24px">1</div>
+        <div class="t" style="left:96px;top:22px">3</div>
+        <div class="t r occ" style="left:180px;top:24px">4</div>
+        <div class="t occ" style="left:30px;top:100px">11</div>
+        <div class="t" style="left:120px;top:104px">12</div>
+        <div class="t r" style="left:212px;top:100px">8</div>
+      </div>
+    </div>
+    <p class="cap ok"><b>Retenu</b> &mdash; le rail recouvre&nbsp;: la salle ne bouge jamais. <i>Survole&nbsp;:</i> rien ne se d&eacute;place.</p>
+  </div>
+</div>
+
+<h2>PC &mdash; le survol</h2>
+<div class="grid3">
+  <div class="bx"><b>Ouverture&nbsp;: 150&nbsp;ms</b><span>Un d&eacute;lai avant d&rsquo;ouvrir. Sans lui, le rail s&rsquo;ouvre chaque fois que le curseur <i>traverse</i> le bord gauche pour aller ailleurs.</span></div>
+  <div class="bx"><b>Fermeture&nbsp;: 200&nbsp;ms</b><span>Un d&eacute;lai avant de fermer, pour pardonner la sortie accidentelle en diagonale.</span></div>
+  <div class="bx"><b>Animation&nbsp;: 140&nbsp;ms</b><span>Largeur et opacit&eacute; ensemble. Assez court pour qu&rsquo;on ne l&rsquo;attende pas, assez long pour qu&rsquo;on comprenne que &ccedil;a vient de la gauche.</span></div>
+</div>
+
+<h2>Tablette &mdash; les 3 secondes</h2>
+<p class="rb-note">Essaie&nbsp;: touche le rail ci-dessous, puis touche la salle avant la fin du compte &agrave; rebours.</p>
+
+<div class="demo" id="rbTouch">
+  <div class="rail"></div>
+  <div class="rail-in" id="rbRail">
+    <div class="e"><i></i><span>Accueil</span></div>
+    <div class="e on"><i></i><span>Service</span></div>
+    <div class="e"><i></i><span>R&eacute;servations</span></div>
+    <div class="e"><i></i><span>Clients</span></div>
+    <div class="e"><i></i><span>R&eacute;glages</span></div>
+  </div>
+  <div class="plan" id="rbPlan">
+    <div class="t r" style="left:22px;top:24px">1</div>
+    <div class="t" style="left:96px;top:22px">3</div>
+    <div class="t r occ" style="left:180px;top:24px">4</div>
+    <div class="t occ" style="left:30px;top:100px">11</div>
+    <div class="t" style="left:120px;top:104px">12</div>
+    <div class="t r" style="left:212px;top:100px">8</div>
+    <div class="tapme" id="rbHint">TOUCHE LE RAIL</div>
+  </div>
+</div>
+
+<div class="tl">
+  <div class="tl-ax">
+    <div class="bar"></div>
+    <div class="fill" style="left:12%;width:46%"></div>
+    <div class="pt" style="left:12%"></div><div class="lb" style="left:12%">contact</div><div class="sub" style="left:12%">les libell&eacute;s apparaissent</div>
+    <div class="pt" style="left:35%"></div><div class="lb" style="left:35%">contact &agrave; nouveau</div><div class="sub" style="left:35%">le compte repart de z&eacute;ro</div>
+    <div class="pt gr" style="left:58%"></div><div class="lb" style="left:58%">+3&nbsp;s</div><div class="sub" style="left:58%">fermeture</div>
+    <div class="pt gr" style="left:85%"></div><div class="lb" style="left:85%">contact ailleurs</div><div class="sub" style="left:85%">fermeture <b>imm&eacute;diate</b></div>
+  </div>
+</div>
+
+<h2>La question que &ccedil;a laisse&nbsp;: sur tablette, un contact sur une ic&ocirc;ne, c&rsquo;est quoi&nbsp;?</h2>
+<p class="rb-note">Sur PC la question ne se pose pas &mdash; survoler et cliquer sont deux gestes s&eacute;par&eacute;s. Sur tablette il n&rsquo;y en a qu&rsquo;un.</p>
+
+<div class="options">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Un contact navigue, toujours</h3>
+      <p class="subtitle">Les libell&eacute;s sont une confirmation, pas une aide au choix.</p>
+      <p>Toucher une ic&ocirc;ne change d&rsquo;&eacute;cran imm&eacute;diatement. Les libell&eacute;s s&rsquo;affichent pendant les 3&nbsp;s qui suivent&nbsp;: on lit <i>o&ugrave; l&rsquo;on vient d&rsquo;aller</i>, pas o&ugrave; l&rsquo;on pourrait aller.</p>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Un geste, un r&eacute;sultat. Le co&ucirc;t de la navigation ne double jamais.</li><li>Cinq entr&eacute;es&nbsp;: les ic&ocirc;nes sont apprises en une soir&eacute;e.</li></ul></div>
+        <div><b>Contre</b><ul><li>La toute premi&egrave;re fois, on tape en aveugle.</li></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Premier contact&nbsp;: ouvrir. Second&nbsp;: naviguer</h3>
+      <p class="subtitle">Les libell&eacute;s sont une aide au choix.</p>
+      <p>Le rail replié absorbe le premier contact et se contente de s&rsquo;ouvrir. C&rsquo;est le contact suivant, sur un libell&eacute; lisible, qui navigue.</p>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>On ne se trompe jamais d&rsquo;&eacute;cran.</li><li>Aucun apprentissage requis.</li></ul></div>
+        <div><b>Contre</b><ul><li>Deux gestes &agrave; chaque changement d&rsquo;&eacute;cran, cinquante fois par soir.</li><li>Un contact qui ne fait &laquo;&nbsp;rien&nbsp;&raquo; est per&ccedil;u comme un rat&eacute; de l&rsquo;&eacute;cran tactile.</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rb-verdict">
+  <b>Je recommande A</b>, avec un correctif pour son seul d&eacute;faut&nbsp;: <b>au tout premier lancement, le rail s&rsquo;ouvre d&eacute;ploy&eacute;</b> et se replie apr&egrave;s le premier contact. On paie la d&eacute;couverte une fois, dans la vie du compte, au lieu de la payer &agrave; chaque geste.
+</div>
+
+<h2>Trois r&egrave;gles de bord</h2>
+<div class="grid3">
+  <div class="bx"><b>Jamais pendant un glisser</b><span>Tant qu&rsquo;une r&eacute;servation est saisie, le rail est inerte&nbsp;: ni survol, ni contact. Rien ne doit appara&icirc;tre au-dessus de la salle pendant qu&rsquo;on vise une table.</span></div>
+  <div class="bx"><b>L&rsquo;actif reste lisible repli&eacute;</b><span>La pastille orange pleine tient toute seule&nbsp;: on sait o&ugrave; l&rsquo;on est sans ouvrir le rail. C&rsquo;est ce qui rend le repli acceptable.</span></div>
+  <div class="bx"><b>Naviguer referme</b><span>Choisir une entr&eacute;e n&rsquo;attend pas les 3&nbsp;s&nbsp;: le rail se referme d&egrave;s que le nouvel &eacute;cran est l&agrave;. Le d&eacute;lai ne sert qu&rsquo;&agrave; la lecture, jamais &agrave; l&rsquo;attente.</span></div>
+</div>
+
+</div>
+
+<script>
+(function(){
+  var demo=document.getElementById('rbTouch'), rail=document.getElementById('rbRail'),
+      plan=document.getElementById('rbPlan'), hint=document.getElementById('rbHint'), t=null;
+  if(!demo) return;
+  function close(){ rail.classList.remove('open'); if(t){clearTimeout(t);t=null;} hint.textContent='TOUCHE LE RAIL'; }
+  rail.addEventListener('click',function(e){
+    e.stopPropagation();
+    rail.classList.add('open');
+    if(t) clearTimeout(t);
+    hint.textContent='FERMETURE DANS 3 s';
+    t=setTimeout(close,3000);
+  });
+  plan.addEventListener('click',function(){
+    if(rail.classList.contains('open')){ close(); hint.textContent='FERMÉ IMMÉDIATEMENT'; setTimeout(function(){hint.textContent='TOUCHE LE RAIL';},1200); }
+  });
+})();
+</script>

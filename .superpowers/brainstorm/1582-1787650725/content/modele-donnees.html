@@ -1,0 +1,257 @@
+<h2>Section 1 — Le modèle de données</h2>
+<p class="subtitle">Les entités, puis la seule mécanique vraiment subtile&nbsp;: <b>d'où vient la couleur d'une table</b>. Elle n'est pas stockée — elle se calcule.</p>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap');
+
+.g { --font:'Exo 2',sans-serif; --mono:'IBM Plex Mono',monospace;
+     --bg:#EDE8E2; --card:#FBFAF8; --edge:#DFD9D1; --ink:#3A3A38; --dim:#9A968F;
+     --accent:#F5A04A; --slate:#2E2A26; --go:#5FBF7A; --meh:#B3BE4E; }
+.g * { box-sizing:border-box; }
+.g { font-family:var(--font); }
+
+/* ── carte entité ── */
+.cols { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+.col { flex:1 1 250px; min-width:230px; }
+.colh { font:700 10px/1 var(--font); letter-spacing:.12em; text-transform:uppercase;
+        color:var(--dim); margin:0 0 9px 3px; }
+.ent { background:var(--card); border:1px solid var(--edge); border-radius:12px;
+       padding:11px 12px 10px; margin-bottom:9px; }
+.ent.key { border-color:var(--accent); box-shadow:0 0 0 2px rgba(245,160,74,.18); }
+.ent h4 { margin:0 0 2px; font:700 13.5px/1.2 var(--font); color:var(--ink); }
+.ent .tag { font:italic 300 11px/1.35 var(--font); color:var(--dim); display:block; margin-bottom:8px; }
+.f { display:flex; gap:7px; align-items:baseline; font:500 11.5px/1.6 var(--font); color:#5F584D; }
+.f code { font:500 10.5px/1 var(--mono); color:#2f2b26; background:#F1ECE4;
+          padding:2px 5px; border-radius:4px; white-space:nowrap; }
+.f s { text-decoration:none; font:italic 300 11px/1.5 var(--font); color:var(--dim); }
+.f.pk code { background:#FDF2E4; color:#8A5210; }
+
+.rel { background:var(--card); border:1px solid var(--edge); border-radius:12px;
+       padding:13px 14px; margin-top:4px; }
+.rel div { font:500 12px/1.85 var(--font); color:#5F584D; }
+.rel b { color:#2f2b26; font-weight:700; }
+.rel em { font-style:italic; color:var(--dim); font-weight:400; }
+
+/* ── timeline ── */
+.tl { background:var(--slate); border:1px solid #241F1B; border-radius:14px; padding:18px 18px 16px; }
+.tlh { font:600 12px/1.4 var(--font); color:#C9BFB0; margin-bottom:2px; }
+.tlh b { color:#F0EAE0; font-weight:700; }
+.tlh s { text-decoration:none; font:italic 300 11.5px/1.4 var(--font); color:#8A8073; }
+.axis { display:flex; margin:16px 0 0; }
+.ax { flex:1; text-align:center; font:500 10.5px/1 var(--mono); color:#8A8073; }
+.track { position:relative; height:40px; margin:7px 0 0; background:rgba(255,255,255,.035);
+         border-radius:8px; overflow:hidden; }
+.resv { position:absolute; top:5px; height:30px; border-radius:7px; border:1.5px solid;
+        display:flex; align-items:center; padding:0 10px; gap:7px;
+        font:600 11px/1 var(--font); }
+.resv s { text-decoration:none; font:italic 300 10.5px/1 var(--font); opacity:.8; }
+.r-assise { background:rgba(230,120,95,.22); border-color:#D9765C; color:#F2A48E; }
+.r-conf   { background:rgba(120,190,230,.18); border-color:#6FA8CC; color:#A8D5F0; }
+.nowline { position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--accent); z-index:3; }
+.nowlbl { position:absolute; top:-19px; transform:translateX(-50%);
+          font:700 9.5px/1 var(--font); letter-spacing:.06em; color:var(--accent); white-space:nowrap; }
+
+.chips { display:flex; margin:11px 0 0; gap:4px; }
+.ch { flex:1; text-align:center; padding:7px 2px; border-radius:8px; border:1.5px solid;
+      font:700 9.5px/1.25 var(--font); letter-spacing:.03em; }
+.c-occ { background:rgba(230,120,95,.20); border-color:#D9765C; color:#F2A48E; }
+.c-res { background:rgba(120,190,230,.16); border-color:#6FA8CC; color:#A8D5F0; }
+.c-lib { background:rgba(255,255,255,.05); border-color:#6A6055; color:#C9BFB0; }
+.ch s { display:block; text-decoration:none; font:italic 300 9px/1.3 var(--font); opacity:.7; margin-top:2px; }
+
+/* ── règles ── */
+.rules { display:flex; gap:12px; flex-wrap:wrap; }
+.rl { flex:1 1 250px; background:var(--card); border:1px solid var(--edge); border-radius:12px; padding:13px 14px; }
+.rl h4 { margin:0 0 8px; font:700 10px/1 var(--font); letter-spacing:.08em; text-transform:uppercase; }
+.rl.no h4 { color:#A8543C; } .rl.ok h4 { color:#3E8F58; } .rl.mh h4 { color:#7A8320; }
+.rl ul { margin:0; padding-left:15px; }
+.rl li { font:500 11.5px/1.65 var(--font); color:#5F584D; margin-bottom:3px; }
+.rl li b { color:#2f2b26; font-weight:700; }
+.rl code { font:500 10.5px/1 var(--mono); background:#F1ECE4; padding:2px 5px; border-radius:4px; color:#2f2b26; }
+
+.q { margin-top:16px; background:rgba(245,160,74,.10); border:1px solid rgba(245,160,74,.4);
+     border-radius:12px; padding:14px 15px; font:400 12.5px/1.65 var(--font); color:#5F584D; }
+.q b { color:#8A5210; font-weight:700; }
+</style>
+
+<div class="g">
+
+<!-- ═════════ ENTITÉS ═════════ -->
+<h3 style="margin-top:4px">Les entités</h3>
+<div class="cols">
+
+  <div class="col">
+    <p class="colh">Configuration — ça bouge rarement</p>
+
+    <div class="ent">
+      <h4>Restaurant</h4><span class="tag">le locataire — tout est cloisonné dessous</span>
+      <div class="f pk"><code>id</code></div>
+      <div class="f"><code>nom</code></div>
+      <div class="f"><code>fuseau</code> <s>Europe/Paris</s></div>
+      <div class="f"><code>rotation_defaut</code> <s>105 min</s></div>
+      <div class="f"><code>tolerance_places</code> <s>+2 avant de dégrader</s></div>
+      <div class="f"><code>retard_grace</code> <s>15 min</s></div>
+    </div>
+
+    <div class="ent">
+      <h4>Zone</h4><span class="tag">salle, terrasse, étage — un onglet chacune</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code></div>
+      <div class="f"><code>nom</code> · <code>ordre</code></div>
+      <div class="f"><code>largeur</code> <code>hauteur</code> <s>en unités de plan, pas en pixels</s></div>
+    </div>
+
+    <div class="ent key">
+      <h4>Table</h4><span class="tag">l'objet posé sur le plan</span>
+      <div class="f pk"><code>id</code> <code>zone_id</code></div>
+      <div class="f"><code>numero</code> <s>« 7 », « T12 », « Bar 3 »</s></div>
+      <div class="f"><code>capacite</code></div>
+      <div class="f"><code>forme</code> <s>ronde · rectangulaire</s></div>
+      <div class="f"><code>x</code> <code>y</code> <code>l</code> <code>h</code> <code>rotation</code></div>
+      <div class="f"><code>a_nettoyer_depuis</code> <s>le seul état physique stocké</s></div>
+    </div>
+
+    <div class="ent">
+      <h4>Service</h4><span class="tag">déjeuner, dîner — par jour de semaine</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code></div>
+      <div class="f"><code>jour</code> · <code>ouverture</code> · <code>fermeture</code></div>
+      <div class="f"><code>pas_creneau</code> <s>15 ou 30 min → la frise</s></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="colh">Réservation — ça bouge en permanence</p>
+
+    <div class="ent key">
+      <h4>Réservation</h4><span class="tag">l'objet central</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code> <code>client_id</code></div>
+      <div class="f"><code>debut</code> <s>UTC</s> · <code>duree</code> <s>min</s></div>
+      <div class="f"><code>jour_service</code> <s>date locale — le dîner de 00:30 appartient à la veille</s></div>
+      <div class="f"><code>couverts</code></div>
+      <div class="f"><code>statut</code> <s>confirmée · assise · terminée · no-show · annulée</s></div>
+      <div class="f"><code>source</code> <s>web · téléphone · walk-in · autre</s></div>
+      <div class="f"><code>zone_souhaitee</code> <s>optionnel</s></div>
+      <div class="f"><code>note</code> <s>« intérieur svp »</s></div>
+      <div class="f"><code>assis_a</code> <code>termine_a</code></div>
+    </div>
+
+    <div class="ent key">
+      <h4>Affectation</h4><span class="tag">le lien réservation ↔ table</span>
+      <div class="f pk"><code>reservation_id</code> <code>table_id</code></div>
+      <div class="f"><code>affecte_par</code> <code>affecte_a</code></div>
+      <div class="f"><s>Plusieurs lignes = un groupe sur deux tables rapprochées.</s></div>
+    </div>
+
+    <div class="ent">
+      <h4>Fermeture exceptionnelle</h4><span class="tag">l'écran « horaires exceptionnels » de tes tests</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code></div>
+      <div class="f"><code>du</code> <code>au</code> · <code>type</code></div>
+      <div class="f"><code>horaires_remplacement</code> <s>optionnel</s></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p class="colh">Personnes</p>
+
+    <div class="ent">
+      <h4>Client</h4><span class="tag">le mini-CRM</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code></div>
+      <div class="f"><code>nom</code> · <code>email</code> · <code>telephone</code></div>
+      <div class="f"><code>notes</code> <s>allergies, occasions, VIP</s></div>
+      <div class="f"><code>nb_noshow</code> <s>compteur dérivé, mis à jour à chaque no-show</s></div>
+    </div>
+
+    <div class="ent">
+      <h4>Utilisateur</h4><span class="tag">qui a le droit de quoi</span>
+      <div class="f pk"><code>id</code> <code>restaurant_id</code></div>
+      <div class="f"><code>role</code> <s>admin · staff</s></div>
+      <div class="f"><s>Le crayon « Éditer le plan » n'existe que pour admin.</s></div>
+    </div>
+
+    <div class="rel">
+      <div><b>Restaurant</b> 1—∞ <b>Zone</b> 1—∞ <b>Table</b></div>
+      <div><b>Client</b> 1—∞ <b>Réservation</b></div>
+      <div><b>Réservation</b> ∞—∞ <b>Table</b> <em>via Affectation</em></div>
+      <div><b>Restaurant</b> 1—∞ <b>Service</b>, <b>Utilisateur</b></div>
+      <div style="margin-top:7px;font-size:11.5px"><em>Toutes les requêtes sont filtrées par <b>restaurant_id</b> — c'est la frontière du multi-tenant.</em></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ DÉRIVATION ═════════ -->
+<h3 style="margin-top:30px">D'où vient la couleur d'une table</h3>
+<p class="subtitle">Le statut n'est pas une colonne. Une seule chose est stockée&nbsp;: <code style="font:500 11px/1 var(--mono);background:#F1ECE4;padding:2px 6px;border-radius:4px">a_nettoyer_depuis</code>. Tout le reste se déduit des <b>intervalles d'occupation</b> qui recouvrent l'heure choisie sur la frise.</p>
+
+<div class="tl">
+  <div class="tlh"><b>Table 4</b> · 4 places · Salle &nbsp;<s>— il est 20:07, la frise couvre 19:00 → 21:30</s></div>
+
+  <div class="track" style="margin-top:22px">
+    <div class="nowlbl" style="left:36.7%">MAINTENANT 20:07</div>
+    <div class="nowline" style="left:36.7%"></div>
+    <div class="resv r-assise" style="left:0;width:38.5%">Dubois · 4p <s>assise · 19:00 → 20:45</s></div>
+    <div class="resv r-conf"   style="left:76.9%;right:0">Petit · 4p <s>confirmée · 21:00 → 22:45</s></div>
+  </div>
+
+  <div class="axis">
+    <div class="ax">19:00</div><div class="ax">19:30</div><div class="ax">20:00</div>
+    <div class="ax">20:30</div><div class="ax">21:00</div><div class="ax">21:30</div>
+  </div>
+
+  <div class="chips">
+    <div class="ch c-occ">Occupée<s>Dubois est assise</s></div>
+    <div class="ch c-occ">Occupée<s>Dubois est assise</s></div>
+    <div class="ch c-occ">Occupée<s>jusqu'à 20:45</s></div>
+    <div class="ch c-lib">Libre<s>entre les deux</s></div>
+    <div class="ch c-res">Réservée<s>Petit arrive</s></div>
+    <div class="ch c-res">Réservée<s>Petit est là</s></div>
+  </div>
+
+  <div style="margin-top:15px;font:400 11.5px/1.65 var(--font);color:#A69C8E">
+    <b style="color:#F0EAE0">La règle, en une phrase&nbsp;:</b> à l'heure <b style="color:#F0EAE0">T</b>, on cherche l'affectation dont l'intervalle recouvre T.
+    Si son statut est <span style="color:#F2A48E">assise</span> → occupée. Si c'est <span style="color:#A8D5F0">confirmée</span> → réservée
+    (et si <code style="font:500 10.5px/1 var(--mono);background:rgba(255,255,255,.08);padding:2px 5px;border-radius:4px;color:#E3CE86">maintenant &gt; début + grâce</code>, on ajoute le cercle corail «&nbsp;en retard&nbsp;»).
+    Aucun intervalle&nbsp;? Alors <code style="font:500 10.5px/1 var(--mono);background:rgba(255,255,255,.08);padding:2px 5px;border-radius:4px;color:#E3CE86">a_nettoyer_depuis</code> décide&nbsp;: rempli → à nettoyer, vide → libre.
+  </div>
+</div>
+
+<!-- ═════════ COMPATIBILITÉ ═════════ -->
+<h3 style="margin-top:30px">La fonction de compatibilité</h3>
+<p class="subtitle">C'est elle qui produit les halos verts et les vert-jaunes. Une réservation, une heure&nbsp;T&nbsp;: chaque table reçoit un verdict.</p>
+
+<div class="rules">
+  <div class="rl no">
+    <h4>✗ Écartée — estompée, pas de halo</h4>
+    <ul>
+      <li>Une affectation recouvre déjà <b>T → T + durée</b></li>
+      <li><code>capacité &lt; couverts − tolérance_basse</code><br><s style="font:italic 300 11px/1.5 var(--font);color:var(--dim);text-decoration:none">une 2p pour 6 personnes ne sert à rien</s></li>
+      <li>La zone est fermée pour ce service</li>
+    </ul>
+  </div>
+  <div class="rl ok">
+    <h4>✓ Parfaite — halo vert plein</h4>
+    <ul>
+      <li>Libre sur tout l'intervalle</li>
+      <li><code>couverts ≤ capacité ≤ couverts + tolérance</code></li>
+      <li>Propre</li>
+      <li>Zone conforme au souhait, s'il y en a un</li>
+      <li><b>Dépôt immédiat</b>, aucun popup</li>
+    </ul>
+  </div>
+  <div class="rl mh">
+    <h4>~✓ À réserve — halo vert-jaune</h4>
+    <ul>
+      <li>Possible, mais avec <b>au moins une raison</b> à dire</li>
+      <li>Chaque raison est un texte du catalogue&nbsp;: non nettoyée, places en trop, places en moins, réservée plus tard, zone non demandée</li>
+      <li>Le popup les <b>liste toutes</b>, puis Annuler / Placer</li>
+    </ul>
+  </div>
+</div>
+
+<div class="q">
+  <b>Une question avant d'écrire.</b> Une table sale, regardée à 21:00 sur la frise&nbsp;: elle s'affiche comment&nbsp;?
+  Physiquement elle est sale <em>maintenant</em>, mais quelqu'un l'aura sûrement redressée d'ici là.
+  Deux réponses possibles&nbsp;— <b>(1)</b> elle reste «&nbsp;à nettoyer&nbsp;» partout tant que personne ne l'a nettoyée&nbsp;: honnête, on ne fait pas de promesse à la place de l'équipe.
+  <b>(2)</b> «&nbsp;à nettoyer&nbsp;» ne s'affiche que sur le créneau courant, et les créneaux futurs la montrent libre&nbsp;: plus lisible pour projeter la soirée, mais on affiche un état qui n'est peut-être jamais arrivé.
+  <br><br>Je penche pour <b>(1)</b> — le plan doit dire ce qui <em>est</em>, pas ce qu'on espère. Et de toute façon, poser une réservation dessus la nettoie.
+</div>
+
+</div>

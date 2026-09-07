@@ -1,0 +1,172 @@
+<style>
+  .ag { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --cor:#B4674F; --vio:#5B4A8A; --bleu:#3D6E8E; --vert:#4E7C59; }
+  .ag-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .ag-note b { color:#2E2A26; }
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:16px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .verdict b { color:#2E2A26; }
+
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; margin:14px 0 6px; }
+  .fr-rail { width:30px; flex:none; background:#FBFAF8; border-radius:8px; padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .ic { width:15px; height:15px; border:1.6px solid #B5ADA2; border-radius:4px; }
+  .ic.on { background:#F5A04A; border-color:#F5A04A; }
+  .sp { flex:1; }
+  .body { flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+
+  .hd { display:flex; align-items:center; gap:10px; }
+  .hd .clk { font-size:17px; font-weight:700; color:#2E2A26; font-variant-numeric:tabular-nums; }
+  .hd .st { font-size:11px; color:#8A8177; }
+  .hd .st b { color:#2E2A26; }
+  .pill { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:20px; padding:3px 11px; font-size:11px; color:#2E2A26; }
+
+  /* --- le bandeau allergies --- */
+  .alb { background:#F7E7E1; border:1px solid #E3C4B7; border-left:3px solid #B4674F; border-radius:0 8px 8px 0; padding:6px 11px; display:flex; align-items:center; gap:10px; }
+  .alb .ttl { font-size:9.5px; letter-spacing:.07em; color:#B4674F; font-weight:700; flex:none; }
+  .alb .items { flex:1; display:flex; gap:14px; flex-wrap:wrap; }
+  .alb .it { font-size:11.5px; color:#2E2A26; }
+  .alb .it b { font-variant-numeric:tabular-nums; }
+  .alb .it span { color:#8C4E3A; font-weight:600; }
+  .alb .tbl { font-size:10px; color:#A08578; }
+
+  .tabs { display:flex; gap:5px; align-items:center; }
+  .tab { font-size:11px; padding:4px 12px; border-radius:20px; background:#FBFAF8; border:1px solid #E4DDD3; color:#8A8177; }
+  .tab.on { background:#2E2A26; border-color:#2E2A26; color:#fff; font-weight:600; }
+
+  .stage { display:flex; gap:7px; }
+  .cv { flex:1; min-width:0; background:#FBFAF8; border-radius:9px; position:relative; min-height:212px; }
+  .tb { position:absolute; border-radius:6px; font-size:9.5px; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.2; }
+  .tb.free { background:#FBFAF8; border:1.5px solid #D8D0C6; color:#8A8177; }
+  .tb.res  { background:#E4EFF7; border:1.5px solid #AFCADB; color:#2F5A76; }
+  .tb.occ  { background:#F7E7E1; border:1.5px solid #D9B5A6; color:#8C4E3A; }
+  .tb i { font-style:normal; font-size:8px; opacity:.8; }
+  .dot { position:absolute; top:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:#B4674F; color:#fff; font-size:9px; line-height:15px; text-align:center; font-weight:700; border:1.5px solid #FBFAF8; }
+
+  .col { width:118px; flex:none; background:#FBFAF8; border-radius:9px; padding:8px 7px; }
+  .col b.t { font-size:8.5px; letter-spacing:.06em; color:#A79E93; font-weight:700; display:block; margin-bottom:6px; }
+  .rc { background:#fff; border:1px solid #E4DDD3; border-radius:7px; padding:5px 7px; font-size:10px; color:#2E2A26; margin-bottom:4px; line-height:1.35; }
+  .rc b { display:block; font-size:10.5px; }
+  .rc em { font-style:normal; color:#8A8177; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx.cor { border-left:3px solid #B4674F; }
+  .bx.vert { border-left:3px solid #4E7C59; }
+
+  table.k { width:100%; border-collapse:collapse; margin:12px 0 4px; background:#FBFAF8; border-radius:10px; overflow:hidden; }
+  table.k th { font-size:9.5px; letter-spacing:.07em; color:#8A8177; text-align:left; padding:8px 12px; background:#F1ECE5; font-weight:600; }
+  table.k td { font-size:12.5px; color:#2E2A26; padding:8px 12px; border-top:1px solid #F0EBE4; vertical-align:top; }
+  table.k td.d { color:#8A8177; font-size:12px; }
+  code { background:#EDE8E2; padding:1px 5px; border-radius:4px; font-size:11.5px; color:#5A5248; }
+</style>
+
+<div class="ag">
+
+<h1>Les allergies vivent sur l&rsquo;&eacute;cran Service</h1>
+<p class="subtitle">Deux emplacements, aucun bouton pour les faire dispara&icirc;tre.</p>
+
+<div class="fr">
+  <div class="fr-rail">
+    <div class="ic"></div><div class="ic on"></div><div class="ic"></div><div class="ic"></div>
+    <div class="sp"></div><div class="ic"></div>
+  </div>
+  <div class="body">
+
+    <div class="hd">
+      <span class="clk">12:38</span>
+      <span class="st">Service du midi &middot; <b>ferme dans 1 h 22</b></span>
+      <div class="sp"></div>
+      <span class="pill">Jeudi 4 sept. &#9662;</span>
+      <span class="pill">28 couverts</span>
+    </div>
+
+    <div class="alb">
+      <span class="ttl">ALLERGIES &middot; CE SERVICE</span>
+      <div class="items">
+        <span class="it"><b>12:30</b> Nguyen &middot; <span>sans gluten</span> <span class="tbl">T4</span></span>
+        <span class="it"><b>13:00</b> Ferrand &middot; <span>fruits de mer</span> <span class="tbl">&agrave; placer</span></span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on">Plan</div>
+      <div class="tab">Agenda</div>
+      <div class="sp"></div>
+      <div class="tab on" style="background:#EDE8E2;border-color:#DCD4C9;color:#5A5248">Salle</div>
+      <div class="tab">Terrasse</div>
+    </div>
+
+    <div class="stage">
+      <div class="cv">
+        <div class="tb free" style="left:12px;  top:12px;  width:62px; height:40px;">T1<i>2 pl.</i></div>
+        <div class="tb occ"  style="left:84px;  top:12px;  width:70px; height:40px;">T2<i>4 pers.</i></div>
+        <div class="tb res"  style="left:164px; top:12px;  width:70px; height:40px;">T3<i>13:15</i></div>
+        <div class="tb occ"  style="left:244px; top:12px;  width:70px; height:40px;">T4<i>2 pers.</i>
+          <span class="dot">!</span>
+        </div>
+        <div class="tb free" style="left:12px;  top:62px;  width:62px; height:40px;">T5<i>2 pl.</i></div>
+        <div class="tb occ"  style="left:84px;  top:62px;  width:70px; height:40px;">T6<i>4 pers.</i></div>
+        <div class="tb free" style="left:164px; top:62px;  width:70px; height:40px;">T7<i>6 pl.</i></div>
+        <div class="tb occ"  style="left:244px; top:62px;  width:70px; height:40px;">T8<i>3 pers.</i></div>
+        <div class="tb res"  style="left:12px;  top:112px; width:62px; height:40px;">T9<i>13:00</i></div>
+        <div class="tb free" style="left:84px;  top:112px; width:70px; height:40px;">T10<i>4 pl.</i></div>
+        <div style="position:absolute;left:12px;bottom:10px;font-size:10px;color:#A79E93;">La pastille corail sur T4 signale une allergie &agrave; cette table.</div>
+      </div>
+
+      <div class="col">
+        <b class="t">&Agrave; PLACER &middot; 1</b>
+        <div class="rc"><b>Ferrand</b>13:00 &middot; 2 pers.<br><em style="color:#B4674F;font-weight:600">fruits de mer</em></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<h2>Pourquoi ton objection est plus forte que le d&eacute;placement</h2>
+
+<div class="verdict"><b>&laquo;&nbsp;Vu, transmis&nbsp;&raquo; ne transmet rien.</b> C&rsquo;est une case qu&rsquo;on coche sur sa propre parole, et une notification qu&rsquo;un clic fait dispara&icirc;tre finit par &ecirc;tre cliqu&eacute;e sans &ecirc;tre lue &mdash; c&rsquo;est le sort de tous les accus&eacute;s de lecture. <b>Une pr&eacute;sence permanente ne pr&eacute;tend rien&nbsp;: elle se contente de rester vraie tant que le service dure.</b></div>
+
+<div class="grid3">
+  <div class="bx vert">
+    <b class="t">&Agrave; traiter redevient homog&egrave;ne</b>
+    <span>Chaque ligne qui reste a une <b>condition d&rsquo;ach&egrave;vement objective</b>&nbsp;: une demande est r&eacute;pondue, une table est plac&eacute;e, deux tables sont coll&eacute;es. Le logiciel sait quand c&rsquo;est fini. L&rsquo;allergie &eacute;tait la seule dont la fin d&eacute;pendait d&rsquo;une parole donn&eacute;e &agrave; soi-m&ecirc;me.</span>
+  </div>
+  <div class="bx">
+    <b class="t">L&rsquo;information est l&agrave; quand elle sert</b>
+    <span>L&rsquo;Accueil se lit une fois, &agrave; 11:12. L&rsquo;&eacute;cran Service reste ouvert <b>toute la dur&eacute;e du service</b> &mdash; y compris &agrave; 13:00, quand Ferrand arrive et qu&rsquo;il faut s&rsquo;en souvenir.</span>
+  </div>
+  <div class="bx">
+    <b class="t">Et elle est enfin situ&eacute;e</b>
+    <span>Sur l&rsquo;Accueil, &laquo;&nbsp;2 allergies&nbsp;&raquo; est une abstraction. Ici c&rsquo;est <b>une table</b>&nbsp;: la pastille corail sur la T4 dit &agrave; qui apporter l&rsquo;assiette avec pr&eacute;caution.</span>
+  </div>
+</div>
+
+<h2>Deux emplacements, deux fonctions</h2>
+
+<table class="k">
+  <tr><th style="width:26%">Emplacement</th><th>R&ocirc;le</th></tr>
+  <tr>
+    <td><b>Le bandeau d&rsquo;en-t&ecirc;te</b></td>
+    <td class="d">La liste compl&egrave;te du service, heure par heure, avec la table quand elle est connue et &laquo;&nbsp;&agrave; placer&nbsp;&raquo; quand elle ne l&rsquo;est pas. <b>C&rsquo;est ce qu&rsquo;on lit &agrave; voix haute en passant en cuisine.</b> Il n&rsquo;appara&icirc;t que s&rsquo;il y a quelque chose &agrave; dire, et il n&rsquo;a <b>aucun bouton de fermeture</b>&nbsp;: il dispara&icirc;t avec le service, pas avant.</td>
+  </tr>
+  <tr>
+    <td><b>La pastille sur la table</b></td>
+    <td class="d">Corail, en haut &agrave; droite, la m&ecirc;me couleur que l&rsquo;allergie sur la fiche (&sect;6.6) et que le badge no-show (&sect;6.2) &mdash; <b>le corail dit &laquo;&nbsp;attention, &ccedil;a co&ucirc;te&nbsp;&raquo;</b> partout dans le logiciel. Elle survit au d&eacute;placement de la r&eacute;servation d&rsquo;une table &agrave; l&rsquo;autre, puisqu&rsquo;elle appartient &agrave; la r&eacute;servation, pas &agrave; la table.</td>
+  </tr>
+</table>
+
+<p class="ag-note"><b>Et sur l&rsquo;Agenda</b>, m&ecirc;me pastille sur le bloc de la r&eacute;servation &mdash; c&rsquo;est la r&egrave;gle qu&rsquo;on vient d&rsquo;&eacute;tablir pour les tags&nbsp;: <b>ce qui qualifie une r&eacute;servation voyage avec elle, partout o&ugrave; elle appara&icirc;t.</b> L&rsquo;allergie est le premier cas de cette r&egrave;gle, et le plus s&eacute;rieux.</p>
+
+<div class="grid2">
+  <div class="bx cor">
+    <b class="t">Une seule chose &agrave; surveiller</b>
+    <span>Si un service comptait six allergies, le bandeau deviendrait long et repousserait le plan vers le bas. Au-del&agrave; de trois, il <b>replie les suivantes derri&egrave;re &laquo;&nbsp;+3 autres&nbsp;&raquo;</b> plut&ocirc;t que de s&rsquo;&eacute;tirer &mdash; l&rsquo;essentiel &eacute;tant qu&rsquo;on sache qu&rsquo;elles existent et que le d&eacute;tail soit &agrave; un doigt.</span>
+  </div>
+  <div class="bx">
+    <b class="t">Ce que l&rsquo;Accueil garde</b>
+    <span>Rien sur les allergies. Son bloc &laquo;&nbsp;service en cours&nbsp;&raquo; ne contient plus que les demandes en attente et les r&eacute;servations &agrave; placer &mdash; <b>et le bouton &laquo;&nbsp;Voir le service&nbsp;&raquo; m&egrave;ne pr&eacute;cis&eacute;ment l&agrave; o&ugrave; les allergies s&rsquo;affichent.</b></span>
+  </div>
+</div>
+
+</div>

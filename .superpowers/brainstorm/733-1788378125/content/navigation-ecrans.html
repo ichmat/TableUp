@@ -1,0 +1,193 @@
+<style>
+  .nv { --beige:#EDE8E2; --card:#FBFAF8; --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; }
+  .nv-inv { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:18px 0 8px; }
+  .nv-item { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .nv-item b { display:block; font-size:15px; color:#2E2A26; margin-bottom:4px; }
+  .nv-item span { font-size:13px; color:#8A8177; line-height:1.45; }
+  .nv-tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:20px; background:#EDE8E2; color:#8A8177; margin-left:6px; vertical-align:1px; }
+  .nv-tag.ok { background:#E4F1E7; color:#3E7A50; }
+  .nv-tag.out { background:#EFE9F4; color:#5B4A8A; }
+
+  .tab { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; height:250px; }
+  .tab.bottom { flex-direction:column; }
+  .rail { background:#FBFAF8; border-radius:8px; padding:8px 6px; display:flex; flex-direction:column; gap:3px; width:104px; flex:none; }
+  .rail-e { display:flex; align-items:center; gap:6px; font-size:11px; color:#8A8177; padding:5px 6px; border-radius:6px; white-space:nowrap; }
+  .rail-e.on { background:#F5A04A; color:#fff; font-weight:600; }
+  .rail-e i { width:14px; height:14px; border:1.5px solid currentColor; border-radius:3px; flex:none; display:block; opacity:.85; }
+  .rail-e.on i { border-color:#fff; }
+  .rail-sep { height:1px; background:#E4DDD3; margin:5px 2px; }
+  .body { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .hdr { background:#FBFAF8; border-radius:8px; padding:7px 10px; display:flex; align-items:center; gap:8px; font-size:11px; color:#2E2A26; }
+  .hdr .dt { font-weight:700; }
+  .hdr .sv { color:#8A8177; }
+  .hdr .sp { flex:1; }
+  .hdr .plus { background:#F5A04A; color:#fff; border-radius:6px; padding:2px 8px; font-weight:700; }
+  .vtabs { display:flex; gap:4px; }
+  .vtab { font-size:11px; padding:4px 11px; border-radius:20px; background:#FBFAF8; color:#8A8177; border:1px solid #E4DDD3; }
+  .vtab.on { background:#2E2A26; color:#fff; border-color:#2E2A26; }
+  .canvas { flex:1; background:#FBFAF8; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#B5ADA2; letter-spacing:.04em; }
+  .botbar { background:#FBFAF8; border-radius:8px; padding:6px; display:flex; justify-content:space-around; }
+  .botbar .rail-e { flex-direction:column; gap:3px; font-size:9px; padding:4px 8px; }
+
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:20px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .nv-note { font-size:13px; color:#8A8177; line-height:1.55; margin:6px 0 0; }
+  .flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; margin:10px 0; }
+  .flow em { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:6px; padding:4px 10px; font-style:normal; color:#2E2A26; }
+  .flow s { color:#B5ADA2; text-decoration:none; }
+</style>
+
+<div class="nv">
+
+<h1>Section 2 &mdash; Les &eacute;crans et la navigation</h1>
+<p class="subtitle">Ce qui existe autour du plan de salle, et comment on circule entre les &eacute;crans.</p>
+
+<h2>2.1 &middot; L&rsquo;inventaire</h2>
+<div class="nv-inv">
+  <div class="nv-item"><b>Accueil</b><span>L&rsquo;&eacute;tat du jour <i>avant</i> le service&nbsp;: couverts attendus, demandes &agrave; confirmer, alertes.</span></div>
+  <div class="nv-item"><b>Plan de salle <span class="nv-tag ok">con&ccedil;u</span></b><span>La salle en temps r&eacute;el&nbsp;: placement, statuts, rapprochements.</span></div>
+  <div class="nv-item"><b>Agenda (frise)</b><span>Les m&ecirc;mes r&eacute;servations sur un axe temps&nbsp;: arriv&eacute;es, rotation, pacing.</span></div>
+  <div class="nv-item"><b>Liste des r&eacute;servations</b><span>Recherche et filtres. Tout ce qui n&rsquo;est <i>pas</i> aujourd&rsquo;hui vit ici.</span></div>
+  <div class="nv-item"><b>Fiche r&eacute;servation <span class="nv-tag">panneau</span></b><span>Pas un &eacute;cran&nbsp;: un panneau lat&eacute;ral qui s&rsquo;ouvre par-dessus n&rsquo;importe lequel.</span></div>
+  <div class="nv-item"><b>Clients</b><span>Le mini-CRM&nbsp;: fiche, historique, no-shows, allergies, notes.</span></div>
+  <div class="nv-item"><b>Param&egrave;tres</b><span>Ouvertures, services, capacit&eacute;s, notifications, tables &amp; zones, &eacute;quipe.</span></div>
+  <div class="nv-item"><b>&Eacute;diteur de plan <span class="nv-tag ok">con&ccedil;u</span></b><span>Plein &eacute;cran, atteint par le crayon. Admin uniquement.</span></div>
+  <div class="nv-item"><b>Widget client <span class="nv-tag out">public</span></b><span>Application s&eacute;par&eacute;e, sur le site du restaurant. Hors back-office.</span></div>
+</div>
+
+<h2>2.2 &middot; La question centrale&nbsp;: trois &eacute;crans, ou trois vues&nbsp;?</h2>
+<p class="nv-note">Plan, agenda et liste montrent <b>les m&ecirc;mes r&eacute;servations</b> du <b>m&ecirc;me service</b>. Pendant le coup de feu, on passe de l&rsquo;un &agrave; l&rsquo;autre toutes les deux minutes. La question est de savoir si ce sont trois destinations du rail, ou une seule destination avec trois angles de vue.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Rail plat</h3>
+      <p class="subtitle">Chaque &eacute;cran est une entr&eacute;e.</p>
+      <div class="tab">
+        <div class="rail">
+          <div class="rail-e"><i></i>Accueil</div>
+          <div class="rail-e on"><i></i>Plan</div>
+          <div class="rail-e"><i></i>Agenda</div>
+          <div class="rail-e"><i></i>R&eacute;servations</div>
+          <div class="rail-e"><i></i>Clients</div>
+          <div class="rail-sep"></div>
+          <div class="rail-e"><i></i>R&eacute;glages</div>
+        </div>
+        <div class="body">
+          <div class="hdr"><span class="dt">Sam. 20 sept.</span><span class="sv">Soir</span><span class="sp"></span><span class="plus">+</span></div>
+          <div class="canvas">PLAN DE SALLE</div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Tout est &agrave; un tap.</li><li>Aucune hi&eacute;rarchie &agrave; comprendre.</li></ul></div>
+        <div><b>Contre</b><ul><li>Le contexte (date + service) est r&eacute;p&eacute;t&eacute; sur 3 &eacute;crans &rarr; il faut le synchroniser, sinon on change de vue et on atterrit un autre jour.</li><li>Le rail grossit &agrave; chaque &eacute;cran ajout&eacute;.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Le service est <i>un seul</i> endroit</h3>
+      <p class="subtitle">Un en-t&ecirc;te de contexte, trois onglets de vue.</p>
+      <div class="tab">
+        <div class="rail">
+          <div class="rail-e"><i></i>Accueil</div>
+          <div class="rail-e on"><i></i>Service</div>
+          <div class="rail-e"><i></i>R&eacute;servations</div>
+          <div class="rail-e"><i></i>Clients</div>
+          <div class="rail-sep"></div>
+          <div class="rail-e"><i></i>R&eacute;glages</div>
+        </div>
+        <div class="body">
+          <div class="hdr"><span class="dt">Sam. 20 sept.</span><span class="sv">Service du soir &middot; 62 couverts</span><span class="sp"></span><span class="plus">+</span></div>
+          <div class="vtabs"><span class="vtab on">Plan</span><span class="vtab">Agenda</span><span class="vtab">Liste</span></div>
+          <div class="canvas">PLAN DE SALLE</div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>&laquo;&nbsp;Samedi soir&nbsp;&raquo; est dit <b>une fois</b>. Changer de vue ne change jamais le moment regard&eacute;.</li><li>Le rail reste court et stable.</li><li>Les onglets de vue portent des badges, comme les onglets de salle.</li></ul></div>
+        <div><b>Contre</b><ul><li>Deux niveaux d&rsquo;onglets &agrave; l&rsquo;&eacute;cran plan (vues + salles).</li><li>Agenda est &agrave; deux taps, pas un.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="C" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Barre du bas</h3>
+      <p class="subtitle">Navigation au pouce, pas de rail.</p>
+      <div class="tab bottom">
+        <div class="body">
+          <div class="hdr"><span class="dt">Sam. 20 sept.</span><span class="sv">Soir</span><span class="sp"></span><span class="plus">+</span></div>
+          <div class="canvas">PLAN DE SALLE</div>
+        </div>
+        <div class="botbar">
+          <div class="rail-e on"><i></i>Plan</div>
+          <div class="rail-e"><i></i>Agenda</div>
+          <div class="rail-e"><i></i>R&eacute;sa</div>
+          <div class="rail-e"><i></i>Clients</div>
+          <div class="rail-e"><i></i>R&eacute;glages</div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div><b>Pour</b><ul><li>Atteignable au pouce, tablette tenue &agrave; deux mains.</li><li>Rend toute la largeur au plan.</li></ul></div>
+        <div><b>Contre</b><ul><li>Contredit la maquette que tu as d&eacute;j&agrave; dessin&eacute;e (rail lat&eacute;ral r&eacute;tractable).</li><li>En paysage, la ressource rare est la <b>hauteur</b>, pas la largeur. Une barre en bas co&ucirc;te la ligne la plus pr&eacute;cieuse.</li><li>Plafonne &agrave; ~5 entr&eacute;es.</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <b>Ma recommandation&nbsp;: B.</b>
+  <p class="nv-note">Parce que la vraie unit&eacute; de travail d&rsquo;un restaurateur n&rsquo;est pas &laquo;&nbsp;le plan&nbsp;&raquo; ou &laquo;&nbsp;l&rsquo;agenda&nbsp;&raquo; &mdash; c&rsquo;est <b>un service</b>. Le plan et la frise sont deux fa&ccedil;ons de regarder ce m&ecirc;me service&nbsp;: l&rsquo;un dans l&rsquo;espace, l&rsquo;autre dans le temps. En A, ce sont deux &eacute;crans qui doivent se souvenir l&rsquo;un de l&rsquo;autre, et le jour o&ugrave; la synchro casse, on d&eacute;place une r&eacute;servation du mauvais soir. En B, la question ne se pose pas&nbsp;: il n&rsquo;y a qu&rsquo;un seul contexte, &eacute;crit une seule fois en haut.</p>
+</div>
+
+<h2>2.3 &middot; Ce qui d&eacute;coule de B</h2>
+
+<div class="cards">
+  <div>
+    <h3>L&rsquo;en-t&ecirc;te de contexte</h3>
+    <p>Une seule ligne, toujours au m&ecirc;me endroit&nbsp;: <b>date</b> (fl&egrave;ches &lsaquo; &rsaquo; + calendrier), <b>service</b> (midi&nbsp;/&nbsp;soir), compteur de couverts. C&rsquo;est le seul endroit de l&rsquo;application o&ugrave; l&rsquo;on change de jour.</p>
+  </div>
+  <div>
+    <h3>Le &laquo;&nbsp;+&nbsp;&raquo; est global</h3>
+    <p>Cr&eacute;er une r&eacute;servation doit &ecirc;tre possible depuis n&rsquo;importe o&ugrave;, y compris depuis la fiche d&rsquo;un client. Le bouton vit dans l&rsquo;en-t&ecirc;te, pas dans le plan.</p>
+  </div>
+  <div>
+    <h3>La fiche est un panneau</h3>
+    <p>Toucher une r&eacute;servation ouvre un panneau &agrave; droite <b>sans quitter la vue</b>. On garde le plan sous les yeux pendant qu&rsquo;on lit les notes du client. Jamais un &eacute;cran plein.</p>
+  </div>
+  <div>
+    <h3>Deux niveaux d&rsquo;onglets</h3>
+    <p>Vues (Plan&nbsp;/&nbsp;Agenda&nbsp;/&nbsp;Liste) au-dessus, salles (Rez&nbsp;/&nbsp;&Eacute;tage&nbsp;/&nbsp;Terrasse) en dessous et <b>uniquement</b> dans la vue Plan. Les deux portent des badges, ce qui les rend coh&eacute;rents plut&ocirc;t que confus.</p>
+  </div>
+</div>
+
+<h2>2.4 &middot; O&ugrave; atterrit-on en ouvrant l&rsquo;application&nbsp;?</h2>
+<p class="nv-note">Tu avais dessin&eacute; un &eacute;cran d&rsquo;accueil. Il est utile &mdash; mais surtout &agrave; 11&nbsp;h. &Agrave; 20&nbsp;h&nbsp;30, personne ne le regarde, et l&rsquo;imposer co&ucirc;te un tap &agrave; chaque ouverture, cinquante fois par soir.</p>
+<div class="flow">
+  <em>Ouverture de l&rsquo;app</em> <s>&rarr;</s> <em>Un service est en cours&nbsp;?</em> <s>&rarr; oui &rarr;</s> <em><b>Plan de salle</b>, sur ce service</em>
+</div>
+<div class="flow">
+  <span style="width:130px"></span> <s>&rarr; non &rarr;</s> <em><b>Accueil</b> (pr&eacute;paration du prochain service)</em>
+</div>
+<p class="nv-note">L&rsquo;accueil reste atteignable en permanence dans le rail. Il devient l&rsquo;&eacute;cran de l&rsquo;<i>avant</i> et de l&rsquo;<i>apr&egrave;s</i>&nbsp;: demandes &agrave; confirmer, no-shows de la veille, couverts pr&eacute;vus, fermeture exceptionnelle &agrave; d&eacute;clarer.</p>
+
+<h2>2.5 &middot; Les r&ocirc;les</h2>
+<p class="nv-note">Tu as d&eacute;j&agrave; pos&eacute; qu&rsquo;un crayon n&rsquo;appara&icirc;t qu&rsquo;en <b>mode admin</b>. Cela suppose au moins deux r&ocirc;les&nbsp;:</p>
+<div class="nv-inv" style="grid-template-columns:repeat(2,1fr)">
+  <div class="nv-item"><b>Service</b><span>Voit Accueil, Service, R&eacute;servations, Clients. Place, d&eacute;place, marque une arriv&eacute;e, note un no-show. <i>Ne peut pas</i> d&eacute;placer une table ni changer les horaires d&rsquo;ouverture.</span></div>
+  <div class="nv-item"><b>Administrateur</b><span>Tout, plus&nbsp;: l&rsquo;&eacute;diteur de plan, les param&egrave;tres, l&rsquo;&eacute;quipe, le widget.</span></div>
+</div>
+
+<h2>Les trois questions que &ccedil;a laisse ouvertes</h2>
+<div class="nv-inv" style="grid-template-columns:repeat(3,1fr)">
+  <div class="nv-item"><b>1 &middot; Le rail repli&eacute;</b><span>Ta maquette montre repli&eacute; <i>et</i> d&eacute;pli&eacute;. Le repli est-il manuel (l&rsquo;utilisateur choisit) ou automatique (repli&eacute; d&egrave;s qu&rsquo;on entre dans le plan)&nbsp;?</span></div>
+  <div class="nv-item"><b>2 &middot; &laquo;&nbsp;Liste&nbsp;&raquo; en 3<sup>e</sup> onglet</b><span>Utile, alors qu&rsquo;il existe d&eacute;j&agrave; un &eacute;cran R&eacute;servations&nbsp;? Ou bien&nbsp;: onglet Liste = les r&eacute;servations <i>de ce service</i>, &eacute;cran R&eacute;servations = tout le reste&nbsp;?</span></div>
+  <div class="nv-item"><b>3 &middot; Midi et soir</b><span>Sur un service continu (brasserie non-stop), le s&eacute;lecteur midi/soir n&rsquo;a plus de sens. On le masque, ou on garde une frise unique sur la journ&eacute;e&nbsp;?</span></div>
+</div>
+
+</div>

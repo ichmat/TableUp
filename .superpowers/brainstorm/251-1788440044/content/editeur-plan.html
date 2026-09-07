@@ -1,0 +1,282 @@
+<style>
+  .ed { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --cor:#B4674F; --vio:#5B4A8A; --bleu:#3D6E8E; --vert:#4E7C59; --ambre:#B08628; }
+  .ed-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .ed-note b { color:#2E2A26; }
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:16px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .verdict b { color:#2E2A26; }
+
+  /* ---- cadre editeur ---- */
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; margin:14px 0 6px; display:flex; flex-direction:column; gap:7px; }
+  .top { display:flex; align-items:center; gap:9px; }
+  .top .bk { font-size:11.5px; color:#8A8177; }
+  .top h4 { margin:0; font-size:15px; color:#2E2A26; font-weight:700; }
+  .sp { flex:1; }
+  .draft { background:#FBF2DC; border:1px solid #E3CE96; border-radius:20px; padding:3px 11px; font-size:10.5px; color:#7A5C12; font-weight:700; }
+  .bt { text-align:center; font-size:11.5px; padding:5px 13px; border-radius:7px; font-weight:600; }
+  .bt.pri { background:#F5A04A; color:#fff; }
+  .bt.sec { background:#FBFAF8; border:1px solid #D8D0C6; color:#2E2A26; }
+  .bt.gh { background:transparent; border:1px solid #D8D0C6; color:#8A8177; }
+  .undo2 { display:flex; gap:3px; }
+  .undo2 span { width:26px; height:24px; background:#FBFAF8; border:1px solid #D8D0C6; border-radius:6px; font-size:12px; color:#6E675E; text-align:center; line-height:23px; }
+
+  .tabs { display:flex; gap:5px; align-items:center; }
+  .tab { font-size:11px; padding:4px 12px; border-radius:20px; background:#FBFAF8; border:1px solid #E4DDD3; color:#8A8177; }
+  .tab.on { background:#2E2A26; border-color:#2E2A26; color:#fff; font-weight:600; }
+  .dims { font-size:10.5px; color:#8A8177; margin-left:auto; }
+  .dims b { color:#2E2A26; }
+
+  .stage { display:flex; gap:7px; align-items:stretch; }
+  .pal { width:96px; flex:none; background:#FBFAF8; border-radius:9px; padding:8px 7px; display:flex; flex-direction:column; gap:5px; }
+  .pal b.t { font-size:8.5px; letter-spacing:.07em; color:#A79E93; font-weight:700; }
+  .pi { background:#fff; border:1px solid #D8D0C6; border-radius:7px; padding:5px 0; text-align:center; font-size:10px; color:#5A5248; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .pi .sh { border:1.5px solid #9E958A; background:#F4F1EC; }
+  .pi .sh.rd { border-radius:50%; width:17px; height:17px; }
+  .pi .sh.sq { border-radius:3px; width:17px; height:17px; }
+  .pi .sh.rc { border-radius:3px; width:26px; height:15px; }
+  .pi .sh.dc { border-style:dashed; border-radius:3px; width:26px; height:12px; background:#EDE8E2; }
+  .pdiv { border-top:1px solid #EDE8E2; margin:3px 0 1px; }
+
+  .cv { flex:1; min-width:0; background:#FBFAF8; border-radius:9px; position:relative; overflow:hidden;
+        background-image:linear-gradient(#F1ECE5 1px,transparent 1px),linear-gradient(90deg,#F1ECE5 1px,transparent 1px);
+        background-size:25px 25px; min-height:270px; }
+  .tb { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:9.5px; line-height:1.2;
+        background:#FBFAF8; border:1.5px solid #C0B8AC; color:#5A5248; }
+  .tb.sq { border-radius:5px; }
+  .tb.rd { border-radius:50%; }
+  .tb i { font-style:normal; font-size:8px; color:#A79E93; }
+  .tb.sel { border-color:#F5A04A; border-width:2px; box-shadow:0 0 0 3px rgba(245,160,74,.28); }
+  .hdl { position:absolute; width:7px; height:7px; background:#fff; border:1.5px solid #F5A04A; border-radius:2px; }
+  .rot { position:absolute; width:9px; height:9px; border:1.5px solid #F5A04A; border-radius:50%; background:#fff; }
+
+  .dec { position:absolute; background:#EDE8E2; border:1.5px solid #DCD4C9; color:#9A9186; font-size:8.5px; display:flex; align-items:center; justify-content:center; letter-spacing:.04em; }
+  .dec.wall { background:#DCD4C9; border-color:#CFC6B9; }
+  .dec.door { background:#FBFAF8; border-style:dashed; }
+
+  .lnk { position:absolute; display:flex; align-items:center; justify-content:center; }
+  .lnk .br { border:1.5px solid #5B4A8A; border-left:0; border-radius:0 5px 5px 0; width:6px; }
+  .lnk .lb { background:#EDE6F5; border:1px solid #C9BADF; color:#5B4A8A; font-size:8px; font-weight:700; padding:1px 5px; border-radius:10px; white-space:nowrap; }
+
+  .prop { width:196px; flex:none; background:#FBFAF8; border-radius:9px; padding:9px 10px; display:flex; flex-direction:column; gap:8px; }
+  .prop b.t { font-size:12.5px; color:#2E2A26; }
+  .lab { font-size:8.5px; letter-spacing:.07em; color:#8A8177; font-weight:700; display:block; margin-bottom:3px; }
+  .inp { background:#fff; border:1px solid #D8D0C6; border-radius:6px; padding:4px 8px; font-size:11.5px; color:#2E2A26; }
+  .row2 { display:flex; gap:5px; }
+  .row2 > div { flex:1; min-width:0; }
+  .segs { display:flex; gap:4px; }
+  .seg { flex:1; text-align:center; font-size:10.5px; padding:4px 0; border-radius:6px; background:#fff; border:1px solid #D8D0C6; color:#6E675E; }
+  .seg.on { background:#2E2A26; border-color:#2E2A26; color:#fff; font-weight:700; }
+  .pact { border-top:1px solid #EDE8E2; padding-top:7px; display:flex; flex-direction:column; gap:4px; }
+  .pact div { font-size:11px; padding:5px 8px; border-radius:6px; background:#F1ECE5; color:#5A5248; }
+  .pact div.dng { color:#B4674F; background:#F9EFEA; }
+
+  /* blocs */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx.cor { border-left:3px solid #B4674F; }
+  .bx.vio { border-left:3px solid #5B4A8A; }
+
+  .conf { background:#FBFAF8; border:1px solid #D8D0C6; border-left:3px solid #B4674F; border-radius:0 10px 10px 0; padding:12px 14px; margin:12px 0 4px; }
+  .conf b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .cl2 { display:flex; align-items:center; gap:8px; font-size:11.5px; color:#2E2A26; padding:4px 0; border-top:1px solid #F0EBE4; }
+  .cl2 .d { width:86px; color:#8A8177; }
+  .cl2 .n { flex:1; }
+  .acts { display:flex; gap:5px; margin-top:9px; }
+
+  table.k { width:100%; border-collapse:collapse; margin:12px 0 4px; background:#FBFAF8; border-radius:10px; overflow:hidden; }
+  table.k th { font-size:9.5px; letter-spacing:.07em; color:#8A8177; text-align:left; padding:8px 12px; background:#F1ECE5; font-weight:600; }
+  table.k td { font-size:12.5px; color:#2E2A26; padding:8px 12px; border-top:1px solid #F0EBE4; vertical-align:top; }
+  table.k td.d { color:#8A8177; font-size:12px; }
+  code { background:#EDE8E2; padding:1px 5px; border-radius:4px; font-size:11.5px; color:#5A5248; }
+</style>
+
+<div class="ed">
+
+<h1>L&rsquo;&eacute;diteur de plan</h1>
+<p class="subtitle">Plein &eacute;cran, admin uniquement. Utilis&eacute; une fois &agrave; l&rsquo;installation, puis deux fois par an.</p>
+
+<h2>1. La contrainte de d&eacute;part&nbsp;: c&rsquo;est un outil de dessin pour quelqu&rsquo;un qui ne dessine pas</h2>
+<p class="ed-note">Un restaurateur ouvre cet &eacute;cran le jour de l&rsquo;installation, puis quand il ach&egrave;te deux tables. <b>Aucune courbe d&rsquo;apprentissage n&rsquo;est finançable&nbsp;: ce qui n&rsquo;est pas compris en dix secondes ne le sera jamais</b>, parce qu&rsquo;il n&rsquo;y aura pas de deuxi&egrave;me fois pour apprendre.</p>
+
+<div class="fr">
+  <div class="top">
+    <span class="bk">&lsaquo; Param&egrave;tres</span>
+    <h4>&Eacute;diteur de plan</h4>
+    <span class="draft">BROUILLON &middot; 4 MODIFICATIONS</span>
+    <div class="sp"></div>
+    <div class="undo2"><span>&#8630;</span><span>&#8631;</span></div>
+    <div class="bt gh">Abandonner</div>
+    <div class="bt pri">Publier le plan</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on">Salle</div>
+    <div class="tab">Terrasse</div>
+    <div class="tab">&Eacute;tage</div>
+    <div class="tab" style="border-style:dashed;color:#C79A5E;border-color:#DCC3A4">+ Salle</div>
+    <span class="dims">Salle&nbsp;: <b>8,00 m</b> &times; <b>5,50 m</b> &middot; grille 25 cm</span>
+  </div>
+
+  <div class="stage">
+    <div class="pal">
+      <b class="t">TABLES</b>
+      <div class="pi"><span class="sh rd"></span>Ronde 2</div>
+      <div class="pi"><span class="sh sq"></span>Carr&eacute;e 4</div>
+      <div class="pi"><span class="sh rc"></span>Rect. 6</div>
+      <div class="pi"><span class="sh rd" style="width:21px;height:21px"></span>Ronde 8</div>
+      <div class="pdiv"></div>
+      <b class="t">D&Eacute;COR</b>
+      <div class="pi"><span class="sh dc"></span>Mur</div>
+      <div class="pi"><span class="sh dc" style="border-style:dotted"></span>Porte</div>
+      <div class="pi"><span class="sh rc" style="background:#EDE8E2"></span>Bar</div>
+    </div>
+
+    <div class="cv">
+      <div class="dec wall" style="left:0;   top:0;    width:100%; height:9px;"></div>
+      <div class="dec door" style="left:118px;top:0;   width:52px; height:9px;">PORTE</div>
+      <div class="dec"      style="left:8px; top:210px;width:126px;height:26px;">BAR</div>
+      <div class="dec"      style="right:8px;top:210px;width:96px; height:26px;">PASSE CUISINE</div>
+
+      <div class="tb rd" style="left:18px;  top:28px; width:44px; height:44px;">T1<i>2 pl.</i></div>
+      <div class="tb sq" style="left:82px;  top:28px; width:52px; height:44px;">T2<i>4 pl.</i></div>
+      <div class="tb sq sel" style="left:154px;top:28px; width:52px; height:44px;">T3<i>4 pl.</i>
+        <span class="hdl" style="left:-4px;top:-4px"></span><span class="hdl" style="right:-4px;top:-4px"></span>
+        <span class="hdl" style="left:-4px;bottom:-4px"></span><span class="hdl" style="right:-4px;bottom:-4px"></span>
+        <span class="rot" style="left:50%;margin-left:-5px;top:-17px"></span>
+      </div>
+      <div class="tb rd" style="left:226px; top:28px; width:44px; height:44px;">T4<i>2 pl.</i></div>
+
+      <div class="tb sq" style="left:18px;  top:100px;width:52px; height:44px;">T5<i>4 pl.</i></div>
+      <div class="tb sq" style="left:78px;  top:100px;width:52px; height:44px;">T6<i>4 pl.</i></div>
+      <div class="lnk" style="left:56px; top:148px; width:96px;">
+        <span class="lb">&#8942;&nbsp; 5-6 &middot; 8 pl.</span>
+      </div>
+
+      <div class="tb rc" style="left:170px; top:100px;width:86px; height:44px; border-radius:5px;">T7<i>6 pl.</i></div>
+      <div class="tb rd" style="left:276px; top:100px;width:52px; height:52px;">T8<i>8 pl.</i></div>
+
+      <div style="position:absolute;right:9px;bottom:9px;font-size:9.5px;color:#B5ADA2;">1 carreau = 25 cm</div>
+    </div>
+
+    <div class="prop">
+      <b class="t">Table 3</b>
+      <div>
+        <span class="lab">NOM</span>
+        <div class="inp">T3</div>
+      </div>
+      <div class="row2">
+        <div><span class="lab">PLACES</span><div class="inp" style="text-align:center">4</div></div>
+        <div><span class="lab">SALLE</span><div class="inp" style="font-size:10.5px">Salle &#9662;</div></div>
+      </div>
+      <div>
+        <span class="lab">FORME</span>
+        <div class="segs"><div class="seg">&#9711;</div><div class="seg on">&#9633;</div><div class="seg">&#9646;</div></div>
+      </div>
+      <div class="row2">
+        <div><span class="lab">LARGEUR</span><div class="inp" style="text-align:center">80</div></div>
+        <div><span class="lab">PROF.</span><div class="inp" style="text-align:center">80</div></div>
+      </div>
+      <div>
+        <span class="lab">ROTATION</span>
+        <div class="inp" style="text-align:center">0&deg;</div>
+      </div>
+      <div class="pact">
+        <div>Dupliquer</div>
+        <div class="dng">D&eacute;sactiver la table</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>2. Cinq d&eacute;cisions qui font la diff&eacute;rence entre un plan et un gribouillis</h2>
+
+<table class="k">
+  <tr><th style="width:26%">D&eacute;cision</th><th>Pourquoi</th></tr>
+  <tr>
+    <td><b>Le canevas est en m&egrave;tres, la grille &agrave; 25 cm</b></td>
+    <td class="d">La salle se saisit en dimensions r&eacute;elles (8,00&nbsp;m &times; 5,50&nbsp;m), les tables en centim&egrave;tres. <b>Un plan &agrave; l&rsquo;&eacute;chelle ressemble &agrave; la vraie salle</b> &mdash; et c&rsquo;est la seule chose qui compte, puisqu&rsquo;on s&rsquo;en sert pour reconna&icirc;tre &laquo;&nbsp;la table du fond &agrave; droite&nbsp;&raquo; en trois secondes. Un plan aux proportions fantaisistes se lit plus lentement que rien.</td>
+  </tr>
+  <tr>
+    <td><b>Tout s&rsquo;aimante &agrave; la grille</b></td>
+    <td class="d">Sans aimantation, dix tables plac&eacute;es &agrave; la main sont dix tables de guingois. Personne ne veut aligner des rectangles au pixel &mdash; et un plan de travers donne l&rsquo;impression d&rsquo;un logiciel bricol&eacute;. Rotation aimant&eacute;e par pas de 15&deg;.</td>
+  </tr>
+  <tr>
+    <td><b>Du d&eacute;cor, parce qu&rsquo;on s&rsquo;oriente avec</b></td>
+    <td class="d">Murs, porte, bar, passe cuisine, pilier. <b>Ce n&rsquo;est pas de la d&eacute;coration&nbsp;: ce sont les rep&egrave;res.</b> Sans la porte et le bar, huit rectangles gris ne sont pas une salle, et le serveur doit lire les num&eacute;ros au lieu de reconna&icirc;tre l&rsquo;endroit. C&rsquo;est un ajout au mod&egrave;le (§3.1)&nbsp;: une entit&eacute; <code>D&eacute;cor</code> non r&eacute;servable, sans capacit&eacute;.</td>
+  </tr>
+  <tr>
+    <td><b>Les combinaisons sont visibles sur le plan</b></td>
+    <td class="d">Deux tables voisines ont exactement la m&ecirc;me apparence, qu&rsquo;une combinaison <code>5-6</code> soit d&eacute;clar&eacute;e ou non. <b>Sans marque, on ne peut pas auditer son propre param&eacute;trage</b> &mdash; ni comprendre pourquoi le logiciel propose un rapprochement ici et pas l&agrave;. D&rsquo;o&ugrave; la pastille violette, m&ecirc;me violet que partout ailleurs.</td>
+  </tr>
+  <tr>
+    <td><b>Une table se d&eacute;sactive, ne se supprime pas</b></td>
+    <td class="d">M&ecirc;me r&egrave;gle que les combinaisons (§3.4). Une r&eacute;servation de 2024 mentionne &laquo;&nbsp;T7&nbsp;&raquo;&nbsp;: si T7 dispara&icirc;t de la base, l&rsquo;historique devient illisible et les statistiques d&rsquo;occupation par table sont fausses. La table quitte le plan, la donn&eacute;e reste.</td>
+  </tr>
+</table>
+
+<h2>3. Le brouillon&nbsp;: la seule exception &agrave; la r&egrave;gle de l&rsquo;envoi imm&eacute;diat</h2>
+
+<p class="ed-note">Partout ailleurs, ce logiciel agit tout de suite et offre huit secondes pour annuler (&sect;6.7). <b>Ici, non&nbsp;: on modifie un brouillon, et on publie.</b></p>
+
+<div class="grid2">
+  <div class="bx">
+    <b class="t">Parce qu&rsquo;un plan est une composition</b>
+    <span>Trente d&eacute;placements ne se jugent pas un par un. Un bandeau &laquo;&nbsp;Annuler&nbsp;&raquo; de 8&nbsp;s apr&egrave;s chaque glissement serait inutile&nbsp;: <b>on ne sait pas qu&rsquo;on s&rsquo;est trompé avant d&rsquo;avoir regard&eacute; l&rsquo;ensemble.</b> D&rsquo;o&ugrave; l&rsquo;annulation par &eacute;tapes (&#8630; &#8631;) et un &laquo;&nbsp;Abandonner&nbsp;&raquo; qui remet tout.</span>
+  </div>
+  <div class="bx cor">
+    <b class="t">Et parce que la salle est peut-&ecirc;tre pleine</b>
+    <span>Si l&rsquo;admin r&eacute;organise le plan &agrave; 20&nbsp;h 30 depuis le bureau, <b>l&rsquo;&eacute;quipe en service ne doit pas voir les tables bouger sous ses doigts.</b> Le plan publi&eacute; reste celui du service en cours jusqu&rsquo;&agrave; ce qu&rsquo;on publie. Un plan &agrave; moiti&eacute; fini pouss&eacute; en direct est pire que pas de changement du tout.</span>
+  </div>
+</div>
+
+<p class="ed-note">Le bandeau &laquo;&nbsp;<b>BROUILLON &middot; 4 MODIFICATIONS</b>&nbsp;&raquo; est permanent. Il r&eacute;pond &agrave; la question qu&rsquo;on se pose en revenant deux jours plus tard&nbsp;: <i>est-ce que j&rsquo;avais fini&nbsp;?</i></p>
+
+<h2>4. D&eacute;sactiver une table qui porte des r&eacute;servations</h2>
+<p class="ed-note">M&ecirc;me classe de probl&egrave;me que fermer un jour occup&eacute; (&sect;9.5), donc <b>m&ecirc;me traitement&nbsp;: on confronte</b>, on ne bloque pas et on ne d&eacute;place rien en silence.</p>
+
+<div class="conf">
+  <b class="t">D&eacute;sactiver la table 3&nbsp;?</b>
+  <div style="font-size:12px;color:#8A8177;margin-bottom:6px">Elle porte <b style="color:#B4674F">2 r&eacute;servations &agrave; venir</b>, et elle est membre de la combinaison <b>3-4</b>.</div>
+  <div class="cl2"><span class="d">sam. 6 &middot; 20:00</span><span class="n">Marchand, Sophie &middot; 2p</span><span style="color:#8A8177">confirm&eacute;e</span></div>
+  <div class="cl2"><span class="d">dim. 14 &middot; 12:30</span><span class="n">Nguyen, Claire &middot; 4p</span><span style="color:#8A8177">confirm&eacute;e</span></div>
+  <div class="acts">
+    <div class="bt sec">Annuler</div>
+    <div class="bt pri">Replacer ces 2 r&eacute;servations</div>
+    <div class="bt sec" style="color:#B4674F;border-color:#D9B5A6">D&eacute;sactiver et les laisser &agrave; placer</div>
+  </div>
+</div>
+
+<p class="ed-note"><b>Aucune r&eacute;servation n&rsquo;est jamais annul&eacute;e par une modification de plan.</b> Elle retombe au pire dans &laquo;&nbsp;&Agrave; placer&nbsp;&raquo; (&sect;5.7) &mdash; visible, en attente d&rsquo;une d&eacute;cision humaine. Un client ne doit pas perdre sa table parce qu&rsquo;on a d&eacute;plac&eacute; un meuble. La combinaison <code>3-4</code>, elle, passe simplement dormante&nbsp;: elle n&rsquo;est pas supprim&eacute;e non plus (&sect;3.4).</p>
+
+<h2>5. Une question&nbsp;: je propose de revenir sur ce que j&rsquo;avais &eacute;crit</h2>
+
+<p class="ed-note">Le &sect;10 actuel s&eacute;pare deux temps&nbsp;: <b>cr&eacute;er les tables par un formulaire, sans plan</b>, puis les poser. La justification &eacute;tait bonne &mdash; ne pas se battre avec une souris pendant la saisie. Mais en dessinant l&rsquo;&eacute;cran, un d&eacute;faut appara&icirc;t&nbsp;: apr&egrave;s le formulaire, <b>on se retrouve avec douze tables empil&eacute;es dans un coin</b>, indiff&eacute;renci&eacute;es, &agrave; distribuer une par une. La saisie a &eacute;t&eacute; rapide et le rangement est devenu p&eacute;nible.</p>
+
+<div class="options">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <b>Une palette de types de tables, qu&rsquo;on glisse sur le plan</b>
+      <div class="subtitle">C&rsquo;est ce que montre la maquette ci-dessus. On tire &laquo;&nbsp;Ronde 2&nbsp;&raquo; sur le plan&nbsp;: une table na&icirc;t l&agrave;, nomm&eacute;e T1, T2, T3&hellip; automatiquement. Un seul geste par table, aucune &eacute;tape pr&eacute;alable, et la table existe d&eacute;j&agrave; &agrave; sa place. La palette se compl&egrave;te toute seule&nbsp;: chaque forme utilis&eacute;e y reste. <b>&laquo;&nbsp;Dupliquer&nbsp;&raquo;</b> couvre les huit tables de 2 identiques.
+      <br><br><b>Recommand&eacute;.</b> Le plan est constamment coh&eacute;rent&nbsp;: il n&rsquo;existe jamais de table sans emplacement.</div>
+    </div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <b>Garder le formulaire d&rsquo;abord, mais avec une quantit&eacute;</b>
+      <div class="subtitle">&laquo;&nbsp;6 tables rondes de 2&nbsp;&raquo; en une saisie, nomm&eacute;es d&rsquo;office. Puis on les distribue depuis un bac. Tr&egrave;s rapide pour &eacute;quiper une salle enti&egrave;re d&rsquo;un coup, et la saisie des places reste au clavier. Mais le bac &agrave; vider demeure, et une table &laquo;&nbsp;cr&eacute;&eacute;e mais nulle part&nbsp;&raquo; est un &eacute;tat que le reste du logiciel ne sait pas repr&eacute;senter.</div>
+    </div>
+  </div>
+  <div class="option" data-choice="C" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <b>Les deux&nbsp;: palette pour l&rsquo;ajout au coup par coup, formulaire en lot pour l&rsquo;installation</b>
+      <div class="subtitle">Le premier &eacute;quipement se fait en lot, les ajouts ult&eacute;rieurs &agrave; la palette. Couvre honn&ecirc;tement les deux moments, qui sont r&eacute;ellement diff&eacute;rents. Mais c&rsquo;est deux chemins &agrave; construire et &agrave; documenter pour un &eacute;cran qu&rsquo;on ouvre deux fois par an.</div>
+    </div>
+  </div>
+</div>
+
+</div>

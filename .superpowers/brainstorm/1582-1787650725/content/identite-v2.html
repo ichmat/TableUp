@@ -1,0 +1,332 @@
+<h2>Trois caractères, une seule base&nbsp;: ton beige et ton orange</h2>
+<p class="subtitle">On garde ton système (fond beige, orange d'interaction, coins ronds, italiques secondaires) et on fait varier le <strong>caractère</strong>. Même écran, même architecture, même contenu&nbsp;— trois personnalités. Clique sur celle qui te parle.</p>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Caveat:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+/* ============ ossature commune ============ */
+.rm { display:flex; border-radius:var(--r); overflow:hidden; border:1px solid var(--edge);
+      background:var(--bg); font-family:var(--font); color:var(--ink); }
+.rm * { box-sizing:border-box; }
+
+.rail { width:46px; flex:none; background:var(--rail); border-right:1px solid var(--edge);
+        display:flex; flex-direction:column; align-items:center; padding:10px 0; gap:6px; }
+.rail .ic { width:32px; height:32px; border-radius:var(--ric); display:flex; align-items:center; justify-content:center; color:var(--dim); }
+.rail .ic.on { background:var(--accent); color:#fff; }
+.rail .sp { flex:1; }
+.rail svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+.main { flex:1; min-width:0; padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
+
+.hdr { display:flex; align-items:flex-end; gap:14px; }
+.clock { font:var(--clock); color:var(--ink); line-height:.9; letter-spacing:var(--clocksp); }
+.hstat { font:var(--sec); font-style:italic; color:var(--dim); flex:1; }
+.hstat b { font-style:normal; font-weight:700; color:var(--accent); }
+.hdate { text-align:right; line-height:1.25; }
+.hdate .d { font:var(--dtop); color:var(--ink); }
+.hdate .j { font:var(--sec); font-style:italic; color:var(--dim); }
+.pill { font:var(--pill); padding:5px 11px; border-radius:99px; background:var(--pillbg); color:var(--pillink); white-space:nowrap; }
+
+.frise { display:flex; gap:var(--fgap); }
+.slot { flex:1; padding:var(--spad); border-radius:var(--sr); background:var(--slotbg);
+        border:1px solid var(--slotbd); text-align:center; }
+.slot .h { font:var(--sh); color:var(--ink); }
+.slot .c { font:var(--sc); color:var(--dim); margin-top:2px; }
+.slot .bar { height:3px; border-radius:2px; background:var(--barbg); margin-top:5px; overflow:hidden; }
+.slot .bar i { display:block; height:100%; background:var(--accent); }
+.slot.on { background:var(--sloton); border-color:var(--accent); }
+.slot.on .h, .slot.on .c { color:var(--onink); }
+
+.body { display:flex; gap:10px; align-items:stretch; }
+.plan { flex:1; min-width:0; position:relative; height:196px; background:var(--plan);
+        border:1px solid var(--planbd); border-radius:var(--pr); overflow:hidden; }
+.zl { position:absolute; left:10px; top:8px; font:var(--zone); color:var(--zoneink); }
+.bar-obj { position:absolute; left:2.5%; top:44px; width:34px; height:118px; border-radius:var(--tr);
+           background:var(--barobj); color:var(--barink); font:var(--barfont);
+           display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; }
+.t { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center;
+     border-radius:var(--tr); border-style:solid; border-width:var(--tbw); }
+.t.rd { border-radius:50%; }
+.t .n { font:var(--tn); }
+.t .cap { font:var(--tcap); opacity:.72; margin-top:1px; }
+
+.libre  { background:var(--l-bg); border-color:var(--l-bd); color:var(--l-ik); }
+.reserv { background:var(--r-bg); border-color:var(--r-bd); color:var(--r-ik); }
+.occup  { background:var(--o-bg); border-color:var(--o-bd); color:var(--o-ik); }
+.nettoy { background:var(--n-bg); border-color:var(--n-bd); color:var(--n-ik); border-style:dashed; }
+
+.ap { width:126px; flex:none; background:var(--apbg); border:1px solid var(--apbd);
+      border-radius:var(--pr); padding:9px 8px; }
+.ap .th { font:var(--apth); color:var(--dim); margin-bottom:7px; }
+.ap .th b { color:var(--accent); }
+.chip { background:var(--chipbg); border:1px solid var(--chipbd); border-radius:var(--cr);
+        padding:6px 8px; margin-bottom:6px; }
+.chip .nm { font:var(--cnm); color:var(--ink); }
+.chip .mt { font:var(--cmt); font-style:italic; color:var(--dim); margin-top:1px; }
+
+.lg { display:flex; gap:12px; flex-wrap:wrap; font:600 10px/1 ui-sans-serif,system-ui,sans-serif;
+      letter-spacing:.06em; text-transform:uppercase; color:#7d7669; margin:10px 0 0; }
+.lg span { display:flex; align-items:center; gap:5px; }
+.lg i { width:10px; height:10px; border-radius:3px; border:1.5px solid; display:inline-block; }
+
+.why { margin-top:12px; font:400 12.5px/1.6 ui-sans-serif,system-ui,sans-serif; color:#5f584d; }
+.why b { color:#2f2b26; }
+
+/* ============ G — L'ARDOISE CHAUDE ============ */
+.g { --font:'Nunito',sans-serif; --r:14px; --ric:10px; --pr:12px; --tr:8px; --sr:10px; --cr:9px;
+     --bg:#EDE8E2; --rail:#FBFAF8; --edge:#DFD9D1; --ink:#3A3A38; --dim:#9A968F; --accent:#F5A04A;
+     --clock:800 30px/1 'Nunito',sans-serif; --clocksp:-.5px;
+     --sec:italic 400 11.5px/1.4 'Nunito',sans-serif; --dtop:700 13px/1 'Nunito',sans-serif;
+     --pill:700 11px/1 'Nunito',sans-serif; --pillbg:#FBFAF8; --pillink:#3A3A38;
+     --fgap:6px; --spad:6px 4px; --slotbg:#FBFAF8; --slotbd:#E4DED6; --sloton:#F5A04A; --onink:#fff;
+     --sh:700 12px/1 'Nunito',sans-serif; --sc:600 9.5px/1 'Nunito',sans-serif; --barbg:#E4DED6;
+     --plan:#2E2A26; --planbd:#241F1B; --zone:600 17px/1 'Caveat',cursive; --zoneink:#B6AC9C;
+     --barobj:#453E36; --barink:#B6AC9C; --barfont:600 15px/1 'Caveat',cursive;
+     --tbw:1.5px; --tn:700 15px/1 'Caveat',cursive; --tcap:600 9px/1 'Nunito',sans-serif;
+     --l-bg:rgba(255,255,255,.05); --l-bd:#6A6055; --l-ik:#C9BFB0;
+     --r-bg:rgba(120,190,230,.16); --r-bd:#6FA8CC; --r-ik:#A8D5F0;
+     --o-bg:rgba(230,120,95,.20);  --o-bd:#D9765C; --o-ik:#F2A48E;
+     --n-bg:rgba(230,200,90,.14);  --n-bd:#C9AC52; --n-ik:#E3CE86;
+     --apbg:#FBFAF8; --apbd:#E4DED6; --apth:700 10px/1 'Nunito',sans-serif;
+     --chipbg:#fff; --chipbd:#E9E3DA; --cnm:700 11.5px/1 'Nunito',sans-serif; --cmt:italic 400 10px/1.3 'Nunito',sans-serif; }
+
+/* ============ H — LE SERVICE ============ */
+.h { --font:'Barlow Condensed',sans-serif; --r:6px; --ric:5px; --pr:4px; --tr:3px; --sr:4px; --cr:3px;
+     --bg:#EDE8E2; --rail:#FFFFFF; --edge:#D6CFC4; --ink:#26241F; --dim:#8A8377; --accent:#EE7A1E;
+     --clock:600 30px/1 'IBM Plex Mono',monospace; --clocksp:-1.5px;
+     --sec:italic 500 12px/1.4 'Barlow Condensed',sans-serif; --dtop:700 15px/1 'Barlow Condensed',sans-serif;
+     --pill:600 11px/1 'IBM Plex Mono',monospace; --pillbg:#26241F; --pillink:#F2EDE4;
+     --fgap:2px; --spad:5px 4px; --slotbg:#FFFFFF; --slotbd:#D6CFC4; --sloton:#26241F; --onink:#FFF;
+     --sh:600 13px/1 'IBM Plex Mono',monospace; --sc:600 10px/1 'Barlow Condensed',sans-serif; --barbg:#E2DBCF;
+     --plan:#FFFFFF; --planbd:#D6CFC4; --zone:700 10px/1 'Barlow Condensed',sans-serif; --zoneink:#A29A8C;
+     --barobj:#26241F; --barink:#D8D1C4; --barfont:700 10px/1 'Barlow Condensed',sans-serif;
+     --tbw:2px; --tn:700 15px/1 'Barlow Condensed',sans-serif; --tcap:500 9px/1 'IBM Plex Mono',monospace;
+     --l-bg:#FFFFFF; --l-bd:#C6BFB2; --l-ik:#6E6759;
+     --r-bg:#DCEAF4; --r-bd:#3B7FB0; --r-ik:#1F4E71;
+     --o-bg:#F8D9D2; --o-bd:#C74A32; --o-ik:#8E2E1C;
+     --n-bg:#F7EDC8; --n-bd:#B99516; --n-ik:#7A6209;
+     --apbg:#FFFFFF; --apbd:#D6CFC4; --apth:700 10px/1 'Barlow Condensed',sans-serif;
+     --chipbg:#F7F4EE; --chipbd:#DED7CB; --cnm:700 13px/1 'Barlow Condensed',sans-serif; --cmt:italic 500 10px/1.3 'Barlow Condensed',sans-serif; }
+.h .lg-note { letter-spacing:.1em; }
+.h .clock { font-variant-numeric:tabular-nums; }
+
+/* ============ I — LA NAPPE ============ */
+.i { --font:'Nunito',sans-serif; --r:22px; --ric:14px; --pr:20px; --tr:14px; --sr:16px; --cr:14px;
+     --bg:#F3EEE7; --rail:#FFFFFF; --edge:#E6DFD4; --ink:#403B33; --dim:#A69E92; --accent:#F0954A;
+     --clock:800 40px/1 'Nunito',sans-serif; --clocksp:-1.2px;
+     --sec:italic 400 13px/1.4 'Nunito',sans-serif; --dtop:700 14px/1 'Nunito',sans-serif;
+     --pill:800 12px/1 'Nunito',sans-serif; --pillbg:#FFFFFF; --pillink:#403B33;
+     --fgap:8px; --spad:10px 4px; --slotbg:#FFFFFF; --slotbd:#EDE6DB; --sloton:#F0954A; --onink:#fff;
+     --sh:800 14px/1 'Nunito',sans-serif; --sc:600 10px/1 'Nunito',sans-serif; --barbg:#EDE6DB;
+     --plan:#FFFDF9; --planbd:#EDE6DB; --zone:800 10px/1 'Nunito',sans-serif; --zoneink:#BDB4A6;
+     --barobj:#EFE8DC; --barink:#A69E92; --barfont:800 10px/1 'Nunito',sans-serif;
+     --tbw:0px; --tn:800 16px/1 'Nunito',sans-serif; --tcap:700 9px/1 'Nunito',sans-serif;
+     --l-bg:#FFFFFF; --l-bd:transparent; --l-ik:#B3AB9E;
+     --r-bg:#CFE6F5; --r-bd:transparent; --r-ik:#2E6E93;
+     --o-bg:#FAC9BE; --o-bd:transparent; --o-ik:#9C3D28;
+     --n-bg:#F8E6A8; --n-bd:transparent; --n-ik:#7E6512;
+     --apbg:#FFFFFF; --apbd:#EDE6DB; --apth:800 10px/1 'Nunito',sans-serif;
+     --chipbg:#F8F4ED; --chipbd:transparent; --cnm:800 12.5px/1 'Nunito',sans-serif; --cmt:italic 400 10.5px/1.3 'Nunito',sans-serif; }
+.i .t { box-shadow:0 2px 5px rgba(70,58,40,.10); }
+.i .rail .ic.on { box-shadow:0 3px 8px rgba(240,149,74,.45); }
+</style>
+
+<div class="options">
+
+<!-- ══════════════════ G ══════════════════ -->
+<div class="option" data-choice="g" onclick="toggleSelect(this)">
+  <div class="letter">G</div>
+  <div class="content">
+    <h3>L'ardoise chaude — <em>ta base + la F, réconciliées</em></h3>
+    <p>Ton interface reste en beige. Seul le <strong>plan</strong> devient une ardoise&nbsp;: un objet sombre posé dans la salle claire, avec les numéros à la craie. La table est un objet, pas une case.</p>
+
+    <div class="rm g">
+      <div class="rail">
+        <div class="ic on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9h18M6 9l-2 11M18 9l2 11M12 9v11"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4z"/></svg></div>
+        <div class="sp"></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+      </div>
+      <div class="main">
+        <div class="hdr">
+          <div class="clock">20:07</div>
+          <div class="hstat">Service en cours — <b>3 tables</b> à placer</div>
+          <div class="hdate"><div class="d">20/08/26</div><div class="j">Jeudi</div></div>
+          <div class="pill">32 / 48 couverts</div>
+        </div>
+        <div class="frise">
+          <div class="slot"><div class="h">19:00</div><div class="c">12 couv.</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="slot"><div class="h">19:30</div><div class="c">18 couv.</div><div class="bar"><i style="width:38%"></i></div></div>
+          <div class="slot on"><div class="h">20:00</div><div class="c">32 couv.</div><div class="bar"><i style="width:67%;background:#fff"></i></div></div>
+          <div class="slot"><div class="h">20:30</div><div class="c">40 couv.</div><div class="bar"><i style="width:83%"></i></div></div>
+          <div class="slot"><div class="h">21:00</div><div class="c">44 couv.</div><div class="bar"><i style="width:92%"></i></div></div>
+          <div class="slot"><div class="h">21:30</div><div class="c">21 couv.</div><div class="bar"><i style="width:44%"></i></div></div>
+        </div>
+        <div class="body">
+          <div class="plan">
+            <div class="zl" style="left:auto;right:12px;top:10px">Salle</div>
+            <div class="bar-obj">BAR</div>
+            <div class="t rd occup"  style="left:16%;top:16px;width:46px;height:46px"><span class="n">1</span><span class="cap">4p</span></div>
+            <div class="t rd libre"  style="left:31%;top:20px;width:38px;height:38px"><span class="n">2</span></div>
+            <div class="t reserv"    style="left:44%;top:18px;width:70px;height:42px"><span class="n">3</span><span class="cap">20:30</span></div>
+            <div class="t rd libre"  style="left:66%;top:20px;width:40px;height:40px"><span class="n">4</span></div>
+            <div class="t rd occup"  style="left:16%;top:78px;width:50px;height:50px"><span class="n">5</span><span class="cap">6p</span></div>
+            <div class="t nettoy"    style="left:31%;top:82px;width:42px;height:42px"><span class="n">6</span></div>
+            <div class="t reserv"    style="left:44%;top:76px;width:86px;height:52px"><span class="n">7</span><span class="cap">21:00</span></div>
+            <div class="t rd libre"  style="left:74%;top:82px;width:40px;height:40px"><span class="n">8</span></div>
+            <div class="t occup"     style="left:16%;top:142px;width:66px;height:40px"><span class="n">9</span></div>
+            <div class="t rd libre"  style="left:37%;top:142px;width:40px;height:40px"><span class="n">10</span></div>
+            <div class="t rd reserv" style="left:50%;top:140px;width:44px;height:44px"><span class="n">11</span></div>
+            <div class="t libre"     style="left:66%;top:142px;width:58px;height:40px"><span class="n">12</span></div>
+          </div>
+          <div class="ap">
+            <div class="th">À PLACER · <b>3</b></div>
+            <div class="chip"><div class="nm">Moreau · 4p</div><div class="mt">20:30 · web</div></div>
+            <div class="chip"><div class="nm">Bekkali · 2p</div><div class="mt">20:45 · tél.</div></div>
+            <div class="chip"><div class="nm">Chen · 6p</div><div class="mt">21:00 · web</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="why"><b>Ce que ça dit&nbsp;:</b> « un vrai restaurant, tenu par des vraies personnes ». La craie n'est jamais sur une donnée qu'on lit vite (heures, couverts, noms restent en Nunito) — seulement sur les numéros de table et les zones, qu'on reconnaît par forme. <b>Le risque&nbsp;:</b> deux univers dans un écran ; si le contraste beige/ardoise est mal dosé, ça se casse.</p>
+  </div>
+</div>
+
+<!-- ══════════════════ H ══════════════════ -->
+<div class="option" data-choice="h" onclick="toggleSelect(this)">
+  <div class="letter">H</div>
+  <div class="content">
+    <h3>Le service — <em>le rail à tickets de la cuisine</em></h3>
+    <p>Zéro ornement. Condensé, chiffré, dense. L'orange n'est plus une couleur d'ambiance mais un <strong>drapeau</strong>&nbsp;: il ne sort que quand quelque chose demande une action.</p>
+
+    <div class="rm h">
+      <div class="rail">
+        <div class="ic on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9h18M6 9l-2 11M18 9l2 11M12 9v11"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4z"/></svg></div>
+        <div class="sp"></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+      </div>
+      <div class="main">
+        <div class="hdr">
+          <div class="clock">20:07</div>
+          <div class="hstat">Service en cours — <b>3 tables</b> à placer</div>
+          <div class="hdate"><div class="d">20/08/26</div><div class="j">Jeudi</div></div>
+          <div class="pill">32/48 COUV.</div>
+        </div>
+        <div class="frise">
+          <div class="slot"><div class="h">19:00</div><div class="c">12 COUV</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="slot"><div class="h">19:30</div><div class="c">18 COUV</div><div class="bar"><i style="width:38%"></i></div></div>
+          <div class="slot on"><div class="h">20:00</div><div class="c">32 COUV</div><div class="bar"><i style="width:67%"></i></div></div>
+          <div class="slot"><div class="h">20:30</div><div class="c">40 COUV</div><div class="bar"><i style="width:83%"></i></div></div>
+          <div class="slot"><div class="h">21:00</div><div class="c">44 COUV</div><div class="bar"><i style="width:92%"></i></div></div>
+          <div class="slot"><div class="h">21:30</div><div class="c">21 COUV</div><div class="bar"><i style="width:44%"></i></div></div>
+        </div>
+        <div class="body">
+          <div class="plan">
+            <div class="zl" style="left:auto;right:12px;top:9px">SALLE · REZ-DE-CHAUSSÉE</div>
+            <div class="bar-obj">BAR</div>
+            <div class="t rd occup"  style="left:16%;top:16px;width:46px;height:46px"><span class="n">1</span><span class="cap">4p</span></div>
+            <div class="t rd libre"  style="left:31%;top:20px;width:38px;height:38px"><span class="n">2</span></div>
+            <div class="t reserv"    style="left:44%;top:18px;width:70px;height:42px"><span class="n">3</span><span class="cap">20:30</span></div>
+            <div class="t rd libre"  style="left:66%;top:20px;width:40px;height:40px"><span class="n">4</span></div>
+            <div class="t rd occup"  style="left:16%;top:78px;width:50px;height:50px"><span class="n">5</span><span class="cap">6p</span></div>
+            <div class="t nettoy"    style="left:31%;top:82px;width:42px;height:42px"><span class="n">6</span></div>
+            <div class="t reserv"    style="left:44%;top:76px;width:86px;height:52px"><span class="n">7</span><span class="cap">21:00</span></div>
+            <div class="t rd libre"  style="left:74%;top:82px;width:40px;height:40px"><span class="n">8</span></div>
+            <div class="t occup"     style="left:16%;top:142px;width:66px;height:40px"><span class="n">9</span></div>
+            <div class="t rd libre"  style="left:37%;top:142px;width:40px;height:40px"><span class="n">10</span></div>
+            <div class="t rd reserv" style="left:50%;top:140px;width:44px;height:44px"><span class="n">11</span></div>
+            <div class="t libre"     style="left:66%;top:142px;width:58px;height:40px"><span class="n">12</span></div>
+          </div>
+          <div class="ap">
+            <div class="th">À PLACER · <b>3</b></div>
+            <div class="chip"><div class="nm">MOREAU · 4p</div><div class="mt">20:30 · web</div></div>
+            <div class="chip"><div class="nm">BEKKALI · 2p</div><div class="mt">20:45 · tél.</div></div>
+            <div class="chip"><div class="nm">CHEN · 6p</div><div class="mt">21:00 · web</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="why"><b>Ce que ça dit&nbsp;:</b> « je suis un outil de travail, pas une jolie appli ». Le condensé gagne ~30&nbsp;% de largeur — c'est la seule des trois qui tient une brasserie de 60 tables sans zoomer. <b>Le risque&nbsp;:</b> ça s'éloigne de la douceur de tes tests ; ça peut paraître froid au premier contact commercial.</p>
+  </div>
+</div>
+
+<!-- ══════════════════ I ══════════════════ -->
+<div class="option" data-choice="i" onclick="toggleSelect(this)">
+  <div class="letter">I</div>
+  <div class="content">
+    <h3>La nappe — <em>ton système poussé à fond</em></h3>
+    <p>On assume la rondeur&nbsp;: grosses cibles tactiles, beaucoup d'air, aucune bordure — les tables sont des galets colorés posés sur la nappe. Pensé pour être utilisé à une main, debout, en plein coup de feu.</p>
+
+    <div class="rm i">
+      <div class="rail">
+        <div class="ic on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9h18M6 9l-2 11M18 9l2 11M12 9v11"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4z"/></svg></div>
+        <div class="sp"></div>
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+      </div>
+      <div class="main">
+        <div class="hdr">
+          <div class="clock">20:07</div>
+          <div class="hstat">Service en cours — <b>3 tables</b> à placer</div>
+          <div class="hdate"><div class="d">20/08/26</div><div class="j">Jeudi</div></div>
+          <div class="pill">32 / 48 couverts</div>
+        </div>
+        <div class="frise">
+          <div class="slot"><div class="h">19:00</div><div class="c">12 couv.</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="slot"><div class="h">19:30</div><div class="c">18 couv.</div><div class="bar"><i style="width:38%"></i></div></div>
+          <div class="slot on"><div class="h">20:00</div><div class="c">32 couv.</div><div class="bar"><i style="width:67%;background:#fff"></i></div></div>
+          <div class="slot"><div class="h">20:30</div><div class="c">40 couv.</div><div class="bar"><i style="width:83%"></i></div></div>
+          <div class="slot"><div class="h">21:00</div><div class="c">44 couv.</div><div class="bar"><i style="width:92%"></i></div></div>
+          <div class="slot"><div class="h">21:30</div><div class="c">21 couv.</div><div class="bar"><i style="width:44%"></i></div></div>
+        </div>
+        <div class="body">
+          <div class="plan">
+            <div class="zl" style="left:auto;right:14px;top:12px">SALLE</div>
+            <div class="bar-obj">BAR</div>
+            <div class="t rd occup"  style="left:16%;top:16px;width:48px;height:48px"><span class="n">1</span><span class="cap">4p</span></div>
+            <div class="t rd libre"  style="left:32%;top:20px;width:40px;height:40px"><span class="n">2</span></div>
+            <div class="t reserv"    style="left:45%;top:18px;width:72px;height:44px"><span class="n">3</span><span class="cap">20:30</span></div>
+            <div class="t rd libre"  style="left:67%;top:20px;width:40px;height:40px"><span class="n">4</span></div>
+            <div class="t rd occup"  style="left:16%;top:78px;width:52px;height:52px"><span class="n">5</span><span class="cap">6p</span></div>
+            <div class="t nettoy"    style="left:32%;top:82px;width:44px;height:44px"><span class="n">6</span></div>
+            <div class="t reserv"    style="left:45%;top:76px;width:88px;height:54px"><span class="n">7</span><span class="cap">21:00</span></div>
+            <div class="t rd libre"  style="left:75%;top:82px;width:40px;height:40px"><span class="n">8</span></div>
+            <div class="t occup"     style="left:16%;top:142px;width:68px;height:42px"><span class="n">9</span></div>
+            <div class="t rd libre"  style="left:38%;top:142px;width:42px;height:42px"><span class="n">10</span></div>
+            <div class="t rd reserv" style="left:51%;top:140px;width:46px;height:46px"><span class="n">11</span></div>
+            <div class="t libre"     style="left:67%;top:142px;width:60px;height:42px"><span class="n">12</span></div>
+          </div>
+          <div class="ap">
+            <div class="th">À placer · <b>3</b></div>
+            <div class="chip"><div class="nm">Moreau · 4p</div><div class="mt">20:30 · web</div></div>
+            <div class="chip"><div class="nm">Bekkali · 2p</div><div class="mt">20:45 · tél.</div></div>
+            <div class="chip"><div class="nm">Chen · 6p</div><div class="mt">21:00 · web</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="why"><b>Ce que ça dit&nbsp;:</b> « respire, tout va bien ». C'est la plus fidèle à tes captures, et la plus facile à toucher du doigt sur la Surface. <b>Le risque&nbsp;:</b> sans bordures, les statuts reposent uniquement sur des pastels — à trois mètres, libre et à&nbsp;nettoyer se ressemblent. Et l'air coûte cher&nbsp;: au-delà de 25 tables, il faut scroller.</p>
+  </div>
+</div>
+
+</div>
+
+<div class="lg">
+  <span><i style="background:#fff;border-color:#C6BFB2"></i>Libre</span>
+  <span><i style="background:#DCEAF4;border-color:#3B7FB0"></i>Réservée</span>
+  <span><i style="background:#F8D9D2;border-color:#C74A32"></i>Occupée</span>
+  <span><i style="background:#F7EDC8;border-color:#B99516;border-style:dashed"></i>À nettoyer</span>
+  <span style="color:#EE7A1E">— l'orange ne sert jamais de statut, uniquement d'interaction</span>
+</div>
+
+<p class="subtitle" style="margin-top:22px"><strong>Ma recommandation&nbsp;: G.</strong> H est le plus efficace mais renie tes tests&nbsp;; I leur est fidèle mais ne tient pas la charge et lit mal de loin. G garde ton système exactement là où il est bon — la périphérie, le calme, l'orange — et met la densité et le caractère là où le regard passe 90&nbsp;% du service&nbsp;: le plan. C'est aussi le seul qui garde la trace de la main qui t'a plu dans&nbsp;F sans importer une esthétique d'ardoise sur tout l'écran.</p>

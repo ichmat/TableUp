@@ -1,0 +1,312 @@
+<style>
+  .pa { --or:#F5A04A; --encre:#2E2A26; --gris:#8A8177; --trait:#D8D0C6; --cor:#B4674F; --vio:#5B4A8A; --bleu:#3D6E8E; --vert:#4E7C59; --ambre:#B08628; }
+  .pa-note { font-size:13px; color:#8A8177; line-height:1.55; margin:8px 0 0; }
+  .pa-note b { color:#2E2A26; }
+  .verdict { border-left:3px solid #F5A04A; padding:10px 14px; margin:16px 0 6px; background:#FBFAF8; border-radius:0 8px 8px 0; }
+  .verdict b { color:#2E2A26; }
+
+  .fr { background:#EDE8E2; border:1px solid #D8D0C6; border-radius:12px; padding:8px; display:flex; gap:8px; margin:14px 0 6px; }
+  .fr-rail { width:34px; flex:none; background:#FBFAF8; border-radius:8px; padding:8px 0; display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .ic { width:17px; height:17px; border:1.6px solid #B5ADA2; border-radius:4px; }
+  .ic.on { background:#F5A04A; border-color:#F5A04A; }
+  .sp { flex:1; }
+
+  .body2 { flex:1; min-width:0; display:flex; gap:8px; }
+  .snav { width:158px; flex:none; background:#FBFAF8; border-radius:9px; padding:7px 6px; display:flex; flex-direction:column; gap:2px; }
+  .snav h6 { margin:2px 6px 6px; font-size:9px; letter-spacing:.08em; color:#A79E93; font-weight:700; }
+  .sn { font-size:11.5px; color:#5A5248; padding:6px 9px; border-radius:7px; display:flex; align-items:center; gap:6px; }
+  .sn.on { background:#2E2A26; color:#fff; font-weight:600; }
+  .sn i { font-style:normal; margin-left:auto; font-size:9px; color:#B5ADA2; }
+  .sn.on i { color:#9B948C; }
+  .sn.sep { margin-top:7px; border-top:1px solid #EDE8E2; padding-top:10px; border-radius:0; }
+
+  .pane { flex:1; min-width:0; background:#FBFAF8; border-radius:9px; padding:12px 14px; }
+  .pane h5 { margin:0 0 3px; font-size:16px; color:#2E2A26; font-weight:700; }
+  .pane .lead { font-size:11.5px; color:#8A8177; margin:0 0 11px; }
+
+  /* --- ligne de reglage --- */
+  .set { border-top:1px solid #EDE8E2; padding:10px 0; display:flex; gap:14px; align-items:flex-start; }
+  .set:first-of-type { border-top:0; padding-top:2px; }
+  .set .lft { flex:1; min-width:0; }
+  .set .nm { font-size:12.5px; color:#2E2A26; font-weight:600; }
+  .set .cons { font-size:11px; color:#8A8177; line-height:1.5; margin-top:3px; }
+  .set .cons b { color:#5A5248; font-weight:600; }
+  .ctrl { flex:none; display:flex; align-items:center; gap:5px; }
+  .num { background:#fff; border:1px solid #D8D0C6; border-radius:7px; padding:5px 9px; font-size:12.5px; color:#2E2A26; font-variant-numeric:tabular-nums; min-width:44px; text-align:center; }
+  .unit { font-size:10.5px; color:#A79E93; }
+  .stepr { display:flex; flex-direction:column; gap:2px; }
+  .stepr span { width:16px; height:11px; background:#EDE8E2; border-radius:3px; font-size:7px; text-align:center; line-height:11px; color:#8A8177; }
+  .tgl { width:32px; height:18px; border-radius:20px; background:#F5A04A; position:relative; flex:none; }
+  .tgl::after { content:''; position:absolute; right:2px; top:2px; width:14px; height:14px; border-radius:50%; background:#fff; }
+  .tgl.off { background:#DCD4C9; }
+  .tgl.off::after { right:auto; left:2px; }
+
+  /* --- apercu de consequence --- */
+  .prev { background:#F1ECE5; border-radius:8px; padding:8px 10px; margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .prev .plab { font-size:8.5px; letter-spacing:.07em; color:#A79E93; font-weight:700; width:100%; }
+  .mini { font-size:10px; padding:4px 9px; border-radius:6px; font-weight:600; }
+  .mini.ok { background:#E7F0E9; border:1.5px solid #4E7C59; color:#31563B; }
+  .mini.tw { background:#FBF2DC; border:1.5px dashed #B08628; color:#7A5C12; }
+  .mini.no { background:#EDE8E2; border:1.5px solid #DCD4C9; color:#B5ADA2; text-decoration:line-through; }
+
+  /* --- ouvertures : semaine --- */
+  .wk { display:flex; gap:5px; margin:10px 0 4px; }
+  .dcol { flex:1; background:#F1ECE5; border-radius:8px; padding:6px 5px; display:flex; flex-direction:column; gap:4px; align-items:stretch; }
+  .dcol.closed { background:#F6F3EF; }
+  .dname { font-size:10px; color:#6E675E; font-weight:700; text-align:center; margin-bottom:1px; }
+  .dcol.closed .dname { color:#B5ADA2; }
+  .slot { background:#fff; border:1px solid #E4DDD3; border-radius:6px; padding:3px 0; text-align:center; font-size:10.5px; color:#2E2A26; font-variant-numeric:tabular-nums; }
+  .add { background:#F5A04A; color:#fff; border-radius:6px; text-align:center; font-size:11px; padding:3px 0; font-weight:700; }
+  .add.gh { background:transparent; border:1.5px dashed #DCC3A4; color:#C79A5E; }
+  .closedlab { font-size:9.5px; color:#B5ADA2; text-align:center; padding:6px 0; font-style:italic; }
+
+  /* --- ouvertures : calendrier --- */
+  .cal { display:flex; gap:10px; }
+  .months { width:82px; flex:none; display:flex; flex-direction:column; gap:1px; font-size:11px; color:#B5ADA2; }
+  .months div { padding:2px 5px; border-radius:5px; }
+  .months div.on { color:#2E2A26; font-weight:700; background:#F1ECE5; }
+  .grid7 { flex:1; display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .grid7 .hd { font-size:9px; letter-spacing:.05em; color:#A79E93; text-align:center; font-weight:700; padding-bottom:2px; }
+  .dy { text-align:center; font-size:11px; padding:4px 0; border-radius:6px; color:#2E2A26; font-variant-numeric:tabular-nums; border:1.5px solid transparent; position:relative; }
+  .dy.out { color:#CFC8BF; }
+  .dy.hab { color:#C5BEB4; background:repeating-linear-gradient(45deg,#F4F1EC,#F4F1EC 3px,#EDE8E2 3px,#EDE8E2 6px); }
+  .dy.ferm { color:#9A9186; background:repeating-linear-gradient(45deg,#EDE8E2,#EDE8E2 3px,#E0D8CD 3px,#E0D8CD 6px); border-color:#DCD4C9; text-decoration:line-through; font-weight:600; }
+  .dy.modif { background:#FBF2DC; border:1.5px dashed #B08628; color:#7A5C12; font-weight:700; }
+  .dy.sel { box-shadow:0 0 0 3px rgba(245,160,74,.35); border-color:#F5A04A; }
+
+  .lgd { display:flex; gap:12px; flex-wrap:wrap; margin-top:9px; font-size:10.5px; color:#8A8177; align-items:center; }
+  .lgd span.k { display:inline-block; width:19px; height:15px; border-radius:4px; vertical-align:middle; margin-right:4px; border:1.5px solid transparent; }
+
+  /* --- conflit --- */
+  .conf { background:#FBFAF8; border:1px solid #D8D0C6; border-left:3px solid #B4674F; border-radius:0 10px 10px 0; padding:12px 14px; margin:12px 0 4px; }
+  .conf b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:6px; }
+  .cl2 { display:flex; align-items:center; gap:8px; font-size:11.5px; color:#2E2A26; padding:4px 0; border-top:1px solid #F0EBE4; }
+  .cl2 .d { width:52px; color:#8A8177; }
+  .cl2 .n { flex:1; }
+  .acts { display:flex; gap:5px; margin-top:10px; }
+  .bt { text-align:center; font-size:11.5px; padding:6px 12px; border-radius:7px; font-weight:600; }
+  .bt.pri { background:#F5A04A; color:#fff; }
+  .bt.sec { background:#FBFAF8; border:1px solid #D8D0C6; color:#2E2A26; }
+  .bt.dng { background:#FBFAF8; border:1px solid #D9B5A6; color:#B4674F; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 4px; }
+  .bx { background:#FBFAF8; border:1px solid #D8D0C6; border-radius:10px; padding:12px 14px; }
+  .bx b.t { display:block; font-size:14px; color:#2E2A26; margin-bottom:5px; }
+  .bx span { font-size:12.5px; color:#8A8177; line-height:1.5; display:block; }
+  .bx.cor { border-left:3px solid #B4674F; }
+
+  table.k { width:100%; border-collapse:collapse; margin:12px 0 4px; background:#FBFAF8; border-radius:10px; overflow:hidden; }
+  table.k th { font-size:9.5px; letter-spacing:.07em; color:#8A8177; text-align:left; padding:8px 12px; background:#F1ECE5; font-weight:600; }
+  table.k td { font-size:12.5px; color:#2E2A26; padding:8px 12px; border-top:1px solid #F0EBE4; vertical-align:top; }
+  table.k td.d { color:#8A8177; font-size:12px; }
+  code { background:#EDE8E2; padding:1px 5px; border-radius:4px; font-size:11.5px; color:#5A5248; }
+</style>
+
+<div class="pa">
+
+<h1>Param&egrave;tres</h1>
+<p class="subtitle">Volet F, plus tout ce que les sections pr&eacute;c&eacute;dentes ont renvoy&eacute; ici.</p>
+
+<h2>1. C&rsquo;est ici que les promesses du logiciel se tiennent ou se cassent</h2>
+<p class="pa-note">Presque toutes les r&egrave;gles fines des sections 5 &agrave; 8 reposent sur un nombre qui vit dans cet &eacute;cran&nbsp;: le halo vert d&eacute;pend de <code>tolerance_places</code>, l&rsquo;anneau &laquo;&nbsp;en retard&nbsp;&raquo; de <code>retard_grace</code>, la bande d&rsquo;heures de <code>rotation_defaut</code>, la frise de <code>pas_creneau</code>.</p>
+
+<div class="verdict"><b>D&rsquo;o&ugrave; la r&egrave;gle qui gouverne tout l&rsquo;&eacute;cran&nbsp;: aucun r&eacute;glage n&rsquo;est pos&eacute; nu.</b> Chacun est suivi d&rsquo;une phrase qui dit sa cons&eacute;quence dans la langue de l&rsquo;&eacute;cran qu&rsquo;il gouverne &mdash; et, quand c&rsquo;est possible, d&rsquo;un aper&ccedil;u avec les vraies tables du restaurant. Un champ &laquo;&nbsp;Tol&eacute;rance de places&nbsp;: [2]&nbsp;&raquo; ne sera jamais r&eacute;gl&eacute; correctement par personne.</div>
+
+<div class="fr">
+  <div class="fr-rail">
+    <div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div>
+    <div class="sp"></div><div class="ic on"></div>
+  </div>
+  <div class="body2">
+    <div class="snav">
+      <h6>PARAM&Egrave;TRES</h6>
+      <div class="sn">Ouvertures</div>
+      <div class="sn">Services et cr&eacute;neaux</div>
+      <div class="sn">Salles et tables <i>&rsaquo;</i></div>
+      <div class="sn on">Placement</div>
+      <div class="sn">R&egrave;gles de r&eacute;servation</div>
+      <div class="sn">No-show</div>
+      <div class="sn">Notifications</div>
+      <div class="sn sep">&Eacute;quipe</div>
+      <div class="sn">Widget</div>
+      <div class="sn">Restaurant</div>
+    </div>
+
+    <div class="pane">
+      <h5>Placement</h5>
+      <p class="lead">Comment le logiciel propose une table quand tu places une r&eacute;servation.</p>
+
+      <div class="set">
+        <div class="lft">
+          <div class="nm">Places en trop tol&eacute;r&eacute;es</div>
+          <div class="cons">Au-del&agrave;, la table reste proposable mais passe en <b>&laquo;&nbsp;convient avec r&eacute;serve&nbsp;&raquo;</b>. Sers-toi de ce r&eacute;glage pour dire &agrave; quel point tu acceptes de &laquo;&nbsp;gaspiller&nbsp;&raquo; des couverts.</div>
+          <div class="prev">
+            <span class="plab">POUR UNE R&Eacute;SERVATION DE 4 PERSONNES, DANS TA SALLE&nbsp;:</span>
+            <span class="mini ok">T5 &middot; 4 pl.</span>
+            <span class="mini ok">T2 &middot; 6 pl.</span>
+            <span class="mini tw">T7 &middot; 7 pl.</span>
+            <span class="mini no">T11 &middot; 10 pl.</span>
+          </div>
+        </div>
+        <div class="ctrl"><div class="num">2</div><div class="stepr"><span>&#9650;</span><span>&#9660;</span></div><span class="unit">places</span></div>
+      </div>
+
+      <div class="set">
+        <div class="lft">
+          <div class="nm">Dur&eacute;e de rotation par d&eacute;faut</div>
+          <div class="cons">Dur&eacute;e attribu&eacute;e &agrave; une nouvelle r&eacute;servation. <b>Les r&eacute;servations d&eacute;j&agrave; prises ne bougent pas</b>&nbsp;: chacune garde la dur&eacute;e qu&rsquo;elle avait le jour de sa cr&eacute;ation.</div>
+        </div>
+        <div class="ctrl"><div class="num">105</div><div class="stepr"><span>&#9650;</span><span>&#9660;</span></div><span class="unit">min</span></div>
+      </div>
+
+      <div class="set">
+        <div class="lft">
+          <div class="nm">D&eacute;lai avant &laquo;&nbsp;en retard&nbsp;&raquo;</div>
+          <div class="cons">Au-del&agrave; de ce d&eacute;lai, la table prend l&rsquo;anneau corail et <b>le bouton &laquo;&nbsp;No-show&nbsp;&raquo; appara&icirc;t</b> sur la fiche. Avant, il n&rsquo;existe pas.</div>
+        </div>
+        <div class="ctrl"><div class="num">15</div><div class="stepr"><span>&#9650;</span><span>&#9660;</span></div><span class="unit">min</span></div>
+      </div>
+
+      <div class="set">
+        <div class="lft">
+          <div class="nm">Proposer les rapprochements de tables</div>
+          <div class="cons">Quand aucune table seule ne convient, proposer les combinaisons d&eacute;j&agrave; d&eacute;clar&eacute;es dans l&rsquo;&eacute;diteur de plan. <b>D&eacute;sactiv&eacute;, la bande d&rsquo;heures affichera davantage de &laquo;&nbsp;complet&nbsp;&raquo;.</b></div>
+        </div>
+        <div class="ctrl"><div class="tgl"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>2. Ouvertures &mdash; la maquette existante, avec une correction</h2>
+<p class="pa-note">La structure de ta maquette est reprise telle quelle&nbsp;: <b>une colonne par jour</b>, les services empil&eacute;s, un &laquo;&nbsp;+&nbsp;&raquo; pour en ajouter. C&rsquo;est la seule disposition qui laisse voir la forme d&rsquo;une semaine d&rsquo;un coup d&rsquo;&oelig;il &mdash; et donc rep&eacute;rer qu&rsquo;on a oubli&eacute; le service du midi le vendredi.</p>
+
+<div class="fr">
+  <div class="fr-rail">
+    <div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div>
+    <div class="sp"></div><div class="ic on"></div>
+  </div>
+  <div class="body2">
+    <div class="pane">
+      <h5>Ouvertures</h5>
+      <p class="lead">Horaires habituels</p>
+      <div class="wk">
+        <div class="dcol closed"><div class="dname">Lundi</div><div class="closedlab">ferm&eacute;</div><div class="add gh">+</div></div>
+        <div class="dcol"><div class="dname">Mardi</div><div class="slot">11:30 &ndash; 14:00</div><div class="slot">19:00 &ndash; 22:00</div><div class="add">+</div></div>
+        <div class="dcol"><div class="dname">Mercredi</div><div class="slot">11:30 &ndash; 14:00</div><div class="slot">19:00 &ndash; 22:00</div><div class="add">+</div></div>
+        <div class="dcol"><div class="dname">Jeudi</div><div class="slot">11:30 &ndash; 14:00</div><div class="slot">19:00 &ndash; 22:00</div><div class="add">+</div></div>
+        <div class="dcol"><div class="dname">Vendredi</div><div class="slot">11:30 &ndash; 14:00</div><div class="slot">19:00 &ndash; 23:00</div><div class="add">+</div></div>
+        <div class="dcol"><div class="dname">Samedi</div><div class="slot">19:00 &ndash; 23:00</div><div class="add">+</div></div>
+        <div class="dcol closed"><div class="dname">Dimanche</div><div class="closedlab">ferm&eacute;</div><div class="add gh">+</div></div>
+      </div>
+
+      <p class="lead" style="margin-top:14px">Horaires exceptionnels &mdash; janvier 2025</p>
+      <div class="cal">
+        <div class="months">
+          <div>Novembre</div><div>D&eacute;cembre</div><div class="on">Janvier</div><div>F&eacute;vrier</div><div>Mars</div>
+        </div>
+        <div class="grid7">
+          <div class="hd">LUN</div><div class="hd">MAR</div><div class="hd">MER</div><div class="hd">JEU</div><div class="hd">VEN</div><div class="hd">SAM</div><div class="hd">DIM</div>
+          <div class="dy out">30</div><div class="dy">31</div><div class="dy">1</div><div class="dy">2</div><div class="dy">3</div><div class="dy">4</div><div class="dy hab">5</div>
+          <div class="dy hab">6</div><div class="dy">7</div><div class="dy">8</div><div class="dy">9</div><div class="dy">10</div><div class="dy">11</div><div class="dy hab">12</div>
+          <div class="dy hab">13</div><div class="dy">14</div><div class="dy">15</div><div class="dy ferm">16</div><div class="dy">17</div><div class="dy">18</div><div class="dy hab">19</div>
+          <div class="dy hab">20</div><div class="dy">21</div><div class="dy">22</div><div class="dy">23</div><div class="dy">24</div><div class="dy">25</div><div class="dy hab">26</div>
+          <div class="dy hab">27</div><div class="dy sel">28</div><div class="dy">29</div><div class="dy">30</div><div class="dy modif">31</div><div class="dy ferm">1</div><div class="dy hab out">2</div>
+        </div>
+      </div>
+      <div class="lgd">
+        <span><span class="k" style="background:#FBFAF8;border-color:#E4DDD3"></span>Ouvert normalement</span>
+        <span><span class="k" style="background:repeating-linear-gradient(45deg,#F4F1EC,#F4F1EC 3px,#EDE8E2 3px,#EDE8E2 6px)"></span>Ferm&eacute; d&rsquo;habitude</span>
+        <span><span class="k" style="background:repeating-linear-gradient(45deg,#EDE8E2,#EDE8E2 3px,#E0D8CD 3px,#E0D8CD 6px);border-color:#DCD4C9"></span>Fermeture exceptionnelle</span>
+        <span><span class="k" style="background:#FBF2DC;border:1.5px dashed #B08628"></span>Horaires modifi&eacute;s</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="bx cor">
+    <b class="t">Ce que j&rsquo;ai chang&eacute;&nbsp;: le vert, le rouge et le jaune</b>
+    <span>Ta maquette code les jours en <b>vert / rouge / jaune</b>. Le &sect;2.3 interdit d&eacute;j&agrave; de distinguer deux &eacute;tats par la teinte seule&nbsp;: vert et rouge sont exactement la paire que ne distinguent pas 8&nbsp;% des hommes. Ici on garde la couleur mais on ajoute la <b>forme</b>&nbsp;: hachures pour ferm&eacute;, pointill&eacute; ambre pour modifi&eacute;, barr&eacute; pour ferm&eacute;. M&ecirc;me grammaire qu&rsquo;au &sect;8.3.</span>
+  </div>
+  <div class="bx">
+    <b class="t">Et surtout&nbsp;: un jour normal ne dit rien</b>
+    <span>En vert, un calendrier d&rsquo;<i>exceptions</i> est vert &agrave; 95&nbsp;%. On apprend &agrave; ne plus le regarder, et le 16&nbsp;janvier ferm&eacute; se noie dans la masse. <b>Le d&eacute;faut doit &ecirc;tre muet pour que l&rsquo;exception crie.</b> L&rsquo;&oelig;il tombe sur les trois jours qui comptent en un quart de seconde.</span>
+  </div>
+</div>
+
+<h2>3. Un r&eacute;glage qui contredit le r&eacute;el doit le dire tout de suite</h2>
+<p class="pa-note">Changer <code>rotation_defaut</code> est sans danger&nbsp;: les r&eacute;servations gardent leur dur&eacute;e. Mais <b>fermer un jour, ou raccourcir un service, entre en conflit avec des r&eacute;servations d&eacute;j&agrave; prises</b> &mdash; et l&agrave; le logiciel ne peut pas se contenter d&rsquo;enregistrer.</p>
+
+<div class="conf">
+  <b class="t">Fermer le samedi 24&nbsp;janvier&nbsp;?</b>
+  <div style="font-size:12px;color:#8A8177;margin-bottom:6px">Ce jour porte d&eacute;j&agrave; <b style="color:#B4674F">3 r&eacute;servations confirm&eacute;es &middot; 11 couverts</b>. Fermer ne les annule pas tout seul.</div>
+  <div class="cl2"><span class="d">19:30</span><span class="n">Perrin, Antoine &middot; 2p &middot; T3</span><span style="color:#8A8177">07 88 21 04 33</span></div>
+  <div class="cl2"><span class="d">20:00</span><span class="n">Marchand, Sophie &middot; 2p &middot; T6</span><span style="color:#8A8177">06 12 34 56 78</span></div>
+  <div class="cl2"><span class="d">20:30</span><span class="n">Bouvier, famille &middot; 7p &middot; T12-13</span><span style="color:#8A8177">06 90 11 42 08</span></div>
+  <div class="acts">
+    <div class="bt sec">Annuler la fermeture</div>
+    <div class="bt pri">Fermer et pr&eacute;venir les 3 clients</div>
+    <div class="bt dng">Fermer, je les appelle</div>
+  </div>
+</div>
+
+<p class="pa-note">Trois sorties, parce qu&rsquo;il y a vraiment trois situations. <b>&laquo;&nbsp;Je les appelle&nbsp;&raquo; n&rsquo;est pas une option de repli&nbsp;: c&rsquo;est souvent la bonne.</b> Annuler par courriel le r&eacute;veillon de quelqu&rsquo;un est le genre de chose qui co&ucirc;te un client d&eacute;finitivement. Le logiciel enregistre alors les annulations avec <code>annule_par&nbsp;= restaurant</code> (&sect;3.1) &mdash; <b>ce qui n&rsquo;entache aucun compteur de fiabilit&eacute; client</b> &mdash; et laisse partir les appels.</p>
+
+<h2>4. Deux r&eacute;glages qui ne peuvent pas &ecirc;tre &agrave; moiti&eacute; faits</h2>
+
+<table class="k">
+  <tr><th style="width:30%">R&eacute;glage</th><th>La r&egrave;gle</th></tr>
+  <tr>
+    <td><b>Conditions d&rsquo;annulation</b> <i>(volet F)</i></td>
+    <td class="d">Le cahier demande un texte configurable, son affichage sur le widget, et une case d&rsquo;acceptation obligatoire. <b>Si le texte est vide, la case ne s&rsquo;affiche pas du tout.</b> Une case &laquo;&nbsp;j&rsquo;accepte les conditions&nbsp;&raquo; qui ne pointe vers rien n&rsquo;a aucune valeur juridique et fait mentir le restaurant &agrave; son client. Le logiciel ne doit pas proposer de consentir &agrave; rien.</td>
+  </tr>
+  <tr>
+    <td><b>Rappel automatique</b> <i>(volet D)</i></td>
+    <td class="d">Activable, avec un d&eacute;lai. Mais le rappel remplit <code>rappel_envoye_le</code>, et l&rsquo;absence de r&eacute;ponse alimente le risque (&sect;3.1). <b>D&eacute;sactiver les rappels doit donc dire ce que &ccedil;a co&ucirc;te</b>&nbsp;: &laquo;&nbsp;sans rappel, un client qui ne vient pas n&rsquo;a jamais eu l&rsquo;occasion de se d&eacute;dire &mdash; le compteur de no-show devient plus s&eacute;v&egrave;re qu&rsquo;il n&rsquo;est juste.&nbsp;&raquo;</td>
+  </tr>
+</table>
+
+<h2>5. Qui peut toucher &agrave; quoi</h2>
+<p class="pa-note">Le &sect;4.7 r&eacute;serve les param&egrave;tres &agrave; l&rsquo;administrateur. Une nuance s&rsquo;impose&nbsp;:</p>
+
+<div class="grid2">
+  <div class="bx">
+    <b class="t">Fermer <i>ce soir</i> n&rsquo;est pas un param&eacute;trage</b>
+    <span>Le chef est malade &agrave; 17&nbsp;h et le patron n&rsquo;est pas l&agrave;. <b>La fermeture du jour se d&eacute;clare depuis l&rsquo;Accueil</b>, accessible au r&ocirc;le Service, avec le m&ecirc;me &eacute;cran de conflit qu&rsquo;au point&nbsp;3. Les param&egrave;tres servent &agrave; <i>pr&eacute;voir</i> les fermetures&nbsp;; l&rsquo;Accueil &agrave; <i>subir</i> celle d&rsquo;aujourd&rsquo;hui.</span>
+  </div>
+  <div class="bx">
+    <b class="t">La section &laquo;&nbsp;Salles et tables&nbsp;&raquo; n&rsquo;est qu&rsquo;une porte</b>
+    <span>On y cr&eacute;e une table par un formulaire simple &mdash; nom, places, forme, salle (&sect;3.1) &mdash; et on ouvre l&rsquo;<b>&eacute;diteur de plan</b> pour la poser. Le chevron <code>&rsaquo;</code> dans la liste le dit&nbsp;: cette entr&eacute;e-l&agrave; m&egrave;ne ailleurs, en plein &eacute;cran.</span>
+  </div>
+</div>
+
+<h2>6. Une question&nbsp;: la navigation entre sections</h2>
+<p class="pa-note">Dix sections. Ta maquette montre un chevron &laquo;&nbsp;<b>&lsaquo; Ouvertures</b>&nbsp;&raquo; en haut &agrave; gauche, ce qui sugg&egrave;re une liste qu&rsquo;on ouvre et dont on revient. J&rsquo;ai dessin&eacute; autre chose ci-dessus&nbsp;; c&rsquo;est &agrave; toi de trancher.</p>
+
+<div class="options">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <b>Une colonne de sections toujours visible, &agrave; c&ocirc;t&eacute; du rail</b>
+      <div class="subtitle">158&nbsp;px, la section courante en encre. On saute de &laquo;&nbsp;Placement&nbsp;&raquo; &agrave; &laquo;&nbsp;No-show&nbsp;&raquo; d&rsquo;un seul geste, et on voit toujours o&ugrave; l&rsquo;on est dans l&rsquo;ensemble. Le r&eacute;glage de plusieurs choses &agrave; la suite &mdash; ce qu&rsquo;on fait toujours en param&eacute;trant &mdash; ne co&ucirc;te pas d&rsquo;aller-retour.
+      <br><br><b>Recommand&eacute;.</b> Il reste 1&nbsp;100&nbsp;px pour le contenu sur une Surface Pro&nbsp;: largement de quoi afficher la semaine et le calendrier c&ocirc;te &agrave; c&ocirc;te.</div>
+    </div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <b>Liste des sections, puis &eacute;cran de section avec &laquo;&nbsp;&lsaquo; retour&nbsp;&raquo;</b>
+      <div class="subtitle">Ce que montre ta maquette. Toute la largeur pour le contenu, ce qui est confortable pour les Ouvertures. Mais r&eacute;gler trois choses demande six navigations, et on perd la vue d&rsquo;ensemble de ce qui est param&eacute;trable &mdash; or beaucoup de r&eacute;glages ne sont jamais trouv&eacute;s faute d&rsquo;&ecirc;tre vus.</div>
+    </div>
+  </div>
+  <div class="option" data-choice="C" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <b>Une seule longue page, avec des ancres &agrave; gauche</b>
+      <div class="subtitle">Tout est l&agrave;, on d&eacute;file. Excellent pour d&eacute;couvrir l&rsquo;&eacute;tendue des r&eacute;glages la premi&egrave;re fois. Mais dix sections font une page tr&egrave;s longue, et sur tablette le d&eacute;filement au doigt d&eacute;passe syst&eacute;matiquement la cible.</div>
+    </div>
+  </div>
+</div>
+
+</div>

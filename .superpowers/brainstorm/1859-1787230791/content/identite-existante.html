@@ -1,0 +1,330 @@
+<h2>Ton système, appliqué au plan de salle</h2>
+<p class="subtitle">Même palette, même rail de navigation, mêmes arrondis que tes tests — poussés jusqu'à l'écran de service. Trois registres, du plus fidèle au plus éloigné.</p>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Caveat:wght@500;600;700&display=swap');
+
+  .tu { border-radius:8px; overflow:hidden; display:flex; font-family:'Nunito',sans-serif;
+        border:1px solid rgba(0,0,0,.08) }
+  .tu-rail { width:56px; flex-shrink:0; display:flex; flex-direction:column; align-items:center;
+             gap:7px; padding:9px 0 }
+  .tu-ico { width:38px; height:38px; border-radius:11px; display:flex; align-items:center;
+            justify-content:center }
+  .tu-ico svg { width:19px; height:19px; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round }
+  .tu-main { flex:1; display:flex; flex-direction:column; min-width:0 }
+
+  .tu-head { display:flex; align-items:baseline; gap:13px; padding:11px 16px 10px }
+  .tu-clock { font-weight:800; font-size:25px; letter-spacing:-.01em; line-height:1 }
+  .tu-sub { font-style:italic; font-size:11px; line-height:1.3 }
+  .tu-date { font-weight:800; font-size:14px; line-height:1 }
+  .tu-grow { flex:1 }
+  .tu-cvt { font-weight:700; font-size:12px; border-radius:20px; padding:5px 12px }
+
+  .tu-rail2 { display:flex; padding:0 12px 10px; gap:5px }
+  .tu-slot { flex:1; text-align:center; padding:6px 0 7px; border-radius:11px }
+  .tu-slot .h { display:block; font-weight:800; font-size:12px; line-height:1.2 }
+  .tu-slot .c { display:block; font-size:9px; font-style:italic; opacity:.7 }
+  .tu-slot .g { height:3px; border-radius:2px; margin:4px 9px 0 }
+
+  .tu-body { flex:1; display:flex; min-height:0; padding:0 12px 12px; gap:10px }
+  .tu-plan { flex:1; position:relative; border-radius:14px; overflow:hidden; height:196px }
+  .tu-t { position:absolute; display:flex; align-items:center; justify-content:center;
+          font-weight:800; font-size:11px; border-radius:9px }
+  .tu-t.r { border-radius:50% }
+  .tu-bar { position:absolute; border-radius:9px; display:flex; align-items:center;
+            justify-content:center; writing-mode:vertical-rl; font-size:8px; font-weight:700;
+            letter-spacing:.16em }
+  .tu-zone { position:absolute; font-size:9px; font-weight:700; letter-spacing:.12em;
+             text-transform:uppercase }
+  .tu-col { width:132px; flex-shrink:0; border-radius:14px; padding:9px }
+  .tu-lab { font-size:8px; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
+            margin:0 0 6px }
+  .tu-card { border-radius:9px; padding:6px 8px; margin-bottom:5px }
+  .tu-card b { display:block; font-size:10px; font-weight:800; line-height:1.3 }
+  .tu-card i { font-size:9px; opacity:.72 }
+
+  .n2 { margin-top:11px; font:400 12px/1.55 ui-sans-serif,system-ui,sans-serif }
+
+  /* ─────────── V1 · FIDÈLE ─────────── */
+  .v1 { background:#EDE8E2 }
+  .v1 .tu-rail { background:#FBFAF8 }
+  .v1 .tu-ico { background:#F4F2EE; stroke:#B6B2AC }
+  .v1 .tu-ico.on { background:#F5A04A; stroke:#fff }
+  .v1 .tu-clock { color:#3A3A38 }
+  .v1 .tu-sub { color:#9A968F }
+  .v1 .tu-sub em { color:#F5A04A; font-weight:700 }
+  .v1 .tu-date { color:#3A3A38 }
+  .v1 .tu-cvt { background:#fff; color:#3A3A38 }
+  .v1 .tu-slot { background:#F5F2EE; color:#9A968F }
+  .v1 .tu-slot .h { color:#3A3A38 }
+  .v1 .tu-slot .g { background:#DFD9D1 }
+  .v1 .tu-slot.on { background:#3A3A38 }
+  .v1 .tu-slot.on .h,.v1 .tu-slot.on .c { color:#F5F2EE }
+  .v1 .tu-slot.on .g { background:#F5A04A }
+  .v1 .tu-plan { background:#FBFAF8 }
+  .v1 .tu-zone { color:#C6C1B9 }
+  .v1 .tu-bar { background:#EDE8E2; color:#A8A39B }
+  .v1 .libre   { background:#fff; box-shadow:inset 0 0 0 1.5px #DFD9D1; color:#8F8B84 }
+  .v1 .reserve { background:#DCEBF7; box-shadow:inset 0 0 0 1.5px #7FB6DE; color:#2F6D9B }
+  .v1 .occupe  { background:#FBDCDA; box-shadow:inset 0 0 0 1.5px #F08A83; color:#B0453C }
+  .v1 .nettoy  { background:#FAF0D2; box-shadow:inset 0 0 0 1.5px #E5C55C; color:#95762A }
+  .v1 .tu-col { background:#FBFAF8 }
+  .v1 .tu-lab { color:#B6B2AC }
+  .v1 .tu-card { background:#F5F2EE; color:#3A3A38 }
+  .v1 .tu-card i { color:#9A968F; font-style:italic }
+
+  /* ─────────── V2 · FIDÈLE + LA MAIN ─────────── */
+  .v2 { background:#EBE4D8;
+    background-image:radial-gradient(rgba(160,140,110,.09) .7px,transparent .7px);
+    background-size:5px 5px }
+  .v2 .tu-rail { background:#F7F2E7 }
+  .v2 .tu-ico { background:#EFE8DA; stroke:#B3A98F }
+  .v2 .tu-ico.on { background:#E8873A; stroke:#fff }
+  .v2 .tu-clock { color:#33302A; font-family:'Caveat',cursive; font-size:33px; font-weight:700 }
+  .v2 .tu-sub { color:#948A76 }
+  .v2 .tu-sub em { color:#E8873A; font-weight:700 }
+  .v2 .tu-date { color:#33302A }
+  .v2 .tu-cvt { background:#F7F2E7; color:#7A6A4C; font-family:'Caveat',cursive; font-size:16px;
+                box-shadow:inset 0 0 0 1.5px #DCD0B6 }
+  .v2 .tu-slot { background:#F2EBDD; color:#948A76 }
+  .v2 .tu-slot .h { color:#33302A; font-family:'Caveat',cursive; font-size:16px }
+  .v2 .tu-slot .g { background:#DCD0B6 }
+  .v2 .tu-slot.on { background:#33302A }
+  .v2 .tu-slot.on .h,.v2 .tu-slot.on .c { color:#F2EBDD }
+  .v2 .tu-slot.on .g { background:#E8873A }
+  .v2 .tu-plan { background:#F7F2E7 }
+  .v2 .tu-zone { color:#B3A98F; font-family:'Caveat',cursive; font-size:14px;
+                 letter-spacing:0; text-transform:none }
+  .v2 .tu-bar { background:#EBE4D8; color:#A0957C }
+  .v2 .libre   { background:#F7F2E7; box-shadow:inset 0 0 0 1.5px #D3C7AC; color:#8A8070 }
+  .v2 .reserve { background:#D9E7EA; box-shadow:inset 0 0 0 1.5px #6EA3B0; color:#2F6070 }
+  .v2 .occupe  { background:#F2D4C4; box-shadow:inset 0 0 0 1.5px #D2704A; color:#9E4526 }
+  .v2 .nettoy  { background:#EDE7D2; box-shadow:inset 0 0 0 1.5px #C4B583; color:#82743F }
+  .v2 .tu-col { background:#F7F2E7 }
+  .v2 .tu-lab { color:#B3A98F }
+  .v2 .tu-card { background:#F2EBDD; color:#33302A }
+  .v2 .tu-card i { color:#948A76; font-style:italic }
+
+  /* ─────────── V3 · MODE SOIR ─────────── */
+  .v3 { background:#26231F }
+  .v3 .tu-rail { background:#1D1B18 }
+  .v3 .tu-ico { background:#2E2A26; stroke:#7C756B }
+  .v3 .tu-ico.on { background:#F5A04A; stroke:#26231F }
+  .v3 .tu-clock { color:#F2EDE5 }
+  .v3 .tu-sub { color:#8A8279 }
+  .v3 .tu-sub em { color:#F5A04A; font-weight:700 }
+  .v3 .tu-date { color:#F2EDE5 }
+  .v3 .tu-cvt { background:#332F2A; color:#E5DED4 }
+  .v3 .tu-slot { background:#2E2A26; color:#8A8279 }
+  .v3 .tu-slot .h { color:#E5DED4 }
+  .v3 .tu-slot .g { background:#413B34 }
+  .v3 .tu-slot.on { background:#F5A04A }
+  .v3 .tu-slot.on .h { color:#26231F }
+  .v3 .tu-slot.on .c { color:#7A4E15 }
+  .v3 .tu-slot.on .g { background:#26231F }
+  .v3 .tu-plan { background:#1D1B18 }
+  .v3 .tu-zone { color:#5C564E }
+  .v3 .tu-bar { background:#2E2A26; color:#7C756B }
+  .v3 .libre   { background:#2A2723; box-shadow:inset 0 0 0 1.5px #45403A; color:#8F887E }
+  .v3 .reserve { background:#123A50; box-shadow:inset 0 0 0 1.5px #4C9CC8; color:#93D2EE }
+  .v3 .occupe  { background:#5A241D; box-shadow:inset 0 0 0 1.5px #E0705C; color:#FFB7A5 }
+  .v3 .nettoy  { background:#4A3F16; box-shadow:inset 0 0 0 1.5px #C9AC42; color:#F0DB92 }
+  .v3 .tu-col { background:#1D1B18 }
+  .v3 .tu-lab { color:#5C564E }
+  .v3 .tu-card { background:#2A2723; color:#E5DED4 }
+  .v3 .tu-card i { color:#8A8279; font-style:italic }
+</style>
+
+<div class="options">
+
+  <!-- ═══════ V1 ═══════ -->
+  <div class="option" data-choice="v1" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Fidèle — ton système tel quel</h3>
+      <p>Rien d'inventé&nbsp;: ton beige, ton orange, tes arrondis, ton rail. L'orange ne sert qu'à l'interaction (nav active, créneau sélectionné). Les statuts prennent une gamme à part — bleu, corail, jaune — reprise de tes pastilles de calendrier.</p>
+      <div class="tu v1">
+        <div class="tu-rail">
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+          <div class="tu-ico on"><svg viewBox="0 0 24 24"><path d="M3 8h18M6 8l-2 12M18 8l2 12M8 14h8"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M6 11h6"/></svg></div>
+          <div class="tu-grow"></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+        </div>
+        <div class="tu-main">
+          <div class="tu-head">
+            <span class="tu-clock">20:07</span>
+            <span class="tu-sub">Service en cours<br>3 tables <em>à placer</em></span>
+            <span class="tu-date">20/08/26</span>
+            <span class="tu-sub">Jeudi</span>
+            <span class="tu-grow"></span>
+            <span class="tu-cvt">32 / 48 couverts</span>
+          </div>
+          <div class="tu-rail2">
+            <div class="tu-slot"><span class="h">19:00</span><span class="c">12 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">19:30</span><span class="c">18 c.</span><div class="g"></div></div>
+            <div class="tu-slot on"><span class="h">20:00</span><span class="c">32 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">20:30</span><span class="c">40 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:00</span><span class="c">44 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:30</span><span class="c">26 c.</span><div class="g"></div></div>
+          </div>
+          <div class="tu-body">
+            <div class="tu-plan">
+              <div class="tu-zone" style="left:14px;top:10px">Salle</div>
+              <div class="tu-bar" style="left:16px;top:30px;width:30px;height:100px">BAR</div>
+              <div class="tu-t r occupe"  style="left:70px;top:32px;width:38px;height:38px">1</div>
+              <div class="tu-t r libre"   style="left:124px;top:38px;width:30px;height:30px">2</div>
+              <div class="tu-t reserve"   style="left:172px;top:30px;width:56px;height:34px">3</div>
+              <div class="tu-t libre"     style="left:244px;top:34px;width:36px;height:36px">4</div>
+              <div class="tu-t r occupe"  style="left:70px;top:92px;width:44px;height:44px">5</div>
+              <div class="tu-t nettoy"    style="left:132px;top:96px;width:36px;height:36px">6</div>
+              <div class="tu-t reserve"   style="left:186px;top:88px;width:72px;height:46px">7</div>
+              <div class="tu-t r libre"   style="left:276px;top:96px;width:32px;height:32px">8</div>
+              <div class="tu-t occupe"    style="left:70px;top:158px;width:54px;height:32px">9</div>
+              <div class="tu-t libre"     style="left:142px;top:160px;width:32px;height:32px">10</div>
+              <div class="tu-t r reserve" style="left:192px;top:154px;width:40px;height:40px">11</div>
+              <div class="tu-t libre"     style="left:248px;top:160px;width:44px;height:32px">12</div>
+            </div>
+            <div class="tu-col">
+              <p class="tu-lab">À placer · 3</p>
+              <div class="tu-card"><b>Moreau · 4p</b><i>20:30 · web</i></div>
+              <div class="tu-card"><b>Bekkali · 2p</b><i>20:45 · tél.</i></div>
+              <div class="tu-card"><b>Chen · 6p</b><i>21:00 · web</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="n2"><strong>Ce que ça règle&nbsp;:</strong> la cohérence avec ce que tu as déjà, et le conflit orange marque / orange statut. <strong>Ce qui reste ouvert&nbsp;:</strong> beaucoup de blanc et de pastel — à trois mètres, les statuts se ressemblent plus qu'ils ne le devraient.</p>
+    </div>
+  </div>
+
+  <!-- ═══════ V2 ═══════ -->
+  <div class="option" data-choice="v2" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>La main — ton système, avec ce que tu aimais dans l'ardoise</h3>
+      <p>Ce qui te plaisait dans F, ce n'était sans doute pas le noir&nbsp;: c'était la trace de la main. Ici on la garde et on jette l'ardoise. Papier ivoire légèrement grené, orange plus terreux, et l'écriture manuscrite réservée à l'heure, aux zones et aux compteurs — <em>jamais</em> à une donnée qu'il faut lire vite.</p>
+      <div class="tu v2">
+        <div class="tu-rail">
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+          <div class="tu-ico on"><svg viewBox="0 0 24 24"><path d="M3 8h18M6 8l-2 12M18 8l2 12M8 14h8"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M6 11h6"/></svg></div>
+          <div class="tu-grow"></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+        </div>
+        <div class="tu-main">
+          <div class="tu-head">
+            <span class="tu-clock">20:07</span>
+            <span class="tu-sub">Service en cours<br>3 tables <em>à placer</em></span>
+            <span class="tu-date">20/08/26</span>
+            <span class="tu-sub">Jeudi</span>
+            <span class="tu-grow"></span>
+            <span class="tu-cvt">32 / 48 couverts</span>
+          </div>
+          <div class="tu-rail2">
+            <div class="tu-slot"><span class="h">19:00</span><span class="c">12 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">19:30</span><span class="c">18 c.</span><div class="g"></div></div>
+            <div class="tu-slot on"><span class="h">20:00</span><span class="c">32 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">20:30</span><span class="c">40 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:00</span><span class="c">44 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:30</span><span class="c">26 c.</span><div class="g"></div></div>
+          </div>
+          <div class="tu-body">
+            <div class="tu-plan">
+              <div class="tu-zone" style="left:14px;top:6px">Salle</div>
+              <div class="tu-bar" style="left:16px;top:30px;width:30px;height:100px">BAR</div>
+              <div class="tu-t r occupe"  style="left:70px;top:32px;width:38px;height:38px">1</div>
+              <div class="tu-t r libre"   style="left:124px;top:38px;width:30px;height:30px">2</div>
+              <div class="tu-t reserve"   style="left:172px;top:30px;width:56px;height:34px">3</div>
+              <div class="tu-t libre"     style="left:244px;top:34px;width:36px;height:36px">4</div>
+              <div class="tu-t r occupe"  style="left:70px;top:92px;width:44px;height:44px">5</div>
+              <div class="tu-t nettoy"    style="left:132px;top:96px;width:36px;height:36px">6</div>
+              <div class="tu-t reserve"   style="left:186px;top:88px;width:72px;height:46px">7</div>
+              <div class="tu-t r libre"   style="left:276px;top:96px;width:32px;height:32px">8</div>
+              <div class="tu-t occupe"    style="left:70px;top:158px;width:54px;height:32px">9</div>
+              <div class="tu-t libre"     style="left:142px;top:160px;width:32px;height:32px">10</div>
+              <div class="tu-t r reserve" style="left:192px;top:154px;width:40px;height:40px">11</div>
+              <div class="tu-t libre"     style="left:248px;top:160px;width:44px;height:32px">12</div>
+            </div>
+            <div class="tu-col">
+              <p class="tu-lab">À placer · 3</p>
+              <div class="tu-card"><b>Moreau · 4p</b><i>20:30 · web</i></div>
+              <div class="tu-card"><b>Bekkali · 2p</b><i>20:45 · tél.</i></div>
+              <div class="tu-card"><b>Chen · 6p</b><i>21:00 · web</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="n2"><strong>Ce que ça règle&nbsp;:</strong> la personnalité que tu cherchais dans F, sans le pastiche ni la perte de lisibilité. <strong>Le risque&nbsp;:</strong> le manuscrit vieillit vite s'il déborde — il faut le tenir à trois usages, pas dix.</p>
+    </div>
+  </div>
+
+  <!-- ═══════ V3 ═══════ -->
+  <div class="option" data-choice="v3" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Mode soir — la même identité, inversée</h3>
+      <p>Pas une autre direction&nbsp;: <em>la même</em>, en sombre. Bruns chauds plutôt que gris froids, orange conservé, arrondis identiques. Le midi se fait en clair, le soir en sombre, et l'écran bascule tout seul à l'heure du service.</p>
+      <div class="tu v3">
+        <div class="tu-rail">
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+          <div class="tu-ico on"><svg viewBox="0 0 24 24"><path d="M3 8h18M6 8l-2 12M18 8l2 12M8 14h8"/></svg></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="3"/><path d="M6 11h6"/></svg></div>
+          <div class="tu-grow"></div>
+          <div class="tu-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+        </div>
+        <div class="tu-main">
+          <div class="tu-head">
+            <span class="tu-clock">20:07</span>
+            <span class="tu-sub">Service en cours<br>3 tables <em>à placer</em></span>
+            <span class="tu-date">20/08/26</span>
+            <span class="tu-sub">Jeudi</span>
+            <span class="tu-grow"></span>
+            <span class="tu-cvt">32 / 48 couverts</span>
+          </div>
+          <div class="tu-rail2">
+            <div class="tu-slot"><span class="h">19:00</span><span class="c">12 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">19:30</span><span class="c">18 c.</span><div class="g"></div></div>
+            <div class="tu-slot on"><span class="h">20:00</span><span class="c">32 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">20:30</span><span class="c">40 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:00</span><span class="c">44 c.</span><div class="g"></div></div>
+            <div class="tu-slot"><span class="h">21:30</span><span class="c">26 c.</span><div class="g"></div></div>
+          </div>
+          <div class="tu-body">
+            <div class="tu-plan">
+              <div class="tu-zone" style="left:14px;top:10px">Salle</div>
+              <div class="tu-bar" style="left:16px;top:30px;width:30px;height:100px">BAR</div>
+              <div class="tu-t r occupe"  style="left:70px;top:32px;width:38px;height:38px">1</div>
+              <div class="tu-t r libre"   style="left:124px;top:38px;width:30px;height:30px">2</div>
+              <div class="tu-t reserve"   style="left:172px;top:30px;width:56px;height:34px">3</div>
+              <div class="tu-t libre"     style="left:244px;top:34px;width:36px;height:36px">4</div>
+              <div class="tu-t r occupe"  style="left:70px;top:92px;width:44px;height:44px">5</div>
+              <div class="tu-t nettoy"    style="left:132px;top:96px;width:36px;height:36px">6</div>
+              <div class="tu-t reserve"   style="left:186px;top:88px;width:72px;height:46px">7</div>
+              <div class="tu-t r libre"   style="left:276px;top:96px;width:32px;height:32px">8</div>
+              <div class="tu-t occupe"    style="left:70px;top:158px;width:54px;height:32px">9</div>
+              <div class="tu-t libre"     style="left:142px;top:160px;width:32px;height:32px">10</div>
+              <div class="tu-t r reserve" style="left:192px;top:154px;width:40px;height:40px">11</div>
+              <div class="tu-t libre"     style="left:248px;top:160px;width:44px;height:32px">12</div>
+            </div>
+            <div class="tu-col">
+              <p class="tu-lab">À placer · 3</p>
+              <div class="tu-card"><b>Moreau · 4p</b><i>20:30 · web</i></div>
+              <div class="tu-card"><b>Bekkali · 2p</b><i>20:45 · tél.</i></div>
+              <div class="tu-card"><b>Chen · 6p</b><i>21:00 · web</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="n2"><strong>Ce que ça règle&nbsp;:</strong> les statuts éclatent enfin — c'est de loin la variante la plus lisible des trois. Et l'écran n'éblouit plus la salle le soir. <strong>Le coût&nbsp;:</strong> deux thèmes à tenir au lieu d'un, dès le départ.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:24px"><strong>Ma recommandation : 2 en thème clair, 3 en thème sombre — c'est le même design, pas deux.</strong> On garde ton identité, on lui ajoute la main que tu cherchais dans l'ardoise, et on prévoit la bascule soir dès maintenant parce que c'est là que ton produit sera le plus utilisé.</p>
+
+<p class="subtitle" style="margin-top:14px"><strong>Une question qui reste&nbsp;:</strong> quelle police as-tu utilisée dans tes tests&nbsp;? Ici j'ai approché avec Nunito, mais ça ressemble à du Museo Sans Rounded — qui n'est pas libre. Si c'est bien elle, il faudra trancher entre l'acheter et lui trouver une remplaçante.</p>
