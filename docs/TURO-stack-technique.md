@@ -31,7 +31,8 @@
 | Tests de bout en bout | **Playwright** |
 | PWA | **`@angular/pwa`** dès la première tranche |
 | File d'écritures hors ligne | **Hors tranche** — mais `CommandGateway` en pose la forme dès maintenant |
-| Heures d'ouverture | **`HeureLocale` (`"19:00"`), jamais un `Date`.** Fuseau appliqué en un seul endroit |
+| Langue du code | **Anglais** — identifiants, types, noms de fichiers, libellés de tests. **Commentaires en français** |
+| Heures d'ouverture | **`LocalTime` (`"19:00"`), jamais un `Date`.** Fuseau appliqué en un seul endroit |
 
 ---
 
@@ -253,7 +254,7 @@ C'est le même mouvement que les frontières Nx du §3.1 : confier une intention
 
 `Restaurant.fuseau` existe au §3.1 de la conception, et tout le §9 manipule des **heures locales du restaurant**, pas des instants. « Le service du soir commence à 19:00 » n'est pas un `Date`.
 
-**Décision :** dans `libs/domain`, une heure d'ouverture est une `HeureLocale` — la chaîne `"19:00"`. La conversion en instant se fait à un seul endroit, avec `date-fns` et `@date-fns/tz`, en appliquant `Restaurant.fuseau`.
+**Décision :** dans `libs/domain`, une heure d'ouverture est un `LocalTime` — la chaîne `"19:00"`. La conversion en instant se fait à un seul endroit, avec `date-fns` et `@date-fns/tz`, en appliquant `Restaurant.fuseau`.
 
 ⚠️ Sans cette règle, le jour du passage à l'heure d'hiver, un service réglé à 18:00 s'affiche à 17:00 ou 19:00 selon la machine qui regarde. Ce bug ne se voit pas en développement : il arrive deux fois par an, en production, et il déplace des réservations.
 

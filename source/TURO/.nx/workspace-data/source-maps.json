@@ -1,0 +1,1360 @@
+{
+  "apps/TURO-e2e": {
+    "root": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "metadata.targetGroups": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "metadata.targetGroups.E2E (CI)": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "metadata.targetGroups.E2E (CI).0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "metadata.targetGroups.E2E (CI).1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "metadata.targetGroups.E2E (CI).2": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.dependsOn.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.dependsOn.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.dependsOn": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.cache": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.inputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.inputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.inputs.2": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.inputs.3": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.inputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.outputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.outputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.outputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.executor": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.options.cwd": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.options.command": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.options": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.technologies": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.technologies.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.description": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.help": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.help.command": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e.metadata.help.example": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.executor": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.cache": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.dependsOn.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.dependsOn": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.metadata": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.options.servers.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.options.servers": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.options": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.metadata.technologies": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.metadata.technologies.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e--wait-for-webserver.metadata.description": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.dependsOn.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.dependsOn.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.dependsOn": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.cache": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.inputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.inputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.inputs.2": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.inputs.3": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.inputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.outputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.outputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.outputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.executor": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.options.cwd": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.options.env": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.options.command": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.options": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.technologies": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.technologies.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.description": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.help": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.help.command": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--src/example.spec.ts.metadata.help.example": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.executor": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.cache": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.inputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.inputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.inputs.2": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.inputs.3": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.inputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.outputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.outputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.outputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.dependsOn.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.dependsOn": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.technologies": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.technologies.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.description": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.nonAtomizedTarget": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.help": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.help.command": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci.metadata.help.example": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.executor": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.continuous": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.cache": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.inputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.inputs.1": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.inputs.2": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.inputs.3": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.inputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.outputs.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.outputs": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.metadata": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.options.config": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.options.expectedSuites": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.options": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.metadata.technologies": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.metadata.technologies.0": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.e2e-ci--merge-reports.metadata.description": [
+      "apps/TURO-e2e/playwright.config.mts",
+      "@nx/playwright/plugin"
+    ],
+    "targets.lint": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.cache": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.0": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.1": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.2": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.3": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.4": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.5": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.outputs.0": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.outputs": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.executor": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options.cwd": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options.command": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.technologies": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.technologies.0": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.description": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help.command": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help.example": [
+      "apps/TURO-e2e/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "name": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "$schema": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "projectType": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "sourceRoot": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "// targets": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "implicitDependencies": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ],
+    "implicitDependencies.TURO": [
+      "apps/TURO-e2e/project.json",
+      "nx/core/project-json"
+    ]
+  },
+  "apps/TURO": {
+    "root": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets": [
+      "apps/TURO/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.cache": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.0": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.1": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.2": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.3": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.4": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs.5": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json#targetDefaults.@nx/eslint:lint",
+      "nx/target-defaults"
+    ],
+    "targets.lint.executor": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.cache": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.dependsOn.0": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.dependsOn": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.inputs.0": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.inputs.1": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.inputs": [
+      "nx.json#targetDefaults.@angular/build:application",
+      "nx/target-defaults"
+    ],
+    "targets.build.executor": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.cache": [
+      "nx.json#targetDefaults.@angular/build:unit-test",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs.0": [
+      "nx.json#targetDefaults.@angular/build:unit-test",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs.1": [
+      "nx.json#targetDefaults.@angular/build:unit-test",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json#targetDefaults.@angular/build:unit-test",
+      "nx/target-defaults"
+    ],
+    "targets.test.executor": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "name": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "$schema": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "projectType": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "prefix": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "sourceRoot": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "tags": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.outputs.0": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.outputs": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.defaultConfiguration": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.outputPath": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.browser": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.tsConfig": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.assets.0": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.assets": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.styles.0": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.styles": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.production.budgets.0": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.production.budgets.1": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.production.budgets": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.production.outputHashing": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.production": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.development.optimization": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.development.extractLicenses": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.development.sourceMap": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations.development": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.configurations": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.continuous": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.executor": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.defaultConfiguration": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.configurations.production.buildTarget": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.configurations.production": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.configurations.development.buildTarget": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.configurations.development": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve.configurations": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options.watch": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.continuous": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.executor": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.options.buildTarget": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.options.port": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.options.staticFilePath": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.options.spa": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.serve-static.options": [
+      "apps/TURO/project.json",
+      "nx/core/project-json"
+    ]
+  },
+  "libs/domain": {
+    "root": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "targets": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.cache": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.0": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.1": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.2": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.3": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.4": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs.5": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.inputs": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.outputs.0": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.outputs": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.executor": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options.cwd": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options.command": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.options": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.technologies": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.technologies.0": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.description": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help.command": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "targets.lint.metadata.help.example": [
+      "libs/domain/eslint.config.mjs",
+      "@nx/eslint/plugin"
+    ],
+    "metadata.targetGroups": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "metadata.targetGroups.TEST (CI)": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "metadata.targetGroups.TEST (CI).0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "metadata.targetGroups.TEST (CI).1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "metadata.targetGroups.TEST (CI).2": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.cache": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.2": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.3": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.4": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.5": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs.6": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.inputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.outputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.outputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.executor": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.options.cwd": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.options.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.options": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.technologies": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.technologies.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.description": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.help": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.help.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test.metadata.help.example": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.cache": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.2": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.3": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.4": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.5": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs.6": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.inputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.outputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.outputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.executor": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.options.cwd": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.options.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.options": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.technologies": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.technologies.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.description": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.help": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.help.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/domain.spec.ts.metadata.help.example": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.cache": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.2": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.3": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.4": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.5": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs.6": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.inputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.outputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.outputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.executor": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.options.cwd": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.options.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.options": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.technologies": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.technologies.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.description": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.help": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.help.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci--src/lib/opening-hours/resolve-day.spec.ts.metadata.help.example": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.executor": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.cache": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.2": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.3": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.4": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.5": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs.6": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.inputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.outputs.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.outputs.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.outputs": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.dependsOn.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.dependsOn.1": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.dependsOn": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.technologies": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.technologies.0": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.description": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.nonAtomizedTarget": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.help": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.help.command": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "targets.test-ci.metadata.help.example": [
+      "libs/domain/vitest.config.mts",
+      "@nx/vitest"
+    ],
+    "name": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "$schema": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "sourceRoot": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "projectType": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "// targets": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "tags": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.type:domain": [
+      "libs/domain/project.json",
+      "nx/core/project-json"
+    ]
+  }
+}
