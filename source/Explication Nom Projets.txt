@@ -3,3 +3,5 @@ TUApp    : Table UP Application
 TUAppApi : Table UP Application Api  -> app.tableup.fr
 TUC      : Table UP Cloud            -> cloud.tableup.fr
 TUM      : Table UP Manager          -> restaurant.tableup.fr
+TUSSO    : Table UP SSO              -> sso.tableup.fr
+TUD      : Table UP Devices          -> devices.tableup.fr

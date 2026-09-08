@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TableUp — Fonctionnalités V1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===================== jetons ===================== */
+:root{
+  --fond:#EDE8E2; --surf:#FBFAF8; --trait:#DFD9D1; --trait2:#E4DED6;
+  --encre:#3A3A38; --gris:#9A968F; --or:#F5A04A;
+  --ardoise:#2E2A26; --ardoise-b:#241F1B; --craie:#B6AC9C;
+  --bleu:#3D6E8E; --bleu-f:#E4EFF7; --cor:#B4674F; --cor-f:#F7E7E1;
+  --vio:#5B4A8A; --vio-f:#EDE6F5; --vert:#4E7C59; --vert-f:#E6F0E8;
+  --ok:#5FBF7A; --rs:#B3BE4E; --ambre:#C9AC52;
+  --nav:300px; --rad:12px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--fond);color:var(--encre);
+  font-family:'Exo 2',system-ui,-apple-system,sans-serif;font-size:15.5px;line-height:1.68;
+  -webkit-font-smoothing:antialiased}
+.craie{font-family:'Caveat',cursive}
+a{color:inherit}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
+  background:#E6E0D8;border-radius:4px;padding:1px 5px;color:#5A544C}
+
+/* ===================== barre latérale ===================== */
+.side{position:fixed;inset:0 auto 0 0;width:var(--nav);background:var(--surf);
+  border-right:1px solid var(--trait);display:flex;flex-direction:column;z-index:60}
+.side-top{padding:19px 22px 14px;border-bottom:1px solid var(--trait)}
+.side-top .logo{font-size:20px;font-weight:700;letter-spacing:-.015em;text-decoration:none;display:block}
+.side-top .logo em{font-style:normal;color:var(--or)}
+.side-top .sub{font-size:11.5px;color:var(--gris);display:block;margin-top:1px}
+.side-nav{flex:1;overflow-y:auto;padding:9px 10px 40px}
+.nv{display:flex;gap:9px;align-items:baseline;text-decoration:none;padding:6px 10px;border-radius:8px;
+  font-size:13px;color:var(--encre);line-height:1.35}
+.nv:hover{background:var(--fond)}
+.nv i{font-style:normal;font-variant-numeric:tabular-nums;color:var(--gris);font-size:11px;
+  flex:none;width:15px;text-align:right}
+.nv.h2{font-weight:600;margin-top:5px}
+.nv.h3{font-size:12.3px;color:#6E675F;padding-left:26px}
+.nv.h3 i{width:22px}
+.nv.on{background:#FCEEDC;font-weight:600}
+.nv.on i{color:var(--or)}
+.side-foot{padding:10px 22px;border-top:1px solid var(--trait);font-size:11px;color:var(--gris);
+  display:flex;gap:12px;flex-wrap:wrap}
+.side-foot a{color:var(--cor)}
+
+/* ===================== corps ===================== */
+.wrap{margin-left:var(--nav);padding-bottom:110px}
+.hero{background:var(--surf);border-bottom:1px solid var(--trait);padding:52px 56px 40px}
+.hero h1{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:0 0 10px;line-height:1.18}
+.hero .lead{font-size:16.5px;color:#5C554D;max-width:74ch;margin:0 0 22px}
+.hero .lead b{color:var(--encre)}
+.meta{display:flex;flex-wrap:wrap;gap:8px}
+.meta span{background:var(--fond);border:1px solid var(--trait);border-radius:20px;
+  padding:5px 13px;font-size:12px;color:var(--gris)}
+.meta b{color:var(--encre)}
+
+.doc{max-width:1180px;padding:0 56px}
+.doc h2{font-size:27px;font-weight:700;letter-spacing:-.018em;margin:66px 0 4px;
+  padding-top:22px;border-top:1px solid var(--trait);scroll-margin-top:16px}
+.doc h2 .hn{color:var(--or);margin-right:10px}
+.doc h3{font-size:19px;font-weight:600;letter-spacing:-.01em;margin:40px 0 6px;scroll-margin-top:16px}
+.doc h3 .hn{color:var(--gris);margin-right:9px;font-weight:600}
+.doc h4{font-size:15.5px;font-weight:700;margin:26px 0 4px;color:#524B43}
+.doc p{margin:11px 0;max-width:78ch}
+.doc ul,.doc ol{margin:11px 0;padding-left:22px;max-width:76ch}
+.doc li{margin:5px 0}
+.doc hr{display:none}
+.doc strong{font-weight:700}
+.doc blockquote{margin:18px 0;padding:14px 20px;background:var(--surf);
+  border-left:3px solid var(--or);border-radius:0 10px 10px 0;max-width:76ch}
+.doc blockquote p{margin:4px 0;font-size:16px}
+.doc pre{background:var(--ardoise);color:#D8D0C4;padding:15px 18px;border-radius:10px;
+  overflow-x:auto;font-size:12.5px;line-height:1.6;max-width:78ch}
+.doc pre code{background:none;color:inherit;padding:0}
+
+/* tableaux */
+.tw{overflow-x:auto;margin:16px 0;border:1px solid var(--trait);border-radius:10px;background:var(--surf)}
+.doc table{border-collapse:collapse;width:100%;font-size:13.8px;line-height:1.55}
+.doc th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--gris);font-weight:700;padding:10px 14px;border-bottom:1px solid var(--trait);white-space:nowrap}
+.doc td{padding:10px 14px;border-bottom:1px solid #EFEAE3;vertical-align:top}
+.doc tr:last-child td{border-bottom:0}
+.doc td:first-child{white-space:nowrap;font-weight:600;color:#4A443C}
+.doc td code{white-space:nowrap}
+
+/* ===================== figures ===================== */
+.fig{margin:26px 0 30px;overflow-x:auto;background:var(--surf);border:1px solid var(--trait);
+  border-radius:var(--rad);padding:20px 22px 6px}
+.fig.pleine{margin-left:-14px;margin-right:-14px}
+.fig-n{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--or);font-weight:700}
+.fig-cap{font-size:13.4px;color:#5C554D;margin:4px 0 16px;max-width:96ch;line-height:1.6}
+.fig-cap b{color:var(--encre);font-weight:600}
+.regle{font-size:13px;color:#5C554D;line-height:1.62;margin:14px 0 16px;padding:11px 15px;
+  background:var(--fond);border-radius:9px;border-left:3px solid var(--trait)}
+.regle b{color:var(--encre)}
+.note{font-size:12.3px;color:#6E675F;line-height:1.56;margin:8px 0 0}
+.note b{color:var(--encre)}
+.split2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px}
+.bx{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:14px 16px}
+.bx-t{display:block;font-size:12.5px;font-weight:700;margin-bottom:10px}
+.bx-ok{border-color:#BFD6C6;background:#F1F6F2}
+.bx-ko{border-color:#E3C9C0;background:#FAF2EF}
+.bx-slate{background:var(--ardoise);border-color:var(--ardoise-b)}
+
+/* --- ardoise --- */
+.slate-wrap{overflow-x:auto;border-radius:10px}
+.slate{position:relative;width:600px;height:300px;background:var(--ardoise);
+  border:1px solid var(--ardoise-b);border-radius:10px;flex:none}
+.tb{position:absolute;border-radius:6px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1.1;transition:opacity .2s}
+.tb.rd{border-radius:50%}
+.tb b{font-size:19px;font-weight:700;line-height:1}
+.tb i{font-style:normal;font-size:9px;opacity:.72;margin-top:2px}
+.tb-libre{background:rgba(255,255,255,.05);border:1.6px solid #6A6055;color:#C9BFB0}
+.tb-res{background:rgba(120,190,230,.16);border:1.6px solid #6FA8CC;color:#A8D5F0}
+.tb-occ{background:rgba(230,120,95,.20);border:1.6px solid #D9765C;color:#F2A48E}
+.tb-sale{background:rgba(230,200,90,.14);border:1.6px dashed #C9AC52;color:#E3CE86}
+.tb-retard{background:rgba(120,190,230,.16);border:1.6px solid #6FA8CC;color:#A8D5F0;
+  box-shadow:0 0 0 2px #D9765C}
+.tb.dim{opacity:.26}
+.tb.halo-ok{box-shadow:0 0 0 3px var(--ok)}
+.tb.halo-reserve{box-shadow:0 0 0 3px var(--rs)}
+.tb.ed-sel{box-shadow:0 0 0 2px var(--or)}
+.hb{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;
+  padding:1px 6px;border-radius:9px;line-height:1.4;white-space:nowrap}
+.hb-ok{background:var(--ok);color:#123D1E}
+.hb-reserve{background:var(--rs);color:#33380F}
+.past{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;
+  background:var(--cor);border:1.5px solid var(--ardoise);display:flex;align-items:center;justify-content:center}
+.past svg{width:11px;height:11px;color:#fff}
+.slate-lab{position:absolute;font-size:10px;color:#8C8378;text-align:center;line-height:1.3}
+.dc{position:absolute;background:rgba(255,255,255,.045);border:1px solid #4A4239;border-radius:4px;
+  display:flex;align-items:center;justify-content:center}
+.dc i{font-style:normal;font-size:8.5px;letter-spacing:.09em;color:#6E655A;
+  writing-mode:vertical-rl;text-orientation:mixed}
+.dc-passe i,.dc-porte i{writing-mode:horizontal-tb}
+.dc-mur{background:#413A32;border:0;border-radius:0}
+.dc-porte{background:var(--ardoise);border:0;border-left:2px dotted #6E655A}
+.dc-porte i{position:absolute;left:9px;font-size:8px;color:#6E655A;writing-mode:vertical-rl}
+.lien{position:absolute;border:1.5px dashed var(--vio);border-radius:9px;background:rgba(91,74,138,.10)}
+.lien i{position:absolute;top:-9px;left:9px;font-style:normal;font-size:9.5px;font-weight:700;
+  background:var(--vio);color:#fff;padding:1px 6px;border-radius:8px}
+.legende{display:flex;flex-wrap:wrap;gap:15px;padding:9px 4px 2px;font-size:11px;color:var(--gris)}
+.legende span{display:flex;align-items:center;gap:6px}
+.lg{width:13px;height:11px;border-radius:3px;display:inline-block}
+.lg-libre{background:#E9E4DC;border:1.4px solid #A79E93}
+.lg-res{background:#DCEBF5;border:1.4px solid #6FA8CC}
+.lg-occ{background:#F6E2DA;border:1.4px solid #D9765C}
+.lg-sale{background:#F5EFD8;border:1.4px dashed #C9AC52}
+.lg-retard{background:#DCEBF5;border:1.4px solid #6FA8CC;box-shadow:0 0 0 1.6px #D9765C}
+
+/* --- coquille applicative --- */
+.app{display:flex;background:var(--fond);border:1px solid var(--trait);border-radius:11px;
+  overflow:hidden;min-width:760px}
+.app-cadre{min-width:700px}
+.app-b{flex:1;min-width:0;display:flex;flex-direction:column}
+.rail{width:46px;flex:none;background:var(--surf);border-right:1px solid var(--trait);
+  padding:9px 0;display:flex;flex-direction:column;align-items:center;gap:7px}
+.rail-sp{flex:1}
+.ri{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#A79E93}
+.ri svg{width:17px;height:17px}
+.ri.on{background:var(--or);color:#fff}
+.entete{display:flex;align-items:center;gap:11px;padding:9px 13px;background:var(--surf);
+  border-bottom:1px solid var(--trait);flex-wrap:wrap}
+.clk{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.etat{font-size:11.5px;color:var(--gris);font-style:italic}
+.etat b{color:var(--or);font-style:normal;font-weight:600}
+.date{margin-left:auto;font-size:11.5px;color:var(--encre);border-bottom:1px dotted var(--gris)}
+.couv{font-size:11.5px;color:var(--gris);font-variant-numeric:tabular-nums}
+.plus{width:23px;height:23px;border-radius:50%;background:var(--or);color:#fff;font-size:15px;
+  display:flex;align-items:center;justify-content:center;line-height:1}
+.pill-alrg{display:flex;align-items:center;gap:5px;background:var(--cor-f);border:1px solid #D9B5A6;
+  color:#8C4E3A;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px}
+.pill-alrg svg{width:12px;height:12px}
+.frise{display:flex;gap:3px;padding:6px 13px;background:var(--surf);border-bottom:1px solid var(--trait)}
+.cr{flex:1;position:relative;background:var(--fond);border:1px solid var(--trait2);border-radius:6px;
+  padding:4px 6px 8px;text-align:center;overflow:hidden}
+.cr b{display:block;font-size:11px;font-variant-numeric:tabular-nums}
+.cr span{font-size:9px;color:var(--gris)}
+.cr em{position:absolute;left:0;bottom:0;height:3px;background:#CBC3B8;font-style:normal}
+.cr.on{background:var(--or);border-color:var(--or);color:#fff}
+.cr.on span{color:rgba(255,255,255,.85)}
+.cr.on em{background:rgba(255,255,255,.5)}
+.cr u{position:absolute;top:2px;right:3px;width:13px;height:13px;border-radius:50%;background:var(--vio);
+  color:#fff;font-size:9px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.onglets{display:flex;align-items:center;gap:5px;padding:7px 13px;background:var(--surf);
+  border-bottom:1px solid var(--trait)}
+.vt{font-size:11.5px;padding:3px 11px;border-radius:7px;color:var(--gris)}
+.vt.on{background:var(--encre);color:#fff;font-weight:600}
+.zt{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--fond);
+  border:1px solid var(--trait);color:var(--gris)}
+.vt+.zt{margin-left:14px}
+.zt.on{background:var(--or);border-color:var(--or);color:#fff;font-weight:600}
+.zt b{font-weight:700}
+.zb-ok{color:#1F5C31;background:var(--ok);border-radius:8px;padding:0 5px}
+.zb-rs{color:#33380F;background:var(--rs);border-radius:8px;padding:0 5px}
+.edit{margin-left:auto;font-size:11px;color:var(--or);border:1px solid var(--or);
+  border-radius:7px;padding:3px 10px}
+.edit-off{opacity:.35}
+.app-stage{display:flex;gap:9px;padding:11px 13px}
+.app-stage-p{position:relative}
+.app-stage .slate-wrap{flex:1;min-width:0}
+.app-stage .slate{width:600px}
+
+/* colonne À placer */
+.col{width:132px;flex:none;background:var(--surf);border:1px solid var(--trait);
+  border-radius:9px;padding:8px 7px}
+.col-t{display:flex;justify-content:space-between;font-size:8.5px;letter-spacing:.07em;
+  color:var(--gris);font-weight:700;margin-bottom:6px}
+.col-t2{margin-top:11px;color:var(--vio)}
+.pz{position:relative;background:var(--fond);border:1px solid var(--trait);border-radius:7px;
+  padding:5px 7px;margin-bottom:5px;font-size:10px;line-height:1.3}
+.pz b{display:block;font-size:11px}
+.pz span{color:var(--gris)}
+.pz i{display:block;font-style:normal;font-size:8.5px;color:#B3AC9F}
+.pz-att{border-left:2.5px solid var(--vio)}
+.pz.sel{background:#FCEEDC;border-color:var(--or)}
+.pz-a{position:absolute;top:5px;right:5px;width:15px;height:15px;border-radius:50%;
+  background:var(--cor);display:flex;align-items:center;justify-content:center}
+.pz-a svg{width:9px;height:9px;color:#fff}
+
+/* ===================== §2.2 palette ===================== */
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}
+.sw{font-size:11.5px}
+.sw-c{display:block;height:46px;border-radius:8px;border:1px solid rgba(0,0,0,.09);
+  font-size:10px;font-family:ui-monospace,monospace;display:flex;align-items:flex-end;
+  justify-content:flex-end;padding:5px 7px}
+.sw-d{color:rgba(0,0,0,.42)} .sw-l{color:rgba(255,255,255,.6)}
+.sw b{display:block;margin-top:5px;font-weight:600}
+
+/* ===================== §2.5 typo ===================== */
+.spec-exo b{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;display:block}
+.spec-exo span{font-size:15px;font-weight:600;display:block}
+.spec-exo i{font-size:13px;font-weight:300;color:var(--gris);display:block}
+.spec-craie{display:flex;gap:16px;align-items:baseline}
+.spec-craie b{font-size:34px;color:var(--craie);line-height:1}
+.spec-craie span{font-size:20px;color:#8C8378}
+.icones3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.ic-card{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:13px 14px;font-size:11.5px}
+.ic-card b{display:block;font-size:12.3px;margin-bottom:4px}
+.ic-card span{color:#6E675F;line-height:1.5;display:block}
+.ic-card.ic-ok{background:#F1F6F2;border-color:#BFD6C6}
+.ic-p{width:30px;height:30px;border-radius:50%;background:var(--cor);color:#fff;
+  display:flex;align-items:center;justify-content:center;margin-bottom:9px;font-weight:700}
+.ic-p svg{width:17px;height:17px}
+.ic-no{background:#C9C2B8}
+
+/* ===================== §3.2 flux ===================== */
+.flow{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:14px 16px}
+.fl-q{font-size:12.5px;color:var(--gris);margin-bottom:10px}
+.fl-q b{color:var(--encre)}
+.fl-s{display:flex;gap:10px;align-items:flex-start;font-size:13px;margin-bottom:11px}
+.fl-n{width:20px;height:20px;flex:none;border-radius:50%;background:var(--encre);color:#fff;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.fl-br{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.fl-y,.fl-n2{background:var(--surf);border:1px solid var(--trait);border-radius:9px;padding:11px 13px;font-size:12.5px}
+.fl-y>b,.fl-n2>b{color:var(--or)}
+.fl-r{display:flex;gap:8px;align-items:center;margin-top:7px;line-height:1.4}
+.fl-r em{display:block;font-style:italic;font-size:11px;color:var(--gris)}
+.tb-mini{width:16px;height:13px;flex:none;border-radius:3px}
+.tb-mini.tb-occ{background:#F6E2DA;border:1.4px solid #D9765C}
+.tb-mini.tb-res{background:#DCEBF5;border:1.4px solid #6FA8CC}
+.tb-mini.tb-sale{background:#F5EFD8;border:1.4px dashed #C9AC52}
+.tb-mini.tb-libre{background:#E9E4DC;border:1.4px solid #A79E93}
+
+/* ===================== §3.3 conflit ===================== */
+.conflit{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+.cf-bois{background:var(--ardoise);border-radius:10px;padding:16px;display:flex;gap:8px;flex-wrap:wrap}
+.cf-t{width:52px;height:52px;border-radius:6px;background:rgba(255,255,255,.05);
+  border:1.6px solid #6A6055;color:#C9BFB0;font-family:'Caveat',cursive;font-size:20px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.cf-t.pris{background:rgba(230,120,95,.2);border-color:#D9765C;color:#F2A48E}
+.cf-bois em{width:100%;font-style:normal;font-size:10px;color:#6E655A;letter-spacing:.06em;margin-top:4px}
+.cf-r{display:grid;grid-template-columns:76px 92px 1fr;gap:10px;align-items:center;
+  padding:7px 11px;border-radius:8px;font-size:12.5px;margin-bottom:5px;background:var(--fond)}
+.cf-r code{font-size:11px}
+.cf-ok{background:#F1F6F2;border-left:3px solid var(--ok)}
+.cf-no{background:#FAF2EF;border-left:3px solid var(--cor)}
+.cf-src{background:var(--bleu-f);border-left:3px solid var(--bleu)}
+
+/* ===================== §3.4 états ===================== */
+.etats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.et{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:11px 12px}
+.et-n{display:inline-flex;width:19px;height:19px;border-radius:50%;background:var(--encre);color:#fff;
+  font-size:10.5px;font-weight:700;align-items:center;justify-content:center;margin-bottom:6px}
+.et b{display:block;font-size:12.5px;margin-bottom:7px}
+.et-f span{display:block;font-size:10.5px;color:var(--gris);line-height:1.6}
+.et-f code{font-size:10px}
+.e-on{background:#F1F6F2;border-color:#BFD6C6}
+.e-att{background:#FDF4E6;border-color:#EBD3AC}
+.trans{display:grid;grid-template-columns:repeat(2,1fr);gap:5px 16px;margin-top:13px}
+.tr{display:flex;gap:10px;align-items:baseline;font-size:12px;color:#5C554D}
+.tr code{flex:none;font-weight:700;color:var(--or);background:#FCEEDC}
+
+/* ===================== popups ===================== */
+.pop{background:var(--surf);border:1px solid var(--trait);border-radius:11px;
+  box-shadow:0 12px 34px rgba(46,42,38,.15),0 2px 6px rgba(46,42,38,.08);overflow:hidden}
+.pop-c{max-width:470px;margin:4px auto}
+.pop-lg{max-width:560px}
+.pop-h{padding:11px 16px;border-bottom:1px solid var(--trait);font-size:13.5px}
+.pop-h b{font-weight:600}
+.pop-h-a{background:var(--cor-f);border-color:#E3C4B7;display:flex;align-items:center;gap:8px}
+.pop-h-a b{font-size:11px;letter-spacing:.06em;color:#8C4E3A;font-weight:700}
+.pop-h-a svg{width:14px;height:14px;color:var(--cor)}
+.pop-h-a .x{margin-left:auto;color:#B99C90}
+.pop-b{padding:12px 16px}
+.rz{font-size:12.5px;line-height:1.55;padding:9px 12px;background:#FDF4E6;border-left:3px solid var(--ambre);
+  border-radius:0 8px 8px 0;margin-bottom:8px}
+.rz i{color:var(--gris);display:block;margin-top:2px}
+.pop-f{display:flex;gap:8px;justify-content:flex-end;padding:11px 16px;background:var(--fond);
+  border-top:1px solid var(--trait)}
+.pop-f3{justify-content:space-between;flex-wrap:wrap}
+.bt{font-size:12px;padding:6px 14px;border-radius:8px;background:var(--surf);
+  border:1px solid var(--trait);color:var(--encre);white-space:nowrap}
+.bt-or{background:var(--or);border-color:var(--or);color:#fff;font-weight:600}
+.bt-dsc{color:var(--gris);border-color:transparent;background:transparent}
+.pop-flot{position:absolute;right:26px;top:16px;width:266px;z-index:5}
+.al{display:flex;align-items:center;gap:9px;font-size:11.5px;padding:6px 0;border-top:1px solid #F0EBE4}
+.al:first-child{border-top:0}
+.hh{width:36px;color:var(--gris);font-variant-numeric:tabular-nums;font-weight:600}
+.nn{flex:1;min-width:0}
+.nn b{display:block}
+.nn span{color:var(--cor);font-weight:600}
+.tt{font-size:10px;color:var(--gris);background:var(--fond);border-radius:5px;padding:2px 7px}
+.tt-no{background:transparent;border:1px dashed var(--trait);color:#B3AC9F}
+
+/* ===================== §4.1 carte ===================== */
+.carte{display:grid;grid-template-columns:118px 1fr 250px;gap:14px;align-items:start}
+.ct-rail{background:var(--surf);border:1px solid var(--trait);border-radius:10px;padding:7px}
+.ct-e{font-size:12px;padding:6px 10px;border-radius:7px;color:var(--gris)}
+.ct-e.on{background:var(--or);color:#fff;font-weight:600}
+.ct-b{background:var(--fond);border:1px solid var(--trait);border-radius:9px;padding:9px 13px;
+  font-size:13px;margin-bottom:6px;font-weight:600}
+.ct-b em{font-style:normal;color:var(--gris);font-size:11px;font-weight:400}
+.ct-on{background:#FCEEDC;border-color:#EBCFA6}
+.ct-sub{display:flex;gap:7px;margin-top:7px}
+.ct-sub span{background:var(--surf);border:1px solid var(--trait);border-radius:7px;
+  padding:4px 11px;font-size:11.5px;font-weight:500}
+.ct-pl{display:block;margin-top:5px;font-size:11px;color:var(--gris);font-weight:400}
+.ct-hors{background:var(--surf);border:1px dashed var(--trait);border-radius:10px;padding:12px 14px;font-size:11.5px}
+.ct-hors>b{display:block;font-size:11px;letter-spacing:.05em;color:var(--gris);margin-bottom:8px}
+.ct-p{display:inline-block;background:var(--fond);border:1px solid var(--trait);border-radius:7px;
+  padding:4px 9px;font-size:11px;margin:0 4px 4px 0}
+.ct-p em{font-style:normal;color:var(--gris)}
+.ct-pub{background:var(--vio-f);border-color:#CFC0E4}
+.ct-hors i{display:block;color:var(--gris);font-size:10.5px;line-height:1.5;margin-top:3px}
+
+/* ===================== §4.4 rail ===================== */
+.mini{display:flex;position:relative;height:120px;background:var(--fond);
+  border:1px solid var(--trait);border-radius:9px;overflow:hidden}
+.mini .rail{border-radius:0}
+.mini-ov{position:absolute;left:0;top:0;bottom:0;width:118px;background:var(--surf);
+  box-shadow:6px 0 18px rgba(46,42,38,.16);padding:11px 12px;font-size:11px;line-height:1.9;z-index:2}
+.mini-push{width:118px;flex:none;background:var(--surf);border-right:1px solid var(--trait);
+  padding:11px 12px;font-size:11px;line-height:1.9}
+.mini-plan{flex:1;display:flex;align-items:center;justify-content:center;
+  background:var(--ardoise);color:#8C8378;font-size:11px;text-align:center;line-height:1.5}
+.mini-dec{color:var(--cor);font-weight:600}
+.mini-dec i{color:#8C8378;font-weight:400;font-size:10px}
+
+/* ===================== §4.5 agenda ===================== */
+.ag{position:relative;background:var(--surf);border:1px solid var(--trait);border-radius:10px;
+  padding:9px 12px;overflow-x:auto}
+.ag-h{display:flex;font-size:10px;color:var(--gris);margin-bottom:5px;min-width:520px}
+.ag-h span{width:88px;flex:none}
+.ag-h b{flex:1;font-weight:600}
+.ag-l{display:flex;align-items:center;gap:0;min-width:520px;margin-bottom:4px}
+.ag-l>span{width:88px;flex:none;font-size:11px;color:var(--gris)}
+.ag-t{flex:1;position:relative;height:24px;background:var(--fond);border-radius:5px}
+.ag-b{position:absolute;top:2px;bottom:2px;border-radius:4px;font-size:9.5px;
+  display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap}
+.ag-blc{background:var(--bleu-f);border:1px solid #AFCADB;color:#2F5A76}
+.ag-fan{background:repeating-linear-gradient(45deg,#E4DED6,#E4DED6 3px,#F3EFE9 3px,#F3EFE9 6px);
+  border:1px dashed #C6BDB1;color:#8E8579;font-style:italic}
+.ag-prev{background:#FDF4E6;border:1.5px dashed var(--or);color:var(--or);font-weight:700;justify-content:center}
+.ag-act{background:var(--vert-f);border:1px solid #A9C6B2;color:#3B6244}
+.ag-virt>span{color:var(--vio);font-weight:600}
+.ag-lien>span{font-size:10px;font-style:italic}
+.ag-now{position:absolute;top:26px;bottom:9px;width:2px;background:var(--or);border-radius:2px}
+
+/* ===================== fiches ===================== */
+.fiche{width:250px;flex:none;background:var(--surf);border:1px solid var(--trait);
+  border-radius:9px;padding:11px 12px;font-size:11.5px}
+.fiche-lg{width:284px}
+.fi-ret{font-size:10.5px;color:var(--or);margin-bottom:8px}
+.fi-h{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.fi-h b{font-size:15px;font-weight:700}
+.fi-s{font-size:11px;color:var(--gris);margin-bottom:9px}
+.fi-tags{display:flex;gap:5px;margin-bottom:5px}
+.fi-al{display:flex;gap:8px;align-items:center;background:var(--cor-f);border:1px solid #E3C4B7;
+  border-radius:8px;padding:7px 10px;margin-bottom:9px}
+.fi-al svg{width:15px;height:15px;color:var(--cor);flex:none}
+.fi-al b{display:block;font-size:12px;color:#8C4E3A}
+.fi-al span{font-size:10px;color:#A87F6E}
+.fi-crm{display:flex;gap:12px;font-size:10.5px;color:var(--gris);background:var(--fond);
+  border-radius:7px;padding:6px 9px;margin-bottom:8px}
+.fi-crm b{color:var(--encre);font-size:12px}
+.fi-crm3 span{flex:1}
+.fi-n{font-size:11px;color:#5C554D;font-style:italic;margin-bottom:10px;line-height:1.5}
+.fi-int{background:#E9E5DF;border-radius:8px;padding:8px 10px;margin-bottom:9px}
+.fi-int b{display:block;font-size:9.5px;letter-spacing:.06em;color:#7C756C;margin-bottom:3px}
+.fi-int span{font-size:11px;line-height:1.5;display:block}
+.fi-int i{font-size:9.5px;color:#96908A;display:block;margin-top:4px}
+.fi-lt{display:block;font-size:9px;letter-spacing:.08em;color:var(--gris);margin:10px 0 6px}
+.fi-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.hs{display:grid;grid-template-columns:78px 1fr auto;gap:6px;align-items:center;
+  font-size:10.5px;padding:5px 0;border-top:1px solid #F0EBE4}
+.hs:first-child{border-top:0}
+.hs-sep{display:block;border-top:1px solid var(--trait);text-align:center;padding:0;margin:5px 0}
+.hs-sep em{font-size:8.5px;color:#B3AC9F;background:var(--surf);padding:0 7px;
+  position:relative;top:-8px;font-style:normal;letter-spacing:.07em}
+.jrn div{font-size:10.5px;color:#5C554D;padding:4px 0;border-top:1px solid #F0EBE4;line-height:1.5}
+.jrn div:first-child{border-top:0}
+.jrn span{color:var(--gris);font-variant-numeric:tabular-nums;margin-right:6px}
+.jrn i{color:#B3AC9F}
+.deux-fiches{display:flex;gap:14px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.fl-vs{align-self:center;font-size:11px;color:var(--gris);text-align:center;line-height:1.7}
+.fl-vs b{font-size:20px;color:var(--or);display:block}
+.fiches4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fi4{background:var(--fond);border:1px solid var(--trait);border-radius:9px;padding:11px 12px}
+.fi4-h{margin-bottom:9px}
+.fi4-h span{display:block;font-size:10.5px;color:var(--gris);margin-top:5px}
+.fi4-a{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.fi4-a .bt{font-size:11px;padding:5px 10px;width:100%;text-align:center}
+
+/* ===================== badges ===================== */
+.bg{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;
+  padding:2px 7px;border-radius:5px;white-space:nowrap;line-height:1.6}
+.bg-att{background:var(--vio-f);color:var(--vio)}
+.bg-conf{background:var(--bleu-f);color:var(--bleu)}
+.bg-assise{background:var(--cor-f);color:var(--cor)}
+.bg-fin{background:#E9E5DF;color:#8A8177}
+.bg-ann{background:#E9E5DF;color:#8A8177;text-decoration:line-through}
+.bg-ns{background:var(--cor);color:#fff}
+.bg-src{background:transparent;border:1px solid var(--trait);color:#A79E93;font-weight:500;letter-spacing:0}
+.bg-row{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;padding:6px 0 14px}
+.bg-c{transform:scale(1.35);margin:6px 14px}
+.cmp{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:11.5px}
+.cmp i{color:#6E675F;font-style:normal;line-height:1.45}
+.mk{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;
+  padding:2px 6px;border-radius:5px;white-space:nowrap;margin-right:4px}
+.mk-ns{border:1px solid var(--cor);color:var(--cor)}
+.mk-h{background:#E9E5DF;color:#7C756C}
+.mk-1{background:var(--vert-f);color:var(--vert)}
+.mk-a{background:var(--cor);color:#fff;padding:2px 5px}
+.mk-a svg{width:10px;height:10px}
+.tag{display:inline-block;font-size:9.5px;background:#E9E5DF;color:#6E675F;
+  border-radius:5px;padding:1px 7px;margin-right:4px}
+
+/* ===================== listes ===================== */
+.entete-r{gap:7px}
+.rech{flex:1;min-width:190px;background:var(--fond);border:1px solid var(--trait);border-radius:8px;
+  padding:5px 11px;font-size:11.5px;color:#B3AC9F}
+.flt{font-size:11px;padding:4px 11px;border-radius:20px;background:var(--fond);
+  border:1px solid var(--trait);color:var(--gris)}
+.flt.on{background:var(--encre);border-color:var(--encre);color:#fff;font-weight:600}
+.flt-s{border-style:dashed}
+.bandeau-att{display:flex;align-items:center;gap:11px;background:var(--vio-f);border-bottom:1px solid #D6CAE8;
+  padding:8px 14px;font-size:11.5px;color:var(--vio)}
+.bandeau-att span:nth-child(2){flex:1;color:#7B6BA6}
+.jour{display:flex;align-items:baseline;gap:11px;padding:10px 14px 5px;font-size:13px}
+.jour span{font-size:11px;color:var(--gris)}
+.liste{width:100%;border-collapse:collapse;font-size:11.5px}
+.liste td{padding:7px 8px;border-top:1px solid #EFEAE3;vertical-align:middle}
+.liste tr:first-child td{border-top:0}
+.liste td:first-child{padding-left:14px}
+.liste td:last-child{padding-right:14px;text-align:right}
+.c-h{width:44px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--gris)}
+.c-n b{display:block;font-size:12.5px}
+.c-n span{font-size:10.5px;color:var(--gris)}
+.c-m{white-space:nowrap}
+.c-t{font-size:11px;color:var(--gris);width:44px}
+.c-b{width:88px}
+.c-a{width:76px}
+.bt-mini{display:inline-block;font-size:10.5px;padding:3px 9px;border-radius:7px;
+  background:var(--fond);border:1px solid var(--trait);color:var(--encre);margin-left:4px;white-space:nowrap}
+.bt-mini.bt-or{background:var(--or);border-color:var(--or);color:#fff;font-weight:600}
+.bt-gris{color:var(--gris)}
+.bt-ann{background:transparent;border-color:rgba(255,255,255,.5);color:#fff}
+.liste-cl .cl-h th{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);
+  text-align:left;padding:8px;font-weight:700}
+.liste-cl .cl-h th:first-child{padding-left:14px}
+.c-tel{font-variant-numeric:tabular-nums;color:#5C554D}
+.c-num,.c-d{color:var(--gris)}
+.ratio{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;
+  background:#E9E5DF;color:#6E675F;border-radius:5px;padding:2px 8px}
+.ratio-al{background:var(--cor);color:#fff}
+
+/* ===================== envoi différé ===================== */
+.differe{padding:8px 0 4px}
+.df-b{position:relative;display:flex;align-items:center;gap:11px;background:var(--encre);color:#fff;
+  border-radius:10px;padding:11px 15px;overflow:hidden;max-width:520px;margin:0 auto}
+.df-ic{width:21px;height:21px;flex:none;border-radius:50%;background:var(--ok);color:#123D1E;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.df-b div{flex:1;font-size:12px;line-height:1.4}
+.df-b div span{display:block;font-size:11px;color:#B3ABA1}
+.df-b div span b{color:#fff}
+.df-jauge{position:absolute;left:0;bottom:0;height:2.5px;width:64%;background:var(--or)}
+
+/* ===================== bande d'heures ===================== */
+.bande-demo{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:14px 16px}
+.bd-q{font-size:12.5px;color:var(--gris);margin-bottom:9px}
+.bd-q b{color:var(--encre)}
+.bande{display:flex;flex-wrap:wrap;gap:6px}
+.bh{font-size:12px;font-variant-numeric:tabular-nums;padding:6px 13px;border-radius:8px;white-space:nowrap}
+.bh-l{background:var(--vert-f);border:1.5px solid var(--vert);color:#3B6244;font-weight:600}
+.bh-s{background:#FDF4E6;border:1.5px dashed var(--ambre);color:#8A6D20;font-weight:600}
+.bh-c{background:#E9E5DF;border:1.5px solid #D2CBC2;color:#A29B92;text-decoration:line-through}
+.bh.on{box-shadow:0 0 0 2.5px var(--or)}
+.bande-sm .bh{font-size:10.5px;padding:4px 8px}
+.bd-leg{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.bd-leg span{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#5C554D;line-height:1.5}
+.bd-leg .bh{flex:none;width:22px;height:16px;padding:0;border-radius:4px}
+.bd-cond{margin-top:11px;font-size:12px;color:#5C554D;background:var(--surf);border-radius:8px;padding:8px 12px}
+.bd-cond i{color:#8A6D20}
+
+/* ===================== formulaire ===================== */
+.form-ov{position:absolute;right:24px;top:12px;width:298px;background:var(--surf);
+  border:1px solid var(--trait);border-radius:10px;padding:12px 13px;
+  box-shadow:0 14px 38px rgba(46,42,38,.20);z-index:5}
+.fo-h{display:flex;align-items:center;margin-bottom:10px}
+.fo-h b{font-size:13.5px;flex:1}
+.fo-h .x{color:var(--gris)}
+.fo-l{font-size:8.5px;letter-spacing:.08em;color:var(--gris);font-weight:700;margin:9px 0 4px}
+.fo-nb{display:flex;gap:4px}
+.fo-nb span{flex:1;text-align:center;font-size:11.5px;padding:5px 0;border-radius:7px;
+  background:var(--fond);border:1px solid var(--trait);color:var(--gris)}
+.fo-nb span.on{background:var(--or);border-color:var(--or);color:#fff;font-weight:700}
+.fo-src span{font-size:10px}
+.fo-in{font-size:11.5px;padding:6px 10px;background:var(--fond);border:1px solid var(--trait);border-radius:7px}
+.fo-cond{font-size:10px;color:#8A6D20;margin-top:5px;font-style:italic}
+.fo-reco{display:flex;gap:8px;align-items:center;background:var(--cor-f);border:1px solid #E3C4B7;
+  border-radius:8px;padding:7px 9px;margin-top:7px;font-size:11px}
+.fo-reco svg{width:14px;height:14px;color:var(--cor);flex:none}
+.fo-reco b{color:#8C4E3A}
+.fo-reco span{display:block;font-size:10px;color:#A87F6E}
+.fo-a{display:flex;gap:6px;margin-top:12px}
+.fo-a .bt{flex:1;text-align:center}
+
+/* ===================== §9.1 réglage ===================== */
+.reg-nu{display:flex;align-items:center;gap:11px;font-size:13px}
+.reg-in{background:var(--surf);border:1px solid var(--trait);border-radius:7px;
+  padding:4px 14px;font-variant-numeric:tabular-nums}
+.reg-cs{font-size:11.5px;color:var(--gris);margin:11px 0 6px}
+.reg-cs b{color:var(--encre)}
+.reg-ap{display:flex;flex-wrap:wrap;gap:6px}
+.ap{font-size:11px;font-weight:600;padding:4px 10px;border-radius:7px}
+.ap-ok{background:var(--vert-f);color:#3B6244;border:1px solid #A9C6B2}
+.ap-rs{background:#F6F5DF;color:#6C7320;border:1px solid #D3D68F}
+.ap-no{background:#E9E5DF;color:#A29B92;border:1px solid #D2CBC2}
+
+/* ===================== §9.3 calendrier ===================== */
+.split-cal .bx{padding-bottom:12px}
+.cal-h{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+.cal-h b{text-align:center;font-size:9px;color:var(--gris)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10.5px;
+  border-radius:5px;background:var(--surf);border:1px solid var(--trait2);color:#6E675F}
+.cd.habit{background:repeating-linear-gradient(45deg,#EDE8E2,#EDE8E2 2px,#F8F5F1 2px,#F8F5F1 4px);color:#B3AC9F}
+.cd.ferme{background:repeating-linear-gradient(45deg,#D9C6BF,#D9C6BF 3px,#EFE2DD 3px,#EFE2DD 6px);
+  border-color:var(--cor);color:#8C4E3A;font-weight:700}
+.cd.modif{background:#FDF4E6;border:1.5px dashed var(--ambre);color:#8A6D20;font-weight:700}
+.cd.v-vert{background:#CFE6D3;border-color:#A9C6B2;color:#3B6244}
+.cd.v-rouge{background:#E9B7A9;border-color:#D9765C;color:#7A3423;font-weight:700}
+.cd.v-jaune{background:#F0E0A8;border-color:#D6C169;color:#7A6416;font-weight:700}
+
+/* ===================== §9.4 ===================== */
+.demo94 .slate{width:600px}
+.d94-cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.d94{border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.5}
+.d94 b{display:block;font-size:19px;font-variant-numeric:tabular-nums;margin-bottom:3px}
+.d94 span{display:block;color:#6E675F}
+.d94 i{display:block;margin-top:7px;font-size:11.5px;line-height:1.5}
+.d94-ko{background:#FAF2EF;border:1px solid #E3C9C0}
+.d94-ko b{color:var(--cor);text-decoration:line-through}
+.d94-ok{background:#F1F6F2;border:1px solid #BFD6C6}
+.d94-ok b{color:var(--vert)}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.md{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:13px 15px}
+.md-t{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
+.md-h{display:block;font-size:12px;color:#5C554D;line-height:1.5;margin-bottom:11px}
+.md-ax{position:relative;height:26px;background:var(--surf);border:1px solid var(--trait);
+  border-radius:6px;overflow:hidden}
+.md-ax em{position:absolute;top:3px;bottom:3px;border-radius:4px;font-style:normal;font-size:9.5px;
+  display:flex;align-items:center;padding:0 7px;background:var(--bleu-f);border:1px solid #AFCADB;color:#2F5A76;
+  overflow:hidden;white-space:nowrap}
+.md-lib{background:var(--vert-f)!important;border-color:#A9C6B2!important;color:#3B6244!important}
+.md-q{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;padding:2px 8px;
+  border-radius:5px;margin:11px 0 4px}
+.md-opt{background:#FDF4E6;color:#8A6D20}
+.md-hon{background:var(--vert-f);color:#3B6244}
+.md i{display:block;font-size:11.5px;color:#6E675F;line-height:1.5}
+
+/* ===================== §9.5 / §9.7 ===================== */
+.conf-r{font-size:12.5px;margin-bottom:9px}
+.conf-l{display:grid;grid-template-columns:44px 1fr 66px auto;gap:9px;align-items:center;
+  font-size:12px;padding:6px 0;border-top:1px solid #F0EBE4}
+.conf-l b{color:var(--gris);font-variant-numeric:tabular-nums}
+.conf-l i{color:var(--gris);font-style:normal;font-size:11px}
+.conf-l code{font-variant-numeric:tabular-nums;font-size:11px}
+.ferm{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:6px}
+.fm{border-radius:10px;padding:13px 15px}
+.fm-int{background:#E9E5DF;border:1px solid #D8D2CA}
+.fm-cli{background:#FDF4E6;border:1px solid #EBD3AC}
+.fm-t{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:9px}
+.fm-tag{font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 7px;border-radius:5px;
+  background:#D2CBC2;color:#5C554D}
+.fm-tag-or{background:var(--or);color:#fff}
+.fm-p{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.fm-p span{font-size:10.5px;padding:3px 10px;border-radius:20px;background:var(--surf);
+  border:1px solid var(--trait);color:var(--gris)}
+.fm-p span.on{background:var(--encre);border-color:var(--encre);color:#fff;font-weight:600}
+.fm-tx{background:var(--surf);border:1px solid var(--trait);border-radius:8px;padding:9px 12px;
+  font-size:11.5px;line-height:1.6}
+.fm-tx-or{border-color:#EBD3AC}
+
+/* ===================== §10 éditeur ===================== */
+.app-ed{flex-direction:column;min-width:940px}
+.ed-h{display:flex;align-items:center;gap:9px;padding:9px 13px;background:var(--surf);
+  border-bottom:1px solid var(--trait);font-size:13px}
+.ed-back{color:var(--gris);font-size:15px}
+.ed-h b{font-weight:600}
+.ed-br{margin-left:auto;font-size:11px;background:#FDF4E6;border:1px solid #EBD3AC;color:#8A6D20;
+  border-radius:20px;padding:3px 11px}
+.ed-uz{color:var(--gris);font-size:14px;padding:0 2px}
+.ed-b{display:flex;gap:9px;padding:11px 13px}
+.pal{width:112px;flex:none;background:var(--surf);border:1px solid var(--trait);border-radius:9px;padding:8px 7px}
+.pal-t{display:block;font-size:8.5px;letter-spacing:.07em;color:var(--gris);font-weight:700;margin:2px 0 6px}
+.pal-t:not(:first-child){margin-top:11px}
+.pl{display:flex;align-items:center;gap:7px;font-size:10.5px;padding:4px 7px;border-radius:6px;
+  background:var(--fond);border:1px solid var(--trait);margin-bottom:4px;color:#5C554D}
+.pl span{color:#A79E93;font-size:12px}
+.pl-dup{margin-top:9px;border-style:dashed;color:var(--gris)}
+.ed-cv{flex:1;min-width:0}
+.ed-dim{font-size:10px;color:var(--gris);margin-bottom:5px}
+.ed-cv .slate{width:600px}
+.ed-fond{font-size:10px;color:var(--gris);margin-top:5px}
+.ed-pn{width:172px;flex:none;background:var(--surf);border:1px solid var(--trait);border-radius:9px;padding:10px 11px}
+.ed-pt{display:block;font-size:9px;letter-spacing:.08em;color:var(--gris);font-weight:700;margin-bottom:8px}
+.ed-f{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px solid #F0EBE4}
+.ed-f:first-of-type{border-top:0}
+.ed-f span{color:var(--gris)}
+.ed-cb{background:var(--vio-f);border-radius:7px;padding:7px 9px;margin:9px 0;font-size:10.5px}
+.ed-cb b{display:block;color:var(--vio)}
+.ed-cb span{color:#7B6BA6}
+.ed-pn .bt{width:100%;text-align:center;font-size:11px}
+
+/* ===================== §11 widget ===================== */
+.tels{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.tel{width:236px}
+.tel-tt{font-size:10.5px;color:var(--gris);text-align:center;margin-bottom:7px;line-height:1.4;min-height:29px}
+.tel-e{background:var(--surf);border:8px solid var(--encre);border-radius:24px;padding:13px 12px;min-height:344px}
+.tw-h{margin-bottom:12px}
+.tw-h b{display:block;font-size:16px;font-weight:700}
+.tw-h span{font-size:11px;color:var(--gris)}
+.tw-l{font-size:8.5px;letter-spacing:.08em;color:var(--gris);font-weight:700;margin:11px 0 6px}
+.tw-cr{display:flex;flex-direction:column;gap:6px}
+.tw-c{font-size:13px;text-align:center;padding:9px 0;border-radius:9px;
+  background:var(--fond);border:1.5px solid var(--trait);font-weight:600}
+.tw-c.tw-on{background:var(--or);border-color:var(--or);color:#fff}
+.tw-dm{background:#FDF4E6;border:1.5px dashed var(--ambre);color:#8A6D20;font-size:11.5px}
+.tw-note{font-size:10.5px;color:#B3AC9F;text-align:center;margin-top:8px}
+.tw-dmx{font-size:10.5px;color:#8A6D20;background:#FDF4E6;border-radius:7px;padding:7px 9px;
+  margin-top:9px;line-height:1.5}
+.tw-in{font-size:11.5px;padding:8px 11px;background:var(--fond);border:1px solid var(--trait);
+  border-radius:8px;margin-bottom:6px;color:#B3AC9F}
+.tw-fac i{font-style:italic;font-size:9.5px;color:#C6BFB4}
+.tw-cgu{display:flex;gap:8px;align-items:center;font-size:10.5px;color:#5C554D;margin:9px 0}
+.tw-box{width:15px;height:15px;flex:none;border:1.6px solid var(--gris);border-radius:4px}
+.tw-bt{text-align:center;font-size:14px;font-weight:700;padding:11px;border-radius:10px;
+  background:var(--or);color:#fff}
+.tw-off{background:#DFD9D1;color:#AFA79C}
+.tw-ok b{display:block;font-size:17px;color:var(--vert)}
+.tw-ok span{display:block;font-size:12px;margin:3px 0 7px}
+.tw-ok i{display:block;font-size:10.5px;color:var(--gris);font-style:normal;line-height:1.5}
+.tw-lien{margin-top:9px;font-size:11.5px;color:var(--or);border:1px solid var(--or);
+  border-radius:8px;padding:6px;text-align:center}
+.tw-sep{height:1px;background:var(--trait);margin:16px 0}
+.tw-att b{display:block;font-size:17px;color:var(--vio)}
+.tw-fort{display:block;font-size:12px;background:var(--vio-f);border-radius:8px;padding:9px 11px;
+  margin-top:7px;color:#4A3C72;line-height:1.5;font-weight:600}
+
+/* ===================== §12 accueil ===================== */
+.app-acc{padding:0 0 13px}
+.acc-h{display:flex;align-items:flex-start;padding:13px 15px 4px}
+.acc-h>div{flex:1}
+.acc-clk{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.acc-d{display:block;font-size:11.5px;color:var(--gris)}
+.acc-d b{color:var(--or)}
+.acc-rc{display:flex;gap:6px;flex-wrap:wrap;padding:9px 15px 4px}
+.acc-rc .bt:last-child{margin-left:auto}
+.acc-t{display:block;font-size:9px;letter-spacing:.09em;color:var(--gris);font-weight:700;padding:16px 15px 7px}
+.acc-bloc{background:var(--surf);border:1px solid var(--trait);border-radius:10px;margin:0 15px 7px;padding:4px 12px}
+.acc-now{border:1.5px solid var(--vio);box-shadow:0 6px 18px rgba(91,74,138,.14);padding-top:0}
+.acc-bt{display:flex;align-items:baseline;gap:9px;padding:8px 0 6px;border-bottom:1px solid #F0EBE4}
+.acc-bt b{font-size:9px;letter-spacing:.08em;color:var(--vio);font-weight:700}
+.acc-bt span{font-size:10.5px;color:var(--gris)}
+.acc-l{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid #F0EBE4;font-size:11.5px}
+.acc-bloc>.acc-l:first-child,.acc-bt+.acc-l{border-top:0}
+.acc-l>b{font-size:12.5px;min-width:112px}
+.acc-l>span:nth-of-type(1){color:var(--gris);min-width:118px}
+.acc-a{margin-left:auto;display:flex;gap:4px}
+.acc-a i{font-style:normal}
+.acc-st{font-size:8.5px;letter-spacing:.08em;color:#B3AC9F;font-weight:700;padding:8px 15px 4px}
+.acc-gris{opacity:.72}
+.acc-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:0 15px}
+.acc-c{background:var(--surf);border:1px solid var(--trait);border-radius:10px;padding:11px 13px}
+.acc-c>b{font-size:11px;color:var(--gris)}
+.acc-c-on{border-bottom:2.5px solid var(--encre)}
+.acc-big{display:block;font-size:17px;font-weight:700;margin:4px 0 2px;line-height:1.2}
+.acc-c i{display:block;font-size:10.5px;color:var(--gris);font-style:normal}
+.acc-c em{display:block;font-size:10.5px;color:#B3AC9F;font-style:normal;margin-top:5px}
+
+/* ===================== responsive & impression ===================== */
+@media (max-width:1180px){
+  :root{--nav:0px}
+  .side{position:static;width:auto;border-right:0;border-bottom:1px solid var(--trait)}
+  .side-nav{max-height:210px}
+  .wrap{margin-left:0}
+  .hero,.doc{padding-left:18px;padding-right:18px}
+  .split2,.ferm,.modes,.d94-cmp,.icones3,.etats,.trans,.fiches4,.carte,.acc-cards{grid-template-columns:1fr}
+  .conflit{grid-template-columns:1fr}
+  .fig.pleine{margin-left:0;margin-right:0}
+  .fig{overflow-x:auto}
+}
+@media print{
+  .side{display:none} .wrap{margin-left:0}
+  .fig,.doc h2,.doc h3{break-inside:avoid}
+  body{font-size:11pt}
+}
+</style>
+<style>
+/* ===================== synthèse fonctionnelle ===================== */
+.rules{margin:15px 0;border:1px solid var(--trait);border-radius:10px;background:var(--surf);overflow:hidden}
+.rules-t{display:block;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--gris);
+  font-weight:700;padding:10px 15px 1px}
+.rg{display:grid;grid-template-columns:88px 1fr;gap:13px;padding:9px 15px;border-top:1px solid #EFEAE3;
+  font-size:13.4px;line-height:1.58}
+.rules-t+.rg,.rg:first-child{border-top:0}
+.rg>b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;font-weight:700;
+  color:var(--or);letter-spacing:.02em;padding-top:3px;white-space:nowrap}
+.rg>div>em{font-style:italic;color:#6E675F}
+.rg code{white-space:nowrap}
+.fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:15px 0}
+.fx-c{background:var(--surf);border:1px solid var(--trait);border-radius:10px;padding:12px 14px;
+  font-size:12.5px;line-height:1.55}
+.fx-c>b{display:block;font-size:13px;margin-bottom:5px}
+.fx-c span{color:#6E675F;display:block}
+.fx-c ul{margin:5px 0 0;padding-left:17px}
+.fx-c li{margin:2px 0;color:#6E675F}
+.hors{background:var(--surf);border:1px dashed var(--trait);border-radius:10px;padding:13px 17px;margin:16px 0}
+.hors>b{display:block;font-size:10.5px;letter-spacing:.06em;color:var(--gris);margin-bottom:9px}
+.hors p{margin:0 0 6px;font-size:13px;line-height:1.6}
+.hors p:last-child{margin-bottom:0}
+.vch{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 7px;
+  border-radius:5px;background:var(--vert-f);color:var(--vert);margin-left:6px;vertical-align:2px}
+.vch-x{background:#E9E5DF;color:#8A8177}
+.doc h2 .hn.anx{color:var(--vio)}
+.arb{background:var(--fond);border:1px solid var(--trait);border-radius:10px;padding:15px 17px}
+.arb-q{font-size:12.5px;color:var(--gris);margin-bottom:11px}
+.arb-q b{color:var(--encre)}
+.arb-s{display:flex;gap:11px;align-items:flex-start;font-size:13.2px;margin-bottom:9px;line-height:1.5}
+.arb-n{width:21px;height:21px;flex:none;border-radius:50%;background:var(--encre);color:#fff;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.arb-r{display:flex;gap:8px;align-items:center;margin-left:32px;margin-bottom:9px;font-size:12.5px}
+.arb-r em{font-style:normal;color:var(--gris);font-size:11.5px}
+.gr2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.gr3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+@media (max-width:1180px){.gr2,.gr3,.fx{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <div class="side-top">
+    <a class="logo" href="#top">Table<em>Up</em></a>
+    <span class="sub">Fonctionnalités — version 1</span>
+  </div>
+  <nav class="side-nav">
+<a class="nv h2" href="#sec-1"><i>1</i>Périmètre</a>
+<a class="nv h3" href="#sec-1.1"><i>1.1</i>Ce que la V1 livre</a>
+<a class="nv h3" href="#sec-1.2"><i>1.2</i>Ce qui est exclu</a>
+<a class="nv h2" href="#sec-2"><i>2</i>Rôles et permissions</a>
+<a class="nv h2" href="#sec-3"><i>3</i>Modèle de données</a>
+<a class="nv h3" href="#sec-3.1"><i>3.1</i>Restaurant</a>
+<a class="nv h3" href="#sec-3.2"><i>3.2</i>Zone, table, décor, combinaison</a>
+<a class="nv h3" href="#sec-3.3"><i>3.3</i>Service et fermeture</a>
+<a class="nv h3" href="#sec-3.4"><i>3.4</i>Réservation, affectation, journal</a>
+<a class="nv h3" href="#sec-3.5"><i>3.5</i>Client</a>
+<a class="nv h3" href="#sec-3.6"><i>3.6</i>Conditions et utilisateurs</a>
+<a class="nv h2" href="#sec-4"><i>4</i>Le moteur de disponibilité</a>
+<a class="nv h3" href="#sec-4.1"><i>4.1</i>Statut d'une table</a>
+<a class="nv h3" href="#sec-4.2"><i>4.2</i>Conflit entre entités</a>
+<a class="nv h3" href="#sec-4.3"><i>4.3</i>Compatibilité au placement</a>
+<a class="nv h3" href="#sec-4.4"><i>4.4</i>Modes d'occupation</a>
+<a class="nv h3" href="#sec-4.5"><i>4.5</i>Cycle de vie d'une combinaison</a>
+<a class="nv h3" href="#sec-4.6"><i>4.6</i>Propositions de rapprochement</a>
+<a class="nv h2" href="#sec-5"><i>5</i>Navigation</a>
+<a class="nv h3" href="#sec-5.1"><i>5.1</i>Inventaire des écrans</a>
+<a class="nv h3" href="#sec-5.2"><i>5.2</i>Le rail</a>
+<a class="nv h3" href="#sec-5.3"><i>5.3</i>En-tête de contexte</a>
+<a class="nv h3" href="#sec-5.4"><i>5.4</i>Atterrissage</a>
+<a class="nv h2" href="#sec-6"><i>6</i>Accueil</a>
+<a class="nv h3" href="#sec-6.1"><i>6.1</i>À traiter</a>
+<a class="nv h3" href="#sec-6.2"><i>6.2</i>Récapitulatif</a>
+<a class="nv h3" href="#sec-6.3"><i>6.3</i>Clôture automatique</a>
+<a class="nv h3" href="#sec-6.4"><i>6.4</i>Fermer aujourd'hui</a>
+<a class="nv h2" href="#sec-7"><i>7</i>Service — Plan de salle</a>
+<a class="nv h3" href="#sec-7.1"><i>7.1</i>Anatomie</a>
+<a class="nv h3" href="#sec-7.2"><i>7.2</i>Frise horaire</a>
+<a class="nv h3" href="#sec-7.3"><i>7.3</i>Onglets de zone</a>
+<a class="nv h3" href="#sec-7.4"><i>7.4</i>Le plan et les marques</a>
+<a class="nv h3" href="#sec-7.5"><i>7.5</i>Colonne « À placer »</a>
+<a class="nv h3" href="#sec-7.6"><i>7.6</i>Le placement</a>
+<a class="nv h3" href="#sec-7.7"><i>7.7</i>Le bouton Allergies</a>
+<a class="nv h3" href="#sec-7.8"><i>7.8</i>Client de passage</a>
+<a class="nv h2" href="#sec-8"><i>8</i>Service — Agenda</a>
+<a class="nv h2" href="#sec-9"><i>9</i>Réservations</a>
+<a class="nv h3" href="#sec-9.1"><i>9.1</i>La liste</a>
+<a class="nv h3" href="#sec-9.2"><i>9.2</i>Statuts et badges</a>
+<a class="nv h3" href="#sec-9.3"><i>9.3</i>Le champ source</a>
+<a class="nv h3" href="#sec-9.4"><i>9.4</i>Colonne « Action »</a>
+<a class="nv h3" href="#sec-9.5"><i>9.5</i>La fiche réservation</a>
+<a class="nv h3" href="#sec-9.6"><i>9.6</i>Le journal</a>
+<a class="nv h2" href="#sec-10"><i>10</i>Clients</a>
+<a class="nv h3" href="#sec-10.1"><i>10.1</i>Création d'une fiche</a>
+<a class="nv h3" href="#sec-10.2"><i>10.2</i>La liste</a>
+<a class="nv h3" href="#sec-10.3"><i>10.3</i>La fiche</a>
+<a class="nv h3" href="#sec-10.4"><i>10.4</i>Les compteurs</a>
+<a class="nv h3" href="#sec-10.5"><i>10.5</i>Doublons et anonymisation</a>
+<a class="nv h2" href="#sec-11"><i>11</i>Créer une réservation</a>
+<a class="nv h3" href="#sec-11.1"><i>11.1</i>Points d'entrée</a>
+<a class="nv h3" href="#sec-11.2"><i>11.2</i>Ordre des champs</a>
+<a class="nv h3" href="#sec-11.3"><i>11.3</i>La bande d'heures</a>
+<a class="nv h3" href="#sec-11.4"><i>11.4</i>Reconnaissance du client</a>
+<a class="nv h3" href="#sec-11.5"><i>11.5</i>Comportement du panneau</a>
+<a class="nv h2" href="#sec-12"><i>12</i>Éditeur de plan</a>
+<a class="nv h3" href="#sec-12.1"><i>12.1</i>Le canevas</a>
+<a class="nv h3" href="#sec-12.2"><i>12.2</i>Créer une table</a>
+<a class="nv h3" href="#sec-12.3"><i>12.3</i>Décor et fond de plan</a>
+<a class="nv h3" href="#sec-12.4"><i>12.4</i>L'accolage</a>
+<a class="nv h3" href="#sec-12.5"><i>12.5</i>Brouillon et publication</a>
+<a class="nv h3" href="#sec-12.6"><i>12.6</i>Désactiver une table</a>
+<a class="nv h2" href="#sec-13"><i>13</i>Paramètres</a>
+<a class="nv h3" href="#sec-13.1"><i>13.1</i>Structure</a>
+<a class="nv h3" href="#sec-13.2"><i>13.2</i>Ouvertures</a>
+<a class="nv h3" href="#sec-13.3"><i>13.3</i>Services et créneaux</a>
+<a class="nv h3" href="#sec-13.4"><i>13.4</i>Placement et réservation</a>
+<a class="nv h3" href="#sec-13.5"><i>13.5</i>Conditions d'annulation</a>
+<a class="nv h3" href="#sec-13.6"><i>13.6</i>Fermeture exceptionnelle</a>
+<a class="nv h3" href="#sec-13.7"><i>13.7</i>Notifications</a>
+<a class="nv h3" href="#sec-13.8"><i>13.8</i>Équipe, widget, restaurant</a>
+<a class="nv h2" href="#sec-14"><i>14</i>Widget public</a>
+<a class="nv h3" href="#sec-14.1"><i>14.1</i>Le parcours</a>
+<a class="nv h3" href="#sec-14.2"><i>14.2</i>Ce qui est proposé</a>
+<a class="nv h3" href="#sec-14.3"><i>14.3</i>Les deux barrières</a>
+<a class="nv h3" href="#sec-14.4"><i>14.4</i>Confidentialité</a>
+<a class="nv h3" href="#sec-14.5"><i>14.5</i>Les champs</a>
+<a class="nv h3" href="#sec-14.6"><i>14.6</i>Fin de parcours</a>
+<a class="nv h2" href="#sec-15"><i>15</i>Notifications et envois différés</a>
+<a class="nv h2" href="#sec-16"><i>16</i>Données personnelles</a>
+<a class="nv h2" href="#sec-17"><i>17</i>Contraintes techniques</a>
+<a class="nv h2" href="#sec-A"><i>A</i>Identité visuelle</a>
+<a class="nv h2" href="#sec-B"><i>B</i>Identifié, non spécifié</a>
+<a class="nv h2" href="#sec-C"><i>C</i>Points ouverts</a>
+  </nav>
+  <div class="side-foot">
+    <a href="TURO-conception.html">Conception détaillée</a>
+    <a href="tableUp-architecture.md">Architecture système</a>
+  </div>
+</aside>
+
+<main class="wrap" id="top">
+<header class="hero">
+  <h1>TableUp — Fonctionnalités de la version 1</h1>
+  <p class="lead">Synthèse de ce qui sera implémenté dans <b>TURO</b>, le logiciel restaurateur, et dans le <b>widget public de réservation</b>. Fonctionnalités et règles de gestion uniquement — les justifications de conception restent dans le document de conception.</p>
+  <div class="meta">
+    <span>Date <b>8 septembre 2026</b></span>
+    <span>Cible <b>V1</b></span>
+    <span>Périmètre <b>TURO + widget</b></span>
+    <span>Sources <b>conception, architecture, cahier des charges</b></span>
+  </div>
+</header>
+
+<div class="doc">
+
+<h2 id="sec-1"><span class="hn">1</span>Périmètre</h2>
+
+<h3 id="sec-1.1"><span class="hn">1.1</span>Ce que la V1 livre</h3>
+
+<div class="fx">
+  <div class="fx-c"><b>Plan de salle temps réel</b><span>Plan spatial à l'échelle, statuts de table, placement par glisser-déposer, rapprochements de tables.</span></div>
+  <div class="fx-c"><b>Agenda</b><span>Les mêmes réservations sur un axe temps, une ligne par table.</span></div>
+  <div class="fx-c"><b>Réservations</b><span>Recherche, filtres, création manuelle multi-canal, fiche, journal d'événements.</span></div>
+  <div class="fx-c"><b>Mini-CRM client</b><span>Fiche, historique, allergies, notes internes, compteurs de visites et de no-shows.</span></div>
+  <div class="fx-c"><b>Éditeur de plan</b><span>Canevas en mètres, palette de tables, décor, fond de plan décalquable, brouillon et publication.</span></div>
+  <div class="fx-c"><b>Paramètres</b><span>Ouvertures, services, capacités, placement, conditions d'annulation, notifications, équipe.</span></div>
+  <div class="fx-c"><b>Widget public</b><span>Parcours de réservation mobile, disponibilité réelle, demande sur créneau serré, confirmation par e-mail.</span></div>
+  <div class="fx-c"><b>Accueil</b><span>File « à traiter » actionnable, récapitulatif du jour, fermeture exceptionnelle du jour.</span></div>
+  <div class="fx-c"><b>Notifications</b><span>Confirmation automatique, rappel J-1, message de fermeture — tous en envoi différé annulable.</span></div>
+</div>
+
+<h3 id="sec-1.2"><span class="hn">1.2</span>Ce qui est exclu</h3>
+
+<div class="tw"><table><thead><tr><th>Exclu de la V1</th><th>Statut</th></tr></thead><tbody>
+<tr><td>Empreinte bancaire, acompte, PSP</td><td>V2+. Le seul levier anti-no-show en V1 est le texte de conditions d'annulation accepté</td></tr>
+<tr><td>Liste d'attente</td><td>V1.1. Le formulaire réserve l'emplacement d'un troisième bouton</td></tr>
+<tr><td>Analytics, tableau de bord, export de statistiques</td><td>V1.1. L'export CSV des clients existe déjà en V1</td></tr>
+<tr><td>Campagnes e-mail / SMS, fidélité</td><td>V2+. Le champ <code>consentement_marketing</code> est au modèle, sans écran</td></tr>
+<tr><td>Menu, QR code de table, prise de commande, paiement</td><td>V2+</td></tr>
+<tr><td>Google Reserve, marketplaces, intégration POS</td><td>V2+. La valeur <code>google</code> du champ <code>source</code> est prévue</td></tr>
+<tr><td>Géolocalisation, coordonnées GPS, recherche par proximité</td><td>V3. Aucune coordonnée au modèle</td></tr>
+<tr><td>Médias : photos du restaurant, galerie</td><td>V3</td></tr>
+<tr><td>Allocation automatique des tables, score de risque no-show</td><td>V2+</td></tr>
+<tr><td>Téléphone (back-office)</td><td>Hors périmètre. Cibles : tablette et bureau</td></tr>
+<tr><td>Modification ou annulation autonome par le client</td><td>Non conçu. Le client passe par e-mail ou téléphone</td></tr>
+</tbody></table></div>
+
+<h2 id="sec-2"><span class="hn">2</span>Rôles et permissions</h2>
+
+<p>Deux rôles. Ils portent sur la <strong>configuration</strong>, jamais sur les données client : les allergies, les notes internes, les téléphones et les compteurs de fiabilité sont visibles par les deux.</p>
+
+<div class="tw"><table><thead><tr><th>Fonction</th><th>Service</th><th>Administrateur</th></tr></thead><tbody>
+<tr><td>Accueil, Service, Réservations, Clients</td><td class="oui">✓</td><td class="oui">✓</td></tr>
+<tr><td>Placer, déplacer, marquer une arrivée, libérer, noter un no-show</td><td class="oui">✓</td><td class="oui">✓</td></tr>
+<tr><td>Créer, modifier, annuler une réservation</td><td class="oui">✓</td><td class="oui">✓</td></tr>
+<tr><td>Créer et modifier une fiche client, ses allergies, ses notes internes</td><td class="oui">✓</td><td class="oui">✓</td></tr>
+<tr><td>Fermer <em>aujourd'hui</em> (depuis l'Accueil)</td><td class="oui">✓</td><td class="oui">✓</td></tr>
+<tr><td>Déplacer une table, éditeur de plan</td><td class="non">✗</td><td class="oui">✓</td></tr>
+<tr><td>Horaires d'ouverture, services, fermetures à venir</td><td class="non">✗</td><td class="oui">✓</td></tr>
+<tr><td>Réglages de placement, conditions d'annulation, notifications</td><td class="non">✗</td><td class="oui">✓</td></tr>
+<tr><td>Comptes de l'équipe, widget, informations du restaurant</td><td class="non">✗</td><td class="oui">✓</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>ROLE-01</b><div>Le bouton « ✎ Éditer le plan » n'est rendu que pour le rôle <code>admin</code>.</div></div>
+<div class="rg"><b>ROLE-02</b><div>Fermer le jour courant n'est pas un paramétrage : le panneau de fermeture est atteignable depuis l'Accueil par le rôle Service. Les fermetures <em>futures</em> restent dans les Paramètres, donc administrateur.</div></div>
+<div class="rg"><b>ROLE-03</b><div>Toutes les requêtes sont filtrées par <code>restaurant_id</code>. Un utilisateur n'appartient qu'à un restaurant.</div></div>
+</div>
+
+<h2 id="sec-3"><span class="hn">3</span>Modèle de données</h2>
+
+<h3 id="sec-3.1"><span class="hn">3.1</span>Restaurant</h3>
+
+<div class="tw"><table><thead><tr><th>Champ</th><th>Rôle</th></tr></thead><tbody>
+<tr><td><code>id</code>, <code>nom</code></td><td></td></tr>
+<tr><td><code>fuseau</code></td><td>Fuseau horaire local, ex. <code>Europe/Paris</code></td></tr>
+<tr><td><code>rotation_defaut</code></td><td>Durée par défaut d'un repas, en minutes (ex. 105)</td></tr>
+<tr><td><code>tolerance_places</code></td><td>Places en trop tolérées avant de dégrader le verdict en <code>~✓</code> (ex. 2)</td></tr>
+<tr><td><code>retard_grace</code></td><td>Minutes après l'heure avant d'afficher l'anneau « en retard » (ex. 15)</td></tr>
+<tr><td><code>rappel_actif</code>, <code>rappel_delai_h</code></td><td>Rappel avant la réservation, et son délai</td></tr>
+<tr><td><code>confirmation_auto</code></td><td>Confirme d'office une demande web posée sur un créneau franchement libre</td></tr>
+</tbody></table></div>
+
+<h3 id="sec-3.2"><span class="hn">3.2</span>Zone, table, décor, combinaison</h3>
+
+<div class="gr2">
+<div>
+<p><strong>Zone</strong> — une salle, un étage, une terrasse.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>nom</code>, <code>ordre</code></td><td>Ordre des onglets</td></tr>
+<tr><td><code>largeur</code>, <code>hauteur</code></td><td><strong>En mètres.</strong> Le rendu convertit, la donnée reste métrique</td></tr>
+</tbody></table></div>
+<p><strong>Décor</strong> — repère non réservable.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>zone_id</code></td><td></td></tr>
+<tr><td><code>type</code></td><td>mur · porte · bar · passe · pilier · escalier · autre</td></tr>
+<tr><td><code>libelle</code></td><td>Optionnel, affiché sur la forme</td></tr>
+<tr><td><code>x</code>, <code>y</code>, <code>l</code>, <code>h</code>, <code>rotation</code></td><td>Comme une table</td></tr>
+</tbody></table></div>
+</div>
+<div>
+<p><strong>Table</strong> — physique, indivisible.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>zone_id</code></td><td></td></tr>
+<tr><td><code>nom</code>, <code>capacite</code></td><td>« 7 », « T12 », « Bar 3 »</td></tr>
+<tr><td><code>forme</code></td><td>ronde · carrée · rectangulaire</td></tr>
+<tr><td><code>x</code>, <code>y</code>, <code>l</code>, <code>h</code>, <code>rotation</code></td><td>Toujours portées par la table physique</td></tr>
+<tr><td><code>a_nettoyer_depuis</code></td><td><strong>Le seul état physique stocké</strong></td></tr>
+<tr><td><code>active</code></td><td>Une table se désactive, ne se supprime jamais</td></tr>
+</tbody></table></div>
+<p><strong>Combinaison</strong> — la table virtuelle.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>zone_id</code>, <code>nom</code></td><td>« 12-13 » proposé, modifiable</td></tr>
+<tr><td><code>capacite</code></td><td><strong>Saisie, jamais calculée</strong></td></tr>
+<tr><td><code>tables[]</code></td><td>Les tables physiques membres</td></tr>
+<tr><td><code>active</code></td><td>Collées <em>en ce moment</em>, oui ou non</td></tr>
+<tr><td><code>a_active_le</code>, <code>a_desactive_le</code></td><td>Rapprochement ou séparation prévus</td></tr>
+</tbody></table></div>
+</div>
+</div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>MOD-01</b><div>Une table et une combinaison ne se suppriment jamais : elles se <strong>désactivent</strong>. Une réservation ancienne doit rester lisible.</div></div>
+<div class="rg"><b>MOD-02</b><div>Une combinaison n'a <strong>aucune géométrie propre</strong> : elle se dessine à partir des <code>x/y</code> de ses membres.</div></div>
+<div class="rg"><b>MOD-03</b><div>La capacité d'une combinaison est saisie à la création — elle n'est pas la somme des capacités, seulement pré-remplie avec.</div></div>
+<div class="rg"><b>MOD-04</b><div>Un objet <code>Décor</code> n'a pas de capacité, n'est jamais proposé au placement et n'est pas cliquable en service.</div></div>
+</div>
+
+<h3 id="sec-3.3"><span class="hn">3.3</span>Service et fermeture exceptionnelle</h3>
+
+<div class="gr2">
+<div>
+<p><strong>Service</strong></p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>jour</code>, <code>ouverture</code>, <code>fermeture</code></td><td>Par jour de semaine</td></tr>
+<tr><td><code>pas_creneau</code></td><td>15 ou 30 min → détermine la frise et la bande d'heures</td></tr>
+<tr><td><code>mode_occupation</code></td><td><code>rotation</code> ou <code>service_unique</code></td></tr>
+<tr><td><code>duree_prevue</code></td><td>Hérite de <code>rotation_defaut</code>, surchargeable</td></tr>
+<tr><td><code>cadence_max</code>, <code>plafond_couverts</code></td><td>Avertissements, nullables. Ne décident jamais de la disponibilité</td></tr>
+</tbody></table></div>
+</div>
+<div>
+<p><strong>Fermeture exceptionnelle</strong></p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>du</code>, <code>au</code>, <code>type</code></td><td></td></tr>
+<tr><td><code>horaires_remplacement</code></td><td>Optionnel</td></tr>
+<tr><td><code>motif</code>, <code>motif_detail</code></td><td>Pastille + texte libre. <strong>Ne sortent jamais du logiciel</strong></td></tr>
+<tr><td><code>message_client</code></td><td>Ce que les clients concernés reçoivent</td></tr>
+</tbody></table></div>
+</div>
+</div>
+
+<h3 id="sec-3.4"><span class="hn">3.4</span>Réservation, affectation, journal</h3>
+
+<div class="tw"><table><thead><tr><th>Champ de <code>Réservation</code></th><th>Rôle</th></tr></thead><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>client_id</code></td><td><strong>Nullable</strong> — un client de passage ne crée aucune fiche</td></tr>
+<tr><td><code>debut</code></td><td>UTC</td></tr>
+<tr><td><code>duree</code></td><td>Minutes, initialisée depuis <code>rotation_defaut</code>, modifiable à la création</td></tr>
+<tr><td><code>jour_service</code></td><td><strong>Date locale du service.</strong> Un dîner commencé à 00:30 appartient à la veille</td></tr>
+<tr><td><code>couverts</code></td><td></td></tr>
+<tr><td><code>statut</code></td><td><code>en_attente</code> · <code>confirmee</code> · <code>assise</code> · <code>terminee</code> · <code>no_show</code> · <code>annulee</code></td></tr>
+<tr><td><code>source</code></td><td><code>web</code> · <code>telephone</code> · <code>sur_place</code> · <code>google</code> · <code>plateforme</code> · <code>autre</code>. Obligatoire</td></tr>
+<tr><td><code>zone_souhaitee</code></td><td>Optionnel. Préférence, jamais promesse</td></tr>
+<tr><td><code>rappel_envoye_le</code></td><td>Horodatage du rappel</td></tr>
+<tr><td><code>confirme_par_client_le</code></td><td>Réponse au rappel. Null ≠ no-show</td></tr>
+<tr><td><code>annule_le</code>, <code>annule_par</code></td><td><code>client</code> ou <code>restaurant</code> — deux événements distincts</td></tr>
+<tr><td><code>conditions_version_id</code>, <code>conditions_acceptees_le</code></td><td>Version du texte acceptée, et quand. Null pour une création restaurateur</td></tr>
+<tr><td><code>note</code></td><td>Commentaire attaché à <em>cette</em> réservation</td></tr>
+<tr><td><code>assis_a</code></td><td></td></tr>
+<tr><td><code>termine_a</code></td><td><strong>Nullable</strong> — une clôture automatique ne connaît pas l'heure de fin</td></tr>
+<tr><td><code>cloture_auto</code></td><td>Vrai si close par l'ouverture du service suivant</td></tr>
+</tbody></table></div>
+
+<div class="gr2">
+<div>
+<p><strong>Affectation</strong> — le lien réservation ↔ entité réservable.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>reservation_id</code></td><td></td></tr>
+<tr><td><code>table_id</code> <em>ou</em> <code>combinaison_id</code></td><td>Contrainte : exactement un des deux rempli</td></tr>
+<tr><td><code>affecte_par</code>, <code>affecte_a</code></td><td></td></tr>
+</tbody></table></div>
+</div>
+<div>
+<p><strong>Journal d'événements</strong> — une ligne par fait.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>reservation_id</code>, <code>horodatage</code></td><td></td></tr>
+<tr><td><code>type</code></td><td>création · acceptation · refus · rappel · confirmation client · placement · déplacement · arrivée · libération · no-show · annulation · modification</td></tr>
+<tr><td><code>auteur_id</code></td><td>Null si l'auteur est le système</td></tr>
+<tr><td><code>details</code></td><td>Ce qui a changé</td></tr>
+</tbody></table></div>
+</div>
+</div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>RES-01</b><div>Une réservation est rattachée à <strong>une seule</strong> entité réservable. Un groupe sur deux tables passe par une combinaison, jamais par deux affectations.</div></div>
+<div class="rg"><b>RES-02</b><div><code>jour_service</code> est la date <em>locale du service</em>, pas la date de <code>debut</code>. Tous les regroupements et totaux s'appuient dessus.</div></div>
+<div class="rg"><b>RES-03</b><div>Une réservation <code>en_attente</code> <strong>ne réserve aucune table</strong>. Deux clients peuvent demander le même créneau ; le restaurateur arbitre.</div></div>
+<div class="rg"><b>RES-04</b><div><code>duree</code> est copiée depuis <code>rotation_defaut</code> à la création. Changer <code>rotation_defaut</code> ensuite ne modifie <strong>aucune</strong> réservation existante.</div></div>
+</div>
+
+<h3 id="sec-3.5"><span class="hn">3.5</span>Client</h3>
+
+<div class="tw"><table><thead><tr><th>Champ</th><th>Rôle</th></tr></thead><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>nom</code>, <code>email</code>, <code>telephone</code></td><td><strong>Le téléphone est la clé d'identité</strong>, l'e-mail la clé de secours</td></tr>
+<tr><td><code>allergies</code></td><td>Champ structuré, à part. C'est lui qui s'épingle en corail sur la fiche réservation</td></tr>
+<tr><td><code>notes_internes</code></td><td>Habitudes, occasions. <strong>Ne sort jamais du logiciel</strong> : ni e-mail, ni widget</td></tr>
+<tr><td><code>tags</code></td><td>vip · habitué · à surveiller · presse. <strong>Manuels</strong>, jamais calculés</td></tr>
+<tr><td><code>nb_visites</code>, <code>nb_noshow</code></td><td>Stockés, écriture symétrique, redressables</td></tr>
+<tr><td><code>consentement_marketing</code>, <code>consentement_le</code></td><td>Au modèle, sans écran en V1</td></tr>
+<tr><td><code>anonymise_le</code></td><td>Effacement = anonymisation</td></tr>
+</tbody></table></div>
+
+<p>Il n'existe <strong>pas</strong> de champ <code>preferences</code> : le commentaire ponctuel appartient à la réservation, ce qui doit durer va dans <code>notes_internes</code>.</p>
+
+<h3 id="sec-3.6"><span class="hn">3.6</span>Conditions d'annulation et utilisateurs</h3>
+
+<div class="gr2">
+<div>
+<p><strong>Conditions d'annulation</strong> — une ligne par enregistrement du texte, jamais modifiée, jamais supprimée.</p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>version</code></td><td>Incrémenté à chaque enregistrement</td></tr>
+<tr><td><code>texte</code></td><td>Vide autorisé</td></tr>
+<tr><td><code>cree_le</code>, <code>cree_par</code></td><td></td></tr>
+</tbody></table></div>
+</div>
+<div>
+<p><strong>Utilisateur</strong></p>
+<div class="tw"><table><tbody>
+<tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
+<tr><td><code>role</code></td><td><code>admin</code> · <code>staff</code></td></tr>
+</tbody></table></div>
+</div>
+</div>
+
+<h2 id="sec-4"><span class="hn">4</span>Le moteur de disponibilité</h2>
+
+<p>Tout ce que le plan colore, ce que la bande d'heures propose et ce que le widget affiche sort de ces six règles. Le moteur est une <strong>fonction pure</strong> : il ne dépend ni du contexte HTTP, ni de la session.</p>
+
+<h3 id="sec-4.1"><span class="hn">4.1</span>Statut d'une table</h3>
+
+<p><strong>Le statut n'est pas une colonne.</strong> Une seule chose est stockée, <code>a_nettoyer_depuis</code> ; le reste se calcule à partir des intervalles d'occupation qui recouvrent l'heure choisie sur la frise.</p>
+
+<figure class="fig" id="fig-1">
+  <div class="fig-n">Figure 1 · §4.1</div>
+  <figcaption class="fig-cap">Le calcul du statut d'une table à une heure <b>T</b>. Quatre étapes, un seul champ stocké.</figcaption>
+  <div class="arb">
+    <div class="arb-q">Pour une table donnée, à l'heure <b>T</b> de la frise :</div>
+    <div class="arb-s"><span class="arb-n">1</span><div>Chercher l'affectation dont l'intervalle <code>[début, début + durée]</code> recouvre <b>T</b>.</div></div>
+    <div class="arb-s"><span class="arb-n">2</span><div>Statut de la réservation = <code>assise</code> ?</div></div>
+    <div class="arb-r"><i class="tb-mini tb-occ"></i> <b>Occupée</b></div>
+    <div class="arb-s"><span class="arb-n">3</span><div>Statut = <code>confirmee</code> ?</div></div>
+    <div class="arb-r"><i class="tb-mini tb-res"></i> <b>Réservée</b> <em>— et si <code>maintenant &gt; début + retard_grace</code>, ajouter l'anneau corail « en retard »</em></div>
+    <div class="arb-s"><span class="arb-n">4</span><div>Aucun intervalle ? <code>a_nettoyer_depuis</code> décide.</div></div>
+    <div class="arb-r"><i class="tb-mini tb-sale"></i> <b>À nettoyer</b> <em>si rempli</em> &nbsp;·&nbsp; <i class="tb-mini tb-libre"></i> <b>Libre</b> <em>si vide</em></div>
+  </div>
+  <div class="regle"><b>« En retard » n'est pas un statut</b> — c'est un anneau corail par-dessus le bleu « réservée ». La table reste réservée.</div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>DISPO-01</b><div>Une table sale reste affichée « à nettoyer » sur <strong>tous</strong> les créneaux, y compris futurs, tant que personne ne l'a nettoyée.</div></div>
+<div class="rg"><b>DISPO-02</b><div><strong>Nettoyage implicite :</strong> placer une réservation sur une table à nettoyer la nettoie. <code>a_nettoyer_depuis</code> est vidé, la table passe directement en « réservée ».</div></div>
+<div class="rg"><b>DISPO-03</b><div>Libérer une réservation <code>assise</code> passe la table en « à nettoyer » : <code>termine_a</code> est horodaté et <code>a_nettoyer_depuis</code> est rempli.</div></div>
+</div>
+
+<h3 id="sec-4.2"><span class="hn">4.2</span>Conflit entre entités réservables</h3>
+
+<blockquote>
+<p><strong>Toute entité réservable se résout en un ensemble de tables physiques</strong> — une table simple est un ensemble d'un élément.</p>
+<p><strong>Deux entités sont en conflit si leurs ensembles se croisent</strong>, sur un intervalle qui se recouvre.</p>
+</blockquote>
+
+<figure class="fig" id="fig-2">
+  <div class="fig-n">Figure 2 · §4.2</div>
+  <figcaption class="fig-cap">Réserver <code>13-14</code> à 21:00 occupe <code>{13, 14}</code>. Une seule requête d'intersection couvre toutes les combinaisons présentes et futures, y compris les chaînes.</figcaption>
+  <div class="conflit">
+    <div class="cf-bois">
+      <div class="cf-t craie">12</div><div class="cf-t pris craie">13</div><div class="cf-t pris craie">14</div>
+      <em>À 21:00</em>
+    </div>
+    <div>
+      <div class="cf-r cf-ok"><b>table 12</b><code>{12}</code><span>libre</span></div>
+      <div class="cf-r cf-no"><b>table 13</b><code>{13}</code><span>prise</span></div>
+      <div class="cf-r cf-no"><b>table 14</b><code>{14}</code><span>prise</span></div>
+      <div class="cf-r cf-no"><b>12-13</b><code>{12, 13}</code><span>prise — <em>parce qu'elle contient 13</em></span></div>
+      <div class="cf-r cf-src"><b>13-14</b><code>{13, 14}</code><span>Nguyen · 8p</span></div>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-4.3"><span class="hn">4.3</span>Compatibilité au placement</h3>
+
+<p>Pour une réservation et une heure <b>T</b>, chaque entité réservable reçoit un verdict.</p>
+
+<figure class="fig" id="fig-3">
+  <div class="fig-n">Figure 3 · §4.3</div>
+  <figcaption class="fig-cap">Les trois verdicts. <b>Le contour de la table ne change jamais</b> — il appartient au statut ; seul le halo porte la compatibilité.</figcaption>
+  <div class="slate-wrap"><div class="slate" style="height:120px">
+    <div class="tb tb-libre halo-ok" style="left:34px;top:24px;width:80px;height:58px">
+      <b class="craie">5</b><i>4p</i><span class="hb hb-ok">✓</span></div>
+      <span class="slate-lab" style="left:14px;top:90px;width:120px">Parfaite — dépôt immédiat</span>
+    <div class="tb tb-sale halo-reserve" style="left:212px;top:24px;width:80px;height:58px">
+      <b class="craie">6</b><i>4p</i><span class="hb hb-reserve">~✓</span></div>
+      <span class="slate-lab" style="left:192px;top:90px;width:120px">À réserve — popup de raisons</span>
+    <div class="tb tb-res dim" style="left:390px;top:24px;width:80px;height:58px">
+      <b class="craie">4</b><i>4p</i></div>
+      <span class="slate-lab" style="left:370px;top:90px;width:120px">Écartée — 26 %, pas de halo</span>
+  </div></div>
+</figure>
+
+<div class="gr3">
+  <div class="bx bx-ko"><b class="bx-t">Écartée</b>
+  <ul style="margin:0;padding-left:17px;font-size:12.5px;line-height:1.6;color:#6E675F">
+    <li>Une affectation recouvre déjà <code>[T, T+durée]</code>, ou conflit d'ensemble</li>
+    <li><code>capacite &lt; couverts − tolérance_basse</code></li>
+    <li>La zone est fermée pour ce service</li>
+  </ul></div>
+  <div class="bx bx-ok"><b class="bx-t"><code>✓</code> Parfaite</b>
+  <ul style="margin:0;padding-left:17px;font-size:12.5px;line-height:1.6;color:#6E675F">
+    <li>Libre sur tout l'intervalle</li>
+    <li><code>couverts ≤ capacite ≤ couverts + tolerance_places</code></li>
+    <li>Propre</li>
+    <li>Zone conforme au souhait, s'il y en a un</li>
+  </ul></div>
+  <div class="bx"><b class="bx-t"><code>~✓</code> À réserve</b>
+  <span style="font-size:12.5px;color:#6E675F;line-height:1.6">Possible, avec au moins une raison à dire. Le dépôt ouvre un popup qui <strong>liste toutes</strong> les raisons.</span></div>
+</div>
+
+<div class="tw"><table><thead><tr><th>Raison de <code>~✓</code></th><th>Message affiché au dépôt</th></tr></thead><tbody>
+<tr><td>Table non nettoyée</td><td>« Legrand est parti à 20:12, elle n'a pas encore été redressée. <em>En plaçant Moreau, elle sera considérée comme nettoyée.</em> »</td></tr>
+<tr><td>Places en trop</td><td>« 2 places de trop — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. »</td></tr>
+<tr><td>Places en moins</td><td>« 1 place manquante — table de 3 pour 4 personnes. À rapprocher d'une autre ? »</td></tr>
+<tr><td>Réservée plus tard</td><td>« Réservée à 22:00 — il reste 1h30, la rotation moyenne est de 1h45. »</td></tr>
+<tr><td>Zone non demandée</td><td>« Terrasse — la réservation demandait la salle. <em>(note : « intérieur svp »)</em> »</td></tr>
+<tr><td>Rapprochement nécessaire</td><td>« Les tables 12 et 13 devront être poussées l'une contre l'autre avant l'arrivée. »</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>PLACE-01</b><div>Un dépôt sur une entité <code>✓</code> place <strong>sans aucun popup</strong>.</div></div>
+<div class="rg"><b>PLACE-02</b><div>Un dépôt sur une entité <code>~✓</code> ouvre un popup qui <strong>informe</strong> et propose <em>Annuler</em> / <em>Placer</em>. Il ne demande pas confirmation, il énonce ce qu'on ne peut pas voir.</div></div>
+<div class="rg"><b>PLACE-03</b><div>Un rapprochement est <strong>toujours</strong> <code>~✓</code>, jamais <code>✓</code>.</div></div>
+<div class="rg"><b>PLACE-04</b><div>Les couleurs d'aide au placement n'existent que pendant un placement. Elles n'entrent jamais en concurrence avec les statuts.</div></div>
+</div>
+
+<h3 id="sec-4.4"><span class="hn">4.4</span>Modes d'occupation et état d'un créneau</h3>
+
+<blockquote><p><strong>La disponibilité se calcule sur les tables, pour l'intervalle demandé — jamais sur un total de couverts.</strong></p></blockquote>
+
+<figure class="fig" id="fig-4">
+  <div class="fig-n">Figure 4 · §4.4</div>
+  <figcaption class="fig-cap">Les deux modes d'occupation, réglés <b>par service</b>. Ils décident si une table peut se libérer avant la fin du service.</figcaption>
+  <div class="modes">
+    <div class="md">
+      <b class="md-t">Rotation</b>
+      <span class="md-h">La table se libère après <code>duree_prevue</code>. Un second service est proposé.</span>
+      <div class="md-ax">
+        <em style="left:2%;width:44%">19:30 · Legrand 4p</em>
+        <em class="md-lib" style="left:48%;width:50%">21:15 — proposable</em>
+      </div>
+      <span class="md-q md-opt">Optimiste</span>
+      <i>Le second créneau ne s'affiche jamais « libre » : il dépend d'un départ qui n'a pas eu lieu.</i>
+    </div>
+    <div class="md">
+      <b class="md-t">Service unique</b>
+      <span class="md-h">Une table prise l'est <strong>jusqu'à la fin du service</strong>.</span>
+      <div class="md-ax">
+        <em style="left:2%;width:96%">19:30 · Legrand 4p — jusqu'à la fermeture</em>
+      </div>
+      <span class="md-q md-hon">Honnête</span>
+      <i>Aucun « sur demande » possible : il y a de la place, ou il n'y en a pas.</i>
+    </div>
+  </div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>État d'un créneau</th><th>Rendu</th><th>Définition</th></tr></thead><tbody>
+<tr><td><strong>Libre</strong></td><td>Vert plein</td><td>Une table adaptée est libre sur tout l'intervalle, <strong>sans supposer aucun départ</strong></td></tr>
+<tr><td><strong>Serré</strong></td><td>Ambre, bordure pointillée</td><td>Libre <strong>seulement si</strong> un repas en cours se termine comme prévu, <strong>ou</strong> seulement en rapprochant deux tables. La condition est nommée</td></tr>
+<tr><td><strong>Complet</strong></td><td>Gris barré</td><td>Aucune table, aucune combinaison, aucun départ prévu</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>DISPO-04</b><div><code>mode_occupation</code> se règle <strong>par service</strong>, pas par restaurant. Une maison peut tourner le midi et pas le soir.</div></div>
+<div class="rg"><b>DISPO-05</b><div>En mode <code>rotation</code>, un créneau libéré par une <em>prévision</em> de départ s'affiche <strong>« serré », jamais « libre »</strong>.</div></div>
+<div class="rg"><b>DISPO-06</b><div>En mode <code>service_unique</code>, l'état « serré » par départ prévu n'existe pas.</div></div>
+<div class="rg"><b>DISPO-07</b><div><code>cadence_max</code> et <code>plafond_couverts</code> <strong>avertissent uniquement</strong>. Ils ne décident jamais de la disponibilité, et sont désactivés par défaut.</div></div>
+<div class="rg"><b>DISPO-08</b><div>Aucune jauge du type <code>24 / 35</code> couverts ne s'affiche comme indicateur de remplissage. Le remplissage se dit <strong>en tables</strong>.</div></div>
+</div>
+
+<h3 id="sec-4.5"><span class="hn">4.5</span>Cycle de vie d'une combinaison</h3>
+
+<p>Deux horloges distinctes : <code>active</code> dit ce qui est <strong>physiquement collé en ce moment</strong> — donc ce que le plan dessine ; le conflit de réservation dit ce qui est libre <strong>à l'heure T</strong>.</p>
+
+<figure class="fig" id="fig-5">
+  <div class="fig-n">Figure 5 · §4.5</div>
+  <figcaption class="fig-cap">Les quatre états d'une combinaison, et les six transitions. Le logiciel ne bascule <b>jamais</b> <code>active</code> tout seul : il sonne, l'utilisateur répond.</figcaption>
+  <div class="etats">
+    <div class="et"><span class="et-n">1</span><b>Dormante</b><div class="et-f">
+      <span><code>active</code> = faux</span><span><code>a_active_le</code> = null</span><span><code>a_desactive_le</code> = null</span></div></div>
+    <div class="et e-att"><span class="et-n">2</span><b>Rapprochement prévu</b><div class="et-f">
+      <span><code>active</code> = faux</span><span><code>a_active_le</code> = 21:30</span><span><code>a_desactive_le</code> = null</span></div></div>
+    <div class="et e-on"><span class="et-n">3</span><b>Liée</b><div class="et-f">
+      <span><code>active</code> = vrai</span><span><code>a_active_le</code> = null</span><span><code>a_desactive_le</code> = null</span></div></div>
+    <div class="et e-att"><span class="et-n">4</span><b>Séparation prévue</b><div class="et-f">
+      <span><code>active</code> = vrai</span><span><code>a_active_le</code> = null</span><span><code>a_desactive_le</code> = 23:15</span></div></div>
+  </div>
+  <div class="trans">
+    <span class="tr"><code>1 → 2</code> Une réservation est placée sur la combinaison</span>
+    <span class="tr"><code>2 → 3</code> Réponse « oui, c'est fait » au rappel</span>
+    <span class="tr"><code>2 → 1</code> « Finalement non », ou réservation annulée</span>
+    <span class="tr"><code>3 → 4</code> Une réservation ultérieure a besoin d'un membre seul</span>
+    <span class="tr"><code>4 → 1</code> Réponse « oui, les séparer »</span>
+    <span class="tr"><code>3 → 1</code> Déliage à la main, sans rappel</span>
+  </div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>COMB-01</b><div><code>a_active_le</code> et <code>a_desactive_le</code> sont <strong>toujours recalculées, jamais saisies</strong> — à chaque placement, annulation ou no-show.</div></div>
+<div class="rg"><b>COMB-02</b><div><code>a_active_le</code> = heure de début de la prochaine affectation sur cette combinaison. Aucune marge. Null s'il n'y a rien à venir, et null dès que <code>active = vrai</code>.</div></div>
+<div class="rg"><b>COMB-03</b><div><code>a_desactive_le</code> = fin de la série d'affectations en cours, <strong>mais seulement si</strong> une réservation ultérieure réclame une table membre seule. Null sinon, et null dès que <code>active = faux</code>.</div></div>
+<div class="rg"><b>COMB-04</b><div><strong>Invariant :</strong> une table physique appartient à <strong>au plus une combinaison active</strong> à la fois. Vérifié avant chaque activation.</div></div>
+<div class="rg"><b>COMB-05</b><div>Contrainte en base : <code>(active = true AND a_active_le IS NULL) OR (active = false AND a_desactive_le IS NULL)</code>. Au plus une action en attente à la fois.</div></div>
+<div class="rg"><b>COMB-06</b><div><strong>Aucun rappel n'expire.</strong> Il reste affiché tant que personne n'a répondu. Pas de délai, pas de bascule automatique.</div></div>
+<div class="rg"><b>COMB-07</b><div>Trois rappels existent : <em>rapprochement</em> (oui c'est fait / pas encore, dans 10 min / finalement non), <em>séparation</em> (oui / non), et <em>après no-show</em> (« Nguyen ne s'est pas présenté. Séparer 12 et 13 ? »).</div></div>
+</div>
+
+<h3 id="sec-4.6"><span class="hn">4.6</span>Propositions de rapprochement</h3>
+
+<div class="rules">
+<div class="rg"><b>RAPP-01</b><div>Le moteur ne se contente pas d'accepter un rapprochement : il le <strong>propose</strong>. Un groupe de 8 dans un restaurant sans table de 8 ne reçoit jamais « aucune table disponible ».</div></div>
+<div class="rg"><b>RAPP-02</b><div><strong>Aucun filtre de proximité.</strong> Toutes les combinaisons possibles sont candidates.</div></div>
+<div class="rg"><b>RAPP-03</b><div>Les candidats sont <strong>triés par distance croissante</strong>, calculée depuis les <code>x/y</code> des tables physiques.</div></div>
+<div class="rg"><b>RAPP-04</b><div>Un rapprochement inédit accepté ouvre le popup de création : nom pré-rempli (« 12-13 »), capacité pré-remplie à la somme, les deux modifiables. Si la combinaison existe déjà, aucune question n'est posée.</div></div>
+</div>
+<h2 id="sec-5"><span class="hn">5</span>Navigation</h2>
+
+<h3 id="sec-5.1"><span class="hn">5.1</span>Inventaire des écrans</h3>
+
+<figure class="fig" id="fig-6">
+  <div class="fig-n">Figure 6 · §5.1</div>
+  <figcaption class="fig-cap">Cinq entrées de rail. <b>Plan et Agenda ne sont pas deux écrans</b> : ce sont deux vues d'un même contexte « Service ». Trois surfaces ne sont pas des écrans du rail : les fiches, le formulaire, l'éditeur.</figcaption>
+  <div class="carte">
+    <div class="ct-rail">
+      <div class="ct-e">Accueil</div>
+      <div class="ct-e on">Service</div>
+      <div class="ct-e">Réservations</div>
+      <div class="ct-e">Clients</div>
+      <div class="ct-e" style="margin-top:22px">Réglages</div>
+    </div>
+    <div>
+      <div class="ct-b">Accueil <em>— l'avant et l'après du service</em></div>
+      <div class="ct-b ct-on">Service
+        <span class="ct-pl">Un seul contexte : date + service, écrit une seule fois</span>
+        <div class="ct-sub"><span>Plan</span><span>Agenda</span></div>
+      </div>
+      <div class="ct-b">Réservations <em>— recherche, filtres, création</em></div>
+      <div class="ct-b">Clients <em>— mini-CRM</em></div>
+      <div class="ct-b">Paramètres <em>— administrateur</em></div>
+    </div>
+    <div class="ct-hors">
+      <b>NI ÉCRANS, NI ENTRÉES DE RAIL</b>
+      <span class="ct-p">Fiche réservation <em>· panneau</em></span>
+      <span class="ct-p">Fiche client <em>· panneau</em></span>
+      <span class="ct-p">Formulaire de création <em>· panneau</em></span>
+      <span class="ct-p">Éditeur de plan <em>· plein écran</em></span>
+      <span class="ct-p ct-pub">Widget <em>· application publique</em></span>
+      <i>Les deux fiches se remplacent dans un panneau unique. Profondeur 2 maximum.</i>
+      <i>Il n'existe pas d'onglet « Liste » : l'écran Réservations remplit ce rôle.</i>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-5.2"><span class="hn">5.2</span>Le rail</h3>
+
+<p>46 px, icônes seules au repos, pas de bouton de repli. Il navigue entre <strong>sections</strong>, jamais entre salles.</p>
+
+<div class="tw"><table><thead><tr><th>Contexte</th><th>Comportement</th></tr></thead><tbody>
+<tr><td>PC</td><td>Survol → libellés. Ouverture après <strong>150 ms</strong>, fermeture après <strong>200 ms</strong></td></tr>
+<tr><td>Tablette</td><td>Contact sur le rail → libellés visibles <strong>3 s</strong>. Le compte repart à chaque nouveau contact</td></tr>
+<tr><td>Tablette — sortie</td><td>Contact ailleurs → fermeture <strong>immédiate</strong></td></tr>
+<tr><td>Premier lancement</td><td>Le rail s'ouvre <strong>déployé</strong>, se replie au premier contact</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>NAV-01</b><div><strong>Le rail recouvre, il ne pousse pas.</strong> Déployé, c'est un calque flottant ; la largeur réservée dans la mise en page reste celle des icônes.</div></div>
+<div class="rg"><b>NAV-02</b><div><strong>Inerte pendant un glisser.</strong> Tant qu'une réservation est saisie, le rail ne réagit ni au survol ni au contact.</div></div>
+<div class="rg"><b>NAV-03</b><div>Sur tablette, un contact sur une icône <strong>navigue immédiatement</strong>. Les libellés qui suivent confirment la destination, ils n'aident pas au choix.</div></div>
+<div class="rg"><b>NAV-04</b><div>L'entrée active reste lisible repliée — pastille orange pleine.</div></div>
+<div class="rg"><b>NAV-05</b><div>Naviguer referme le rail dès que le nouvel écran est là, sans attendre les 3 s.</div></div>
+</div>
+
+<h3 id="sec-5.3"><span class="hn">5.3</span>En-tête de contexte</h3>
+
+<p>Une seule ligne, toujours au même endroit, partagée par les vues Plan et Agenda : <strong>horloge · état du service · pastille Allergies · date · pastille de couverts · bouton +</strong>.</p>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>NAV-06</b><div>Par défaut l'en-tête affiche <strong>le service en cours</strong>. Il n'y a rien à choisir en arrivant.</div></div>
+<div class="rg"><b>NAV-07</b><div>Toucher la date ouvre le sélecteur : calendrier du mois, un point sous chaque jour portant des réservations, <strong>les jours de fermeture grisés et non cliquables</strong>, puis les services de ce jour <em>et eux seuls</em>, avec leur état (terminé / en cours / à venir) et leur remplissage.</div></div>
+<div class="rg"><b>NAV-08</b><div>Choisir un service recharge <strong>la vue courante</strong> : on ne repart pas au Plan si on était dans l'Agenda.</div></div>
+<div class="rg"><b>NAV-09</b><div>Dès qu'on n'est plus sur le service en cours, l'en-tête change de ton et affiche un bouton <strong>« Aujourd'hui »</strong>.</div></div>
+<div class="rg"><b>NAV-10</b><div>Le bouton <strong>« + »</strong> est global, dans l'en-tête, jamais dans le plan.</div></div>
+</div>
+
+<h3 id="sec-5.4"><span class="hn">5.4</span>Atterrissage</h3>
+
+<div class="rules">
+<div class="rg"><b>NAV-11</b><div>À l'ouverture : <strong>un service est en cours</strong> → vue Plan sur ce service. <strong>Sinon</strong> → Accueil.</div></div>
+</div>
+
+<h2 id="sec-6"><span class="hn">6</span>Accueil</h2>
+
+<p>Deux sections, et <strong>une seule porte des boutons</strong>.</p>
+
+<figure class="fig pleine" id="fig-7">
+  <div class="fig-n">Figure 7 · §6</div>
+  <figcaption class="fig-cap">L'Accueil. « À traiter » est ordonné par <b>proximité dans le temps</b> : le service en cours est encadré et surélevé, le reste suit du plus proche au plus lointain. Le récapitulatif ne porte aucun bouton.</figcaption>
+  <div class="app app-acc">
+    <div style="flex:1;min-width:0">
+      <div class="acc-h">
+        <div>
+          <div class="acc-clk">11:12</div>
+          <span class="acc-d">Jeudi 20 août · <b>Service du midi dans 18 min</b></span>
+        </div>
+        <span class="bt bt-gris">Fermer aujourd'hui</span>
+      </div>
+      <div class="acc-rc">
+        <span class="bt">Voir le service du midi</span>
+        <span class="bt">Voir les réservations</span>
+        <span class="bt">Clients</span>
+        <span class="bt bt-or">+ Réservation</span>
+      </div>
+
+      <b class="acc-t">À TRAITER</b>
+      <div class="acc-bloc acc-now">
+        <div class="acc-bt"><b>SERVICE EN COURS DANS 18 MIN</b><span>Midi · 11 réservations · 26 couverts</span></div>
+        <div class="acc-l"><b>Bouvier</b><span>7 pers. · 12:30</span><span class="mk mk-ns">NO-SHOW ×2</span>
+          <span class="acc-a"><i class="bt-mini">✗</i><i class="bt-mini bt-or">✓ Accepter</i></span></div>
+        <div class="acc-l"><b>Moreau</b><span>4 pers. · 12:15 · sans table</span><span class="mk mk-h">HABITUÉ</span>
+          <span class="acc-a"><i class="bt-mini bt-or">Placer</i></span></div>
+        <div class="acc-l"><b>Coller 12 et 13</b><span>avant 12:30 · Nguyen 8 pers.</span>
+          <span class="acc-a"><i class="bt-mini">Pas encore</i><i class="bt-mini bt-or">C'est fait</i></span></div>
+      </div>
+
+      <b class="acc-st">CE SOIR</b>
+      <div class="acc-bloc">
+        <div class="acc-l"><b>Ferrand</b><span>2 pers. · 19:30</span><span class="mk mk-1">1<sup>re</sup> VISITE</span>
+          <span class="acc-a"><i class="bt-mini">✗</i><i class="bt-mini bt-or">✓ Accepter</i></span></div>
+      </div>
+
+      <b class="acc-st">POUR INFORMATION</b>
+      <div class="acc-bloc acc-gris">
+        <div class="acc-l"><b>2 tables closes</b><span>hier soir, à l'ouverture du midi</span>
+          <span class="acc-a"><i class="bt-mini bt-gris">Corriger les heures</i><i class="bt-mini bt-gris">Masquer</i></span></div>
+      </div>
+
+      <b class="acc-t">RÉCAPITULATIF</b>
+      <div class="acc-cards">
+        <div class="acc-c acc-c-on"><b>CE MIDI</b><span class="acc-big">11 tables sur 19</span><i>26 couverts · pic vers 12:30</i></div>
+        <div class="acc-c"><b>CE SOIR</b><span class="acc-big">18 tables sur 19</span><i>47 couverts · pic vers 20:30</i></div>
+        <div class="acc-c"><b>HIER</b><span class="acc-big">52 couverts</span><i>1 no-show · 2 annulations</i><em>3 clients de passage</em></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-6.1"><span class="hn">6.1</span>À traiter</h3>
+
+<div class="tw"><table><thead><tr><th>Rang</th><th>Contenu</th><th>Traitement</th></tr></thead><tbody>
+<tr><td><strong>1</strong></td><td>Le service en cours ou imminent</td><td>Encadré et surélevé — bordure violette, ombre portée, titre « SERVICE EN COURS » avec compte à rebours</td></tr>
+<tr><td><strong>2</strong></td><td>Les services suivants, du plus proche au plus lointain</td><td>Groupés par service, intertitre discret (« CE SOIR », « SAMEDI 6 SEPT. »)</td></tr>
+<tr><td><strong>3</strong></td><td>Pour information</td><td>Gris, sans bordure de couleur. Ce qui est déjà résolu</td></tr>
+</tbody></table></div>
+
+<p>Trois types de lignes y figurent : les <strong>demandes en attente</strong> (détaillées une par une, jamais comptées), les <strong>réservations sans table</strong> du service concerné, les <strong>rapprochements à préparer</strong>.</p>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>ACC-01</b><div><strong>Chaque ligne porte son geste</strong> — accepter, refuser, placer, confirmer un rapprochement — avec les mêmes actions rapides que la liste des réservations.</div></div>
+<div class="rg"><b>ACC-02</b><div>Le récapitulatif <strong>ne porte aucun bouton, jamais</strong>. Si un chiffre appelait une action, il serait dans « À traiter ».</div></div>
+<div class="rg"><b>ACC-03</b><div>« À traiter » <strong>doit pouvoir être vide</strong>, et le dit alors explicitement : « Rien à traiter. Les demandes sont répondues, et les 11 réservations de ce midi ont toutes une table. »</div></div>
+<div class="rg"><b>ACC-04</b><div>Chaque ligne a une <strong>condition d'achèvement objective</strong> que le logiciel sait constater. Rien dont la clôture dépendrait d'une parole donnée à soi-même — c'est pourquoi les allergies ne figurent pas ici.</div></div>
+<div class="rg"><b>ACC-05</b><div>Les demandes en attente portent leurs marques de qualification : habitué, première visite, no-show ×2, allergie.</div></div>
+</div>
+
+<h3 id="sec-6.2"><span class="hn">6.2</span>Récapitulatif</h3>
+
+<div class="rules">
+<div class="rg"><b>ACC-06</b><div>Trois cartes : <strong>ce midi</strong>, <strong>ce soir</strong>, <strong>hier</strong>. Le service en cours est souligné d'un trait d'encre, pas d'une couleur.</div></div>
+<div class="rg"><b>ACC-07</b><div>Le remplissage se dit <strong>en tables</strong> — « 18 tables sur 19 au plus fort, vers 20:30 ». Le pic est toujours nommé avec son heure.</div></div>
+<div class="rg"><b>ACC-08</b><div>Les couverts figurent comme <strong>volume de travail pour la cuisine</strong>, jamais comme jauge de remplissage.</div></div>
+<div class="rg"><b>ACC-09</b><div>La carte « hier » porte les couverts servis, les no-shows, les annulations tardives et les clients de passage.</div></div>
+</div>
+
+<h3 id="sec-6.3"><span class="hn">6.3</span>Clôture automatique</h3>
+
+<div class="rules">
+<div class="rg"><b>ACC-10</b><div><strong>À l'ouverture d'un service, toute réservation encore <code>assise</code> d'un service précédent passe <code>terminee</code></strong>, avec <code>termine_a = null</code> et <code>cloture_auto = vrai</code>.</div></div>
+<div class="rg"><b>ACC-11</b><div>Le déclencheur est <strong>l'ouverture du service suivant</strong>, pas la fermeture théorique du service courant.</div></div>
+<div class="rg"><b>ACC-12</b><div>Ces lignes s'affichent en dernier, sous « Pour information », avec deux sorties : <em>corriger les heures</em> et <em>masquer</em>.</div></div>
+<div class="rg"><b>ACC-13</b><div>Toute statistique de durée doit <strong>exclure</strong> les lignes portant <code>cloture_auto = vrai</code>.</div></div>
+</div>
+
+<h3 id="sec-6.4"><span class="hn">6.4</span>Fermer aujourd'hui</h3>
+
+<div class="rules">
+<div class="rg"><b>ACC-14</b><div>Bouton en haut à droite, <strong>en gris, jamais en rouge</strong>. Accessible au rôle Service.</div></div>
+<div class="rg"><b>ACC-15</b><div>Il ouvre le <strong>même panneau</strong> que la fermeture exceptionnelle des Paramètres : motif interne, message aux clients, confrontation des réservations concernées.</div></div>
+<div class="rg"><b>ACC-16</b><div>Après la fin du dernier service, le bandeau devient « Service terminé · prochain service demain 11:30 ». Le reste de l'écran ne bouge pas — les tables non libérées restent visibles avant le départ.</div></div>
+</div>
+
+<h2 id="sec-7"><span class="hn">7</span>Service — Plan de salle</h2>
+
+<h3 id="sec-7.1"><span class="hn">7.1</span>Anatomie</h3>
+
+<figure class="fig pleine" id="fig-8">
+  <div class="fig-n">Figure 8 · §7.1</div>
+  <figcaption class="fig-cap">L'écran Plan. De haut en bas : en-tête de contexte, frise horaire, onglets de vue et de zone, plan en ardoise, colonne « À placer », légende permanente. La table 3 porte la pastille d'allergie ; la 13 l'anneau « en retard » ; la 6 le pointillé « à nettoyer ».</figcaption>
+  <div class="app"><div class="rail"><span class="ri" title="Accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/></svg></span><span class="ri on" title="Service"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="ri" title="Réservations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg></span><span class="ri" title="Clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></span><div class="rail-sp"></div><span class="ri" title="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span></div><div class="app-b">
+    <div class="entete">
+      <b class="clk">20:07</b>
+      <span class="etat">Service en cours — <b>3 tables à placer</b></span>
+      <span class="pill-alrg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M9.5 9v12"/><path d="M17.5 3c-1.4 1.4-2 3-2 5.2 0 1.6.7 2.6 2 2.8V21"/></svg> Allergies <b>2</b></span>
+      <span class="date">20/08/26 Jeudi</span>
+      <span class="couv">32/48 couverts</span>
+      <span class="plus">+</span></div>
+    <div class="frise">
+      <div class="cr"><b>19:00</b><span>8c</span><em style="width:30%"></em></div>
+      <div class="cr"><b>19:30</b><span>16c</span><em style="width:55%"></em></div>
+      <div class="cr on"><b>20:00</b><span>28c</span><em style="width:85%"></em></div>
+      <div class="cr"><b>20:30</b><span>24c</span><em style="width:70%"></em></div>
+      <div class="cr"><b>21:00</b><span>15c</span><em style="width:45%"></em><u class="bg-att">!</u></div>
+      <div class="cr"><b>21:30</b><span>7c</span><em style="width:20%"></em></div>
+    </div>
+    <div class="onglets">
+      <span class="vt on">Plan</span><span class="vt">Agenda</span>
+      <span class="zt on">Salle <b>8/9</b></span><span class="zt">Terrasse <b>3/6</b></span>
+      <span class="edit">✎ Éditer le plan</span></div>
+    <div class="app-stage">
+      <div class="slate-wrap"><div class="slate">
+        <div class="dc dc-bar" style="left:350px;top:20px;width:44px;height:174px"><i>BAR</i></div>
+        <div class="dc dc-passe" style="left:350px;top:212px;width:44px;height:62px"><i>PASSE</i></div>
+        <div class="dc dc-mur" style="left:0;top:0;width:6px;height:300px"></div>
+        <div class="dc dc-porte" style="left:0;top:104px;width:6px;height:66px"><i>porte</i></div>
+        <div class="tb tb-libre rd" style="left:22px;top:24px;width:54px;height:54px"><b class="craie">1</b><i>2p</i></div>
+        <div class="tb tb-libre rd" style="left:92px;top:24px;width:54px;height:54px"><b class="craie">2</b><i>2p</i></div>
+        <div class="tb tb-occ" style="left:168px;top:20px;width:62px;height:62px"><b class="craie">3</b><i>4p</i>
+          <span class="past"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M9.5 9v12"/><path d="M17.5 3c-1.4 1.4-2 3-2 5.2 0 1.6.7 2.6 2 2.8V21"/></svg></span></div>
+        <div class="tb tb-res" style="left:248px;top:20px;width:62px;height:62px"><b class="craie">4</b><i>4p</i></div>
+        <div class="tb tb-occ" style="left:22px;top:116px;width:62px;height:62px"><b class="craie">5</b><i>4p</i></div>
+        <div class="tb tb-sale" style="left:102px;top:116px;width:62px;height:62px"><b class="craie">6</b><i>4p</i></div>
+        <div class="tb tb-occ" style="left:196px;top:122px;width:100px;height:52px"><b class="craie">7</b><i>6p</i></div>
+        <div class="tb tb-res" style="left:22px;top:212px;width:62px;height:62px"><b class="craie">12</b><i>4p</i></div>
+        <div class="tb tb-retard" style="left:92px;top:212px;width:62px;height:62px"><b class="craie">13</b><i>4p</i></div>
+      </div></div>
+      <div class="col">
+        <b class="col-t">À PLACER <span>3</span></b>
+        <div class="pz"><b>Moreau</b><span>4p · 20:30</span><i>tél</i></div>
+        <div class="pz"><b>Bekkali</b><span>2p · 20:00</span><i>web</i></div>
+        <div class="pz"><b>Chen</b><span>6p · 21:00</span><i>tél</i></div>
+        <b class="col-t col-t2">EN ATTENTE <span>2</span></b>
+        <div class="pz pz-att"><b>Bouvier</b><span>7p · vend. 20:00</span></div>
+        <div class="pz pz-att"><b>Ferrand</b><span>2p · sam. 19:30</span></div>
+      </div>
+    </div>
+    <div class="legende">
+      <span><i class="lg lg-libre"></i>Libre</span>
+      <span><i class="lg lg-res"></i>Réservée</span>
+      <span><i class="lg lg-occ"></i>Occupée</span>
+      <span><i class="lg lg-sale"></i>À nettoyer</span>
+      <span><i class="lg lg-retard"></i>En retard</span>
+    </div>
+  </div></div>
+</figure>
+
+<h3 id="sec-7.2"><span class="hn">7.2</span>Frise horaire</h3>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>FRISE-01</b><div>Un créneau par <code>pas_creneau</code> (15 ou 30 min). Chacun porte l'heure, le nombre de couverts et une barre de remplissage.</div></div>
+<div class="rg"><b>FRISE-02</b><div>Le créneau actif est <strong>orange plein</strong>. Le plan affiche l'état des tables <em>à cette heure</em>, pas à l'heure courante.</div></div>
+<div class="rg"><b>FRISE-03</b><div>Un badge <strong><code>!</code> violet</strong> signale les créneaux portant des réservations non placées. <strong>Pas de compteur</strong> — le nombre est dans « À placer ».</div></div>
+<div class="rg"><b>FRISE-04</b><div>Sélectionner une réservation <strong>déplace la frise sur son créneau</strong>.</div></div>
+</div>
+
+<h3 id="sec-7.3"><span class="hn">7.3</span>Onglets de zone</h3>
+
+<div class="rules">
+<div class="rg"><b>ZONE-01</b><div>Une pastille par zone, avec son taux d'occupation. L'onglet actif est orange.</div></div>
+<div class="rg"><b>ZONE-02</b><div>Pendant un placement, chaque onglet porte <strong>le meilleur niveau qu'il contient</strong> : vert s'il a du <code>✓</code>, vert-jaune s'il n'a que du <code>~✓</code>, estompé s'il n'a rien.</div></div>
+<div class="rg"><b>ZONE-03</b><div>Une zone vide mais sans table assez grande est <strong>estompée, pas badgée</strong> : le badge dit « compatible », pas « libre ».</div></div>
+<div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible en mode admin seulement, et <strong>estompé pendant un placement</strong>.</div></div>
+</div>
+
+<h3 id="sec-7.4"><span class="hn">7.4</span>Le plan et les marques</h3>
+
+<p>Ardoise sombre, tables aux vraies positions et vraies formes. Numéros à la craie, capacité en petit. La <strong>légende reste affichée en permanence</strong> sous le plan.</p>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>PLAN-01</b><div>Chaque table affiche son statut par <strong>couleur ET forme du contour</strong>. Jamais par la couleur seule.</div></div>
+<div class="rg"><b>PLAN-02</b><div><strong>L'orange ne code jamais un statut.</strong> Il signale la sélection, l'élément actif, l'action.</div></div>
+<div class="rg"><b>PLAN-03</b><div>Les marques qui <strong>qualifient</strong> une réservation — allergie, VIP, habitué, première visite, antécédent de no-show — apparaissent <strong>partout où la réservation apparaît</strong> : ligne de liste, colonne « À placer », bloc d'agenda, pastille sur la table.</div></div>
+<div class="rg"><b>PLAN-04</b><div>Ces marques appartiennent à la <strong>réservation</strong>, pas à la table : une pastille suit un déplacement.</div></div>
+<div class="rg"><b>PLAN-05</b><div>Sur la <em>fiche</em>, l'allergie reste écrite en toutes lettres et épinglée, jamais réduite à une icône.</div></div>
+<div class="rg"><b>PLAN-06</b><div>Icônes : SVG dessinés, <strong>jamais d'emoji</strong>. Allergie = un couvert, blanc sur corail.</div></div>
+</div>
+
+<h3 id="sec-7.5"><span class="hn">7.5</span>Colonne « À placer »</h3>
+
+<div class="rules">
+<div class="rg"><b>COL-01</b><div>126 px, repliable. <strong>Deux groupes, deux compteurs</strong> : « À placer » (confirmées sans table) et « En attente » (demandes non répondues, bordure violette).</div></div>
+<div class="rg"><b>COL-02</b><div>Une pastille par réservation : nom, couverts, heure, source. <strong>Les deux groupes sont glissables.</strong></div></div>
+<div class="rg"><b>COL-03</b><div>Sélectionner une pastille la met en orange et estompe les autres.</div></div>
+</div>
+
+<h3 id="sec-7.6"><span class="hn">7.6</span>Le placement</h3>
+
+<figure class="fig" id="fig-9">
+  <div class="fig-n">Figure 9 · §7.6</div>
+  <figcaption class="fig-cap">Le popup d'un dépôt <code>~✓</code>. Il <b>liste toutes</b> les raisons ; il n'interroge pas, il énonce ce qui n'est pas visible sur le plan.</figcaption>
+  <div class="pop pop-c">
+    <div class="pop-h"><b>Placer Moreau · 4 pers. · 20:30</b> sur la table 6</div>
+    <div class="pop-b">
+      <div class="rz"><b>Table non nettoyée</b> — Legrand est parti à 20:12, elle n'a pas encore été redressée.<i>En plaçant Moreau, elle sera considérée comme nettoyée.</i></div>
+      <div class="rz"><b>2 places de trop</b> — table de 6 pour 4 personnes.<i>Il ne te restera plus de table de 6 ce soir.</i></div>
+      <div class="rz"><b>Réservée à 22:00</b> — il reste 1h30, la rotation moyenne est de 1h45.</div>
+    </div>
+    <div class="pop-f"><span class="bt">Annuler</span><span class="bt bt-or">Placer</span></div>
+  </div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Séquence</span>
+<div class="rg"><b>PLACE-05</b><div>Toucher une réservation → <strong>la fiche remplace la colonne</strong>, la frise saute sur son créneau, les entités compatibles reçoivent leur halo, tout le reste tombe à 26 % d'opacité. <code>Échap</code> annule.</div></div>
+<div class="rg"><b>PLACE-06</b><div>Dépôt sur <code>✓</code> → placement immédiat, aucun popup.</div></div>
+<div class="rg"><b>PLACE-07</b><div>Dépôt sur <code>~✓</code> → popup listant <strong>toutes</strong> les raisons, puis <em>Annuler</em> / <em>Placer</em>.</div></div>
+<div class="rg"><b>PLACE-08</b><div>Si le dépôt crée une combinaison inédite → popup de création. Si elle existe déjà, aucune question.</div></div>
+<div class="rg"><b>PLACE-09</b><div>Si la réservation déposée est <code>en_attente</code>, elle est <strong>acceptée du même geste</strong> ; la table est réservée immédiatement, le message au client part avec 8 s de délai annulable.</div></div>
+<div class="rg"><b>PLACE-10</b><div><strong>Pas de voile sur le plan</strong> pendant un placement : le plan est l'objet de l'action.</div></div>
+<div class="rg"><b>PLACE-11</b><div><strong>Le plan se recompose uniquement quand quelque chose y est désigné.</strong> La fiche ouverte pour un placement décale le plan ; le formulaire de création, lui, survole.</div></div>
+</div>
+
+<h3 id="sec-7.7"><span class="hn">7.7</span>Le bouton Allergies</h3>
+
+<div class="rules">
+<div class="rg"><b>ALRG-01</b><div>Pastille corail dans l'en-tête portant <strong>l'icône couvert, le mot « Allergies » et le compte</strong>. Elle n'apparaît que si le service en compte au moins une.</div></div>
+<div class="rg"><b>ALRG-02</b><div>Elle ouvre une fenêtre flottante : <strong>heure · nom · allergène · table</strong>, dans cet ordre. « À placer » en pointillé quand la table n'est pas connue.</div></div>
+<div class="rg"><b>ALRG-03</b><div>La fenêtre <strong>survole, ne pousse pas</strong>, et ne désigne rien sur le plan. Toucher à côté ferme.</div></div>
+<div class="rg"><b>ALRG-04</b><div><strong>La fenêtre se ferme, la pastille reste.</strong> Aucun bouton « vu » ou « transmis » : jamais d'accusé de lecture.</div></div>
+<div class="rg"><b>ALRG-05</b><div>Les allergies vivent sur l'écran Service, <strong>pas sur l'Accueil</strong>.</div></div>
+</div>
+
+<h3 id="sec-7.8"><span class="hn">7.8</span>Client de passage</h3>
+
+<div class="rules">
+<div class="rg"><b>WALK-01</b><div>Un walk-in ne passe <strong>pas</strong> par le formulaire de création : <strong>toucher une table libre sur le plan → « Asseoir maintenant » → couverts</strong>. Deux gestes.</div></div>
+<div class="rg"><b>WALK-02</b><div>Ni nom, ni téléphone demandés. <strong>Aucune fiche client n'est créée.</strong></div></div>
+<div class="rg"><b>WALK-03</b><div>La réservation créée porte <code>source = sur_place</code>, <code>client_id = null</code>, et passe directement en <code>assise</code>.</div></div>
+</div>
+
+<h2 id="sec-8"><span class="hn">8</span>Service — Agenda</h2>
+
+<p>Même ossature que le Plan — même rail, même en-tête, mêmes onglets, même colonne « À placer ». Seul le centre change : <strong>une ligne par table, le temps en abscisse</strong>.</p>
+
+<figure class="fig" id="fig-10">
+  <div class="fig-n">Figure 10 · §8</div>
+  <figcaption class="fig-cap">La vue Agenda. La <b>bande fantôme</b> « via 12-13 » est le rendu visuel direct de la règle de conflit : les lignes des tables physiques montrent qu'elles sont prises par leur combinaison.</figcaption>
+  <div class="ag">
+    <div class="ag-h"><span>Table</span><b>19:00 &nbsp;&nbsp;&nbsp; 20:00 &nbsp;&nbsp;&nbsp; 21:00 &nbsp;&nbsp;&nbsp; 22:00 &nbsp;&nbsp;&nbsp; 23:00</b></div>
+    <div class="ag-now" style="left:calc(88px + 34%)"></div>
+    <div class="ag-l"><span>Table 5 · 4p</span><div class="ag-t">
+      <div class="ag-b ag-blc" style="left:4%;width:32%">Legrand · 4p</div>
+      <div class="ag-b ag-blc" style="left:44%;width:32%">Moreau · 4p</div></div></div>
+    <div class="ag-l"><span>Table 7 · 6p</span><div class="ag-t">
+      <div class="ag-b ag-blc" style="left:18%;width:38%">Rossi · 5p</div></div></div>
+    <div class="ag-l ag-virt"><span>12-13 · 8p</span><div class="ag-t">
+      <div class="ag-b ag-blc" style="left:52%;width:40%">Nguyen · 8p</div></div></div>
+    <div class="ag-l ag-lien"><span>lien physique</span><div class="ag-t">
+      <div class="ag-b ag-prev" style="left:44%;width:8%">!</div>
+      <div class="ag-b ag-act" style="left:52%;width:40%">collées</div></div></div>
+    <div class="ag-l"><span>Table 12 · 4p</span><div class="ag-t">
+      <div class="ag-b ag-fan" style="left:52%;width:40%">via 12-13</div></div></div>
+    <div class="ag-l"><span>Table 13 · 4p</span><div class="ag-t">
+      <div class="ag-b ag-blc" style="left:4%;width:30%">Bekkali · 2p</div>
+      <div class="ag-b ag-fan" style="left:52%;width:40%">via 12-13</div></div></div>
+  </div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>Élément</th><th>Rendu</th></tr></thead><tbody>
+<tr><td>Réservation</td><td>Bloc bleu, largeur = durée. Toucher ouvre la fiche</td></tr>
+<tr><td>Table virtuelle</td><td>Ligne propre, libellé violet (<code>12-13</code>)</td></tr>
+<tr><td>Lien physique</td><td>Ligne dédiée, glissée <strong>sous</strong> sa table virtuelle</td></tr>
+<tr><td>Rapprochement prévu, non confirmé</td><td>Bloc orange pointillé + rappel <code>!</code></td></tr>
+<tr><td>Lien physique confirmé (<code>active = vrai</code>)</td><td>Bloc vert plein</td></tr>
+<tr><td>Instant présent</td><td>Trait orange vertical. La vue s'ouvre centrée dessus</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>AGD-01</b><div>Quand une combinaison porte une réservation, les lignes de ses tables physiques affichent une <strong>bande hachurée « via 12-13 »</strong> sur le même intervalle.</div></div>
+<div class="rg"><b>AGD-02</b><div>La bande fantôme est <strong>dérivée, jamais saisie</strong>, et <strong>non cliquable</strong> : la toucher sélectionne la réservation réelle, sur la ligne de la combinaison.</div></div>
+<div class="rg"><b>AGD-03</b><div>Une ligne de <strong>table virtuelle</strong> n'apparaît que si elle porte quelque chose ce jour-là.</div></div>
+<div class="rg"><b>AGD-04</b><div>Une ligne <strong>Lien physique</strong> n'apparaît que sous les combinaisons ayant un rapprochement prévu ou actif dans la fenêtre affichée.</div></div>
+</div>
+
+<h2 id="sec-9"><span class="hn">9</span>Réservations</h2>
+
+<h3 id="sec-9.1"><span class="hn">9.1</span>La liste</h3>
+
+<p>L'en-tête de cet écran ne porte <strong>ni date ni service</strong> : on regarde une période, pas un moment.</p>
+
+<div class="tw"><table><thead><tr><th>Élément</th><th>Comportement</th></tr></thead><tbody>
+<tr><td>Recherche</td><td>Par <strong>nom et par numéro de téléphone</strong>. La recherche ignore espaces et points</td></tr>
+<tr><td>Filtres</td><td>Période (À venir / Aujourd'hui / Passées), puis Statut, Source, Salle</td></tr>
+<tr><td>Groupement</td><td><strong>Par jour</strong>, jamais de liste plate. L'en-tête de jour porte le total de couverts et l'état (« complet à 20:30 »)</td></tr>
+<tr><td>Demandes en attente</td><td>Un <strong>bandeau violet</strong> en haut de liste, pas un onglet. Il disparaît seul quand la file est vide</td></tr>
+</tbody></table></div>
+
+<p><strong>Anatomie d'une ligne :</strong> heure · nom et détails · [marques de qualification] [source] · table · badge de statut · action rapide.</p>
+
+<h3 id="sec-9.2"><span class="hn">9.2</span>Statuts et badges</h3>
+
+<blockquote><p><strong>La teinte dit le cours normal, le plein dit l'anomalie, le gris dit que c'est clos.</strong></p></blockquote>
+
+<figure class="fig" id="fig-11">
+  <div class="fig-n">Figure 11 · §9.2</div>
+  <figcaption class="fig-cap">Les six badges de statut. <b>Un seul est plein</b> : le no-show, la seule anomalie qui coûte de l'argent. Un seul est barré : l'annulation, distinguée de « terminée » sans ajouter une couleur.</figcaption>
+  <div class="bg-row">
+    <span class="bg bg-att bg-c">À RÉPONDRE</span>
+    <span class="bg bg-conf bg-c">CONFIRMÉE</span>
+    <span class="bg bg-assise bg-c">ASSISE</span>
+    <span class="bg bg-fin bg-c">TERMINÉE</span>
+    <span class="bg bg-ann bg-c">ANNULÉE</span>
+    <span class="bg bg-ns bg-c">NO-SHOW</span>
+  </div>
+  <div class="regle"><b>Deux corails, deux formes.</b> <span class="mk mk-ns">NO-SHOW ×2</span> en <b>contour</b> est un antécédent du <em>client</em>, un risque à venir. <span class="bg bg-ns">NO-SHOW</span> en <b>plein</b> est le résultat de <em>cette</em> réservation, déjà acté.</div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>Statut</th><th>Badge</th><th>Traitement</th></tr></thead><tbody>
+<tr><td><code>en_attente</code></td><td>À RÉPONDRE</td><td>Teinte violette — même violet que le badge <code>!</code> du plan</td></tr>
+<tr><td><code>confirmee</code></td><td>CONFIRMÉE</td><td>Teinte bleue — même bleu qu'une table <em>réservée</em></td></tr>
+<tr><td><code>assise</code></td><td>ASSISE</td><td>Teinte corail — même corail qu'une table <em>occupée</em></td></tr>
+<tr><td><code>terminee</code></td><td>TERMINÉE</td><td>Gris</td></tr>
+<tr><td><code>annulee</code></td><td>ANNULÉE</td><td>Gris <strong>barré</strong></td></tr>
+<tr><td><code>no_show</code></td><td>NO-SHOW</td><td>Corail <strong>plein</strong> — le seul badge plein</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>BADGE-01</b><div><strong>Une seule couleur forte par ligne, toujours à la même abscisse.</strong></div></div>
+<div class="rg"><b>BADGE-02</b><div>La source reste <strong>toujours grise</strong>, sur chaque ligne. Information de référence, jamais alerte.</div></div>
+</div>
+
+<h3 id="sec-9.3"><span class="hn">9.3</span>Le champ source</h3>
+
+<div class="tw"><table><thead><tr><th>Origine</th><th>Source écrite</th><th>Demandée ?</th></tr></thead><tbody>
+<tr><td>Widget public</td><td><code>web</code></td><td>Non — écrite d'office, non modifiable</td></tr>
+<tr><td>Google Reserve <em>(V2+)</em></td><td><code>google</code></td><td>Non — écrite d'office</td></tr>
+<tr><td>Création depuis le plan de salle</td><td><code>sur_place</code></td><td>Pré-choisie, modifiable</td></tr>
+<tr><td>Création depuis l'écran Réservations</td><td><code>telephone</code></td><td><strong>Oui</strong> — le seul cas où la question est posée</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>SRC-01</b><div>Le champ <code>source</code> n'est demandé <strong>qu'à la création manuelle depuis l'écran Réservations</strong>. Partout ailleurs le logiciel l'écrit lui-même.</div></div>
+<div class="rg"><b>SRC-02</b><div>Quand la question est posée, les valeurs sont affichées <strong>côte à côte, une seule allumée</strong> — jamais un menu déroulant.</div></div>
+</div>
+
+<h3 id="sec-9.4"><span class="hn">9.4</span>Colonne « Action »</h3>
+
+<div class="tw"><table><thead><tr><th>État</th><th>Action rapide</th><th>Effet</th></tr></thead><tbody>
+<tr><td><code>en_attente</code></td><td><code>✓</code> vert · <code>✗</code> corail</td><td>Accepter / refuser. Pas de « Placer » : on ne place pas depuis une liste</td></tr>
+<tr><td><code>confirmee</code> sans table</td><td><strong>Placer</strong> <em>(orange)</em></td><td>Bascule vers la vue Plan, au bon service, tables compatibles allumées</td></tr>
+<tr><td><code>confirmee</code> placée</td><td><strong>Arrivée</strong></td><td>→ <code>assise</code>, horodate <code>assis_a</code>, la table passe occupée</td></tr>
+<tr><td><code>assise</code></td><td><strong>Libérer</strong></td><td>→ <code>terminee</code>, <code>termine_a</code>, la table passe « à nettoyer »</td></tr>
+<tr><td><code>terminee</code>, <code>no_show</code>, <code>annulee</code></td><td>—</td><td>Colonne vide mais <strong>jamais absente</strong> : la grille ne bouge pas</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>ACT-01</b><div><strong>Jamais deux actions concurrentes</strong>, sauf <code>en_attente</code> où accepter et refuser sont symétriques.</div></div>
+<div class="rg"><b>ACT-02</b><div><code>✓</code> et <code>✗</code> sont <strong>dessinés et teintés</strong>, jamais des emojis.</div></div>
+<div class="rg"><b>ACT-03</b><div><strong>Toute action rapide est annulable</strong> par le bandeau différé de 8 s.</div></div>
+</div>
+
+<h3 id="sec-9.5"><span class="hn">9.5</span>La fiche réservation</h3>
+
+<p><strong>Un panneau, jamais un écran.</strong> ~250–308 px. Il s'ouvre à l'identique depuis les trois endroits qui y mènent : une ligne de la liste, un bloc de l'agenda, une table du plan. Toucher à côté ferme.</p>
+
+<figure class="fig" id="fig-12">
+  <div class="fig-n">Figure 12 · §9.5</div>
+  <figcaption class="fig-cap">La fiche réservation, de haut en bas : identité, allergie épinglée, bandeau CRM, détails, journal, une seule action principale déduite de l'état.</figcaption>
+  <div class="deux-fiches">
+    <div class="fiche fiche-lg">
+      <div class="fi-h"><b>Sophie Marchand</b><span class="bg bg-conf">CONFIRMÉE</span></div>
+      <div class="fi-s">4 pers. · jeudi 20 août · 20:00 &nbsp; <span class="bg bg-src">web</span></div>
+      <div class="fi-al">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M9.5 9v12"/><path d="M17.5 3c-1.4 1.4-2 3-2 5.2 0 1.6.7 2.6 2 2.8V21"/></svg>
+        <div><b>Fruits à coque</b><span>déclaré par la cliente</span></div>
+      </div>
+      <div class="fi-crm fi-crm3">
+        <span><b>41</b><br>visites</span><span><b>2</b><br>no-shows</span><span><b>12 juin</b><br>dernière</span>
+      </div>
+      <b class="fi-lt">DÉTAILS</b>
+      <div class="fi-n">« intérieur svp » · salle souhaitée : Salle · durée 1 h 45 · table 5</div>
+      <b class="fi-lt">JOURNAL</b>
+      <div class="jrn">
+        <div><span>20/08 14:02</span>création <i>· web</i></div>
+        <div><span>20/08 14:02</span>conditions acceptées <i>(version 3)</i></div>
+        <div><span>20/08 14:02</span>confirmation automatique <i>· système</i></div>
+        <div><span>20/08 18:40</span>placement table 5 <i>· Claire</i></div>
+      </div>
+      <div class="fi-a"><span class="bt">Marquer l'arrivée</span><span class="bt bt-dsc">Modifier</span></div>
+    </div>
+  </div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>État</th><th>Action principale</th><th>Effet</th></tr></thead><tbody>
+<tr><td><code>en_attente</code></td><td><strong>Accepter et placer à une table</strong> <em>(orange)</em>, puis <em>Accepter</em>, puis <em>Refuser</em></td><td>Trois boutons, dans cet ordre, toujours</td></tr>
+<tr><td><code>confirmee</code> sans table</td><td><strong>Placer à une table</strong> <em>(orange)</em></td><td>Ferme la colonne, allume les entités compatibles</td></tr>
+<tr><td><code>confirmee</code> placée</td><td><strong>Marquer l'arrivée</strong> <em>(encre)</em></td><td>→ <code>assise</code>, horodate <code>assis_a</code></td></tr>
+<tr><td><code>assise</code></td><td><strong>Libérer la table</strong> <em>(encre)</em></td><td>→ <code>terminee</code>, <code>termine_a</code>, table « à nettoyer »</td></tr>
+<tr><td><code>terminee</code>, <code>no_show</code>, <code>annulee</code></td><td>Aucune</td><td>Lecture seule, plus une sortie discrète « Rouvrir »</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>FICHE-01</b><div><strong>Une seule action principale</strong>, déduite de l'état.</div></div>
+<div class="rg"><b>FICHE-02</b><div><strong>L'orange est réservé à ce qui n'est pas encore fait.</strong> <em>Placer</em> et <em>Accepter</em> sont oranges ; <em>Marquer l'arrivée</em> et <em>Libérer</em> passent en encre.</div></div>
+<div class="rg"><b>FICHE-03</b><div>Les boutons ne sont <strong>jamais réordonnés selon le contexte</strong>. Une position stable prime sur une hiérarchie juste.</div></div>
+<div class="rg"><b>FICHE-04</b><div>L'allergie vient de la <strong>fiche client</strong> et suit le client à toutes ses réservations, y compris celles saisies par quelqu'un qui ne le connaît pas. Elle est épinglée sous le nom, en corail, jamais repliée.</div></div>
+<div class="rg"><b>FICHE-05</b><div>Le bouton <strong>« No-show » n'apparaît qu'une fois l'heure dépassée de <code>retard_grace</code></strong>. Sa confirmation nomme la conséquence : « 2<sup>e</sup> no-show pour ce client ».</div></div>
+<div class="rg"><b>FICHE-06</b><div>Une modification qui invalide l'affectation (4 → 6 couverts sur une table de 4) <strong>ne déplace ni ne libère rien</strong> : la fiche garde la table, affiche « la table 12 ne suffit plus », et propose de replacer.</div></div>
+</div>
+
+<h3 id="sec-9.6"><span class="hn">9.6</span>Le journal</h3>
+
+<div class="rules">
+<div class="rg"><b>JRN-01</b><div>Une ligne <strong>horodatée et signée</strong> par événement, sur chaque réservation. L'auteur est une personne, ou <em>système</em>.</div></div>
+<div class="rg"><b>JRN-02</b><div>S'y inscrivent : création (avec la source) · acceptation ou refus · rappel envoyé · confirmation du client · placement et déplacements · arrivée · libération · no-show · annulation avec <code>annule_par</code> · toute modification d'heure, de date ou de couverts · acceptation des conditions avec leur numéro de version.</div></div>
+<div class="rg"><b>JRN-03</b><div>Le journal est <strong>l'autorité</strong> face aux compteurs client, qui ne sont qu'un cache.</div></div>
+</div>
+<h2 id="sec-10"><span class="hn">10</span>Clients — le mini-CRM</h2>
+
+<h3 id="sec-10.1"><span class="hn">10.1</span>Création d'une fiche</h3>
+
+<blockquote><p><strong>Le téléphone est la clé d'identité.</strong> L'e-mail est la clé de secours.</p></blockquote>
+
+<div class="tw"><table><thead><tr><th>Situation</th><th>Comportement</th></tr></thead><tbody>
+<tr><td>Réservation avec un numéro <strong>déjà connu</strong></td><td>Rattachée à la fiche existante <strong>sans rien demander</strong>. Le compteur de visites monte seul</td></tr>
+<tr><td>Réservation avec un numéro inconnu</td><td>Crée une fiche client, <strong>silencieusement</strong>. Aucun écran de plus</td></tr>
+<tr><td>Numéro absent, e-mail connu</td><td>L'e-mail sert de clé</td></tr>
+<tr><td><strong>Client de passage</strong> (ni numéro ni e-mail)</td><td><strong>Ne crée aucune fiche.</strong> C'est une occupation de table, pas un client</td></tr>
+</tbody></table></div>
+
+<h3 id="sec-10.2"><span class="hn">10.2</span>La liste</h3>
+
+<p>En-tête : recherche <strong>par nom et par téléphone</strong> (espaces et points ignorés), bouton « + Client », filtres, <strong>export CSV</strong>.</p>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>CLI-01</b><div>Colonnes : <strong>Nom · Téléphone · Tags · Visites · Dernière · No-show / Visites</strong>.</div></div>
+<div class="rg"><b>CLI-02</b><div>Tri par défaut : <strong>récents</strong>, jamais alphabétique.</div></div>
+<div class="rg"><b>CLI-03</b><div>L'en-tête de la colonne de fiabilité s'appelle <strong>« No-show / Visites »</strong>, jamais « Fiabilité ».</div></div>
+<div class="rg"><b>CLI-04</b><div>Le ratio porte <strong>toujours son dénominateur</strong> : <code>2 / 41</code>, jamais <code>2</code>.</div></div>
+<div class="rg"><b>CLI-05</b><div>Le ratio passe en <strong>corail plein</strong> au-delà d'un seuil (seuil non tranché, cf. annexe C).</div></div>
+</div>
+
+<h3 id="sec-10.3"><span class="hn">10.3</span>La fiche</h3>
+
+<figure class="fig" id="fig-13">
+  <div class="fig-n">Figure 13 · §10.3</div>
+  <figcaption class="fig-cap">La fiche client et la fiche réservation <b>se remplacent dans un panneau unique</b>. La flèche nomme toujours d'où l'on vient. Profondeur 2 maximum.</figcaption>
+  <div class="deux-fiches">
+    <div class="fiche fiche-lg">
+      <div class="fi-ret">← Réservation de jeudi 20:00</div>
+      <div class="fi-h"><b>Sophie Marchand</b></div>
+      <div class="fi-tags"><span class="tag">habitué</span><span class="tag">vip</span></div>
+      <div class="fi-s">06 12 34 56 78 · s.marchand@mail.fr</div>
+      <div class="fi-al">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2.5 2.5 0 0 0 5 0V3"/><path d="M9.5 9v12"/><path d="M17.5 3c-1.4 1.4-2 3-2 5.2 0 1.6.7 2.6 2 2.8V21"/></svg>
+        <div><b>Fruits à coque</b><span>champ structuré, jamais dans les notes</span></div>
+      </div>
+      <div class="fi-crm fi-crm3"><span><b>41</b><br>visites</span><span><b>3,4</b><br>couverts moy.</span><span><b>2</b><br>no-shows</span></div>
+      <div class="fi-int"><b>NOTES · INTERNE</b><span>Préfère la table près de la fenêtre. Négocie toujours le dessert.</span><i>Ne sort jamais du logiciel : ni e-mail, ni widget.</i></div>
+      <b class="fi-lt">HISTORIQUE</b>
+      <div class="hs"><span>jeu. 20 août</span><span>4p · table 5</span><span class="bg bg-conf">CONFIRMÉE</span></div>
+      <div class="hs hs-sep"><em>PASSÉ</em></div>
+      <div class="hs"><span>12 juin</span><span>2p · table 1</span><span class="bg bg-fin">TERMINÉE</span></div>
+      <div class="hs"><span>4 mai</span><span>4p · table 7</span><span class="bg bg-ns">NO-SHOW</span></div>
+      <div class="fi-a"><span class="bt bt-or">Nouvelle réservation</span><span class="bt">Modifier</span><span class="bt bt-dsc">Recompter</span></div>
+    </div>
+  </div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>CLI-06</b><div><strong>Deux champs de texte, pas trois.</strong> <code>allergies</code> — structuré, affiché, épinglé. <code>notes_internes</code> — tout le reste, <strong>ne sort jamais du logiciel</strong>. Il n'existe pas de champ « préférences ».</div></div>
+<div class="rg"><b>CLI-07</b><div>Les deux champs sont <strong>lisibles et modifiables par les deux rôles</strong>, Service comme Administrateur.</div></div>
+<div class="rg"><b>CLI-08</b><div>L'historique est trié <strong>du plus récent au plus ancien, réservations à venir en haut</strong>, avec un trait fin marquant le passage au passé.</div></div>
+<div class="rg"><b>CLI-09</b><div>Les <strong>tags restent manuels</strong> : vip · habitué · à surveiller · presse. Aucun tag n'est calculé.</div></div>
+<div class="rg"><b>CLI-10</b><div>Les deux fiches se remplacent dans un <strong>panneau unique</strong> — jamais deux panneaux à l'écran. <strong>Profondeur 2 maximum</strong> : un troisième aller-retour ramène au premier panneau.</div></div>
+</div>
+
+<h3 id="sec-10.4"><span class="hn">10.4</span>Les compteurs</h3>
+
+<div class="rules">
+<div class="rg"><b>CPT-01</b><div><code>nb_visites</code> et <code>nb_noshow</code> sont des <strong>champs stockés</strong>, pas des agrégats calculés à l'affichage.</div></div>
+<div class="rg"><b>CPT-02</b><div><strong>L'écriture est symétrique</strong> : tout passage <em>vers</em> <code>no_show</code> incrémente, tout passage <em>hors de</em> <code>no_show</code> décrémente — y compris le bouton « Rouvrir ».</div></div>
+<div class="rg"><b>CPT-03</b><div>Le compteur est un <strong>cache</strong>. Une action <strong>« Recompter »</strong> existe sur la fiche, et un recomptage global tourne la nuit.</div></div>
+</div>
+
+<h3 id="sec-10.5"><span class="hn">10.5</span>Doublons et anonymisation</h3>
+
+<div class="tw"><table><thead><tr><th>Cas</th><th>Comportement</th></tr></thead><tbody>
+<tr><td>Même téléphone <strong>exact</strong></td><td>Rattachement automatique et silencieux à la création. Aucun doublon ne naît</td></tr>
+<tr><td>Même e-mail <strong>exact</strong>, téléphones différents</td><td><strong>Fusion proposée.</strong> Conserve les deux numéros, concatène les historiques</td></tr>
+<tr><td>Même téléphone exact, e-mails différents</td><td>Idem : fusion proposée, les deux e-mails gardés</td></tr>
+<tr><td><strong>Même nom et prénom</strong>, aucune clé commune</td><td><strong>Rien.</strong> Pas de badge, pas de suggestion, pas de fusion manuelle</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>CLI-11</b><div>La fusion ne se propose <strong>que sur une clé exacte</strong>. Jamais sur le nom : deux homonymes fusionnés mélangeraient leurs allergies.</div></div>
+<div class="rg"><b>CLI-12</b><div>La fusion additionne <code>nb_visites</code> et <code>nb_noshow</code>, puis déclenche un recomptage.</div></div>
+<div class="rg"><b>CLI-13</b><div><strong>Supprimer un client = l'anonymiser.</strong> Sont effacés : nom, e-mail, téléphone, allergies, notes internes, tags. <code>anonymise_le</code> est horodaté.</div></div>
+<div class="rg"><b>CLI-14</b><div><strong>Les réservations survivent</strong>, signées « Client supprimé », avec leurs couverts, leurs dates et leurs statuts. Elles sont <strong>conservées définitivement</strong> : le chiffre d'affaires de l'an dernier ne bouge pas.</div></div>
+</div>
+
+<h2 id="sec-11"><span class="hn">11</span>Créer une réservation</h2>
+
+<h3 id="sec-11.1"><span class="hn">11.1</span>Points d'entrée et pré-remplissage</h3>
+
+<p><strong>Même formulaire partout, pré-rempli différemment.</strong> Il ne demande jamais ce qu'il sait déjà.</p>
+
+<div class="tw"><table><thead><tr><th>Ouvert depuis</th><th>Déjà connu, donc jamais demandé</th><th>Source</th></tr></thead><tbody>
+<tr><td>Une table du plan</td><td>Date, service, <strong>et la table</strong></td><td><code>sur_place</code></td></tr>
+<tr><td>Un créneau de l'agenda</td><td>Date, service, heure</td><td><code>sur_place</code></td></tr>
+<tr><td>Une fiche client</td><td>Nom, téléphone, e-mail, allergie — bloc identité rempli et replié</td><td><code>telephone</code></td></tr>
+<tr><td>L'écran Réservations</td><td>Rien. Le formulaire complet, dans l'ordre</td><td><code>telephone</code></td></tr>
+</tbody></table></div>
+
+<h3 id="sec-11.2"><span class="hn">11.2</span>Ordre des champs</h3>
+
+<div class="rules">
+<div class="rg"><b>FORM-01</b><div><strong>Couverts → date → heure → identité.</strong> L'ordre de l'appel téléphonique.</div></div>
+<div class="rg"><b>FORM-02</b><div><strong>Un seul formulaire</strong>, pas d'assistant en deux étapes. La réponse de disponibilité arrive dès que couverts et date sont saisis.</div></div>
+<div class="rg"><b>FORM-03</b><div><strong>Nom et téléphone sont obligatoires</strong> pour une réservation à venir. L'e-mail est facultatif, mais il conditionne la confirmation automatique.</div></div>
+<div class="rg"><b>FORM-04</b><div><strong>Pas de champ « table »</strong>, sauf ouverture depuis une table. Le bouton dit <strong>« Créer et placer »</strong> et enchaîne sur le plan. « Créer » seul reste possible : la réservation tombe dans « À placer ».</div></div>
+<div class="rg"><b>FORM-05</b><div>La <strong>durée</strong> est affichée, pré-remplie depuis <code>rotation_defaut</code>, et modifiable à la création.</div></div>
+</div>
+
+<h3 id="sec-11.3"><span class="hn">11.3</span>La bande d'heures</h3>
+
+<figure class="fig" id="fig-14">
+  <div class="fig-n">Figure 14 · §11.3</div>
+  <figcaption class="fig-cap">La bande d'heures se colore dès que les couverts et la date sont saisis — avant le nom. <b>C'est une bande, pas un menu déroulant</b> : elle répond aussi à la question suivante, « et à 19:30 ? ».</figcaption>
+  <div class="bande-demo">
+    <div class="bd-q">« Une table pour <b>4 personnes</b>, <b>jeudi soir</b> ? »</div>
+    <div class="bande">
+      <span class="bh bh-l">19:00</span><span class="bh bh-l">19:30</span>
+      <span class="bh bh-s">20:00</span><span class="bh bh-c">20:30</span>
+      <span class="bh bh-s on">21:00</span><span class="bh bh-l">21:30</span>
+    </div>
+    <div class="bd-cond">21:00 — <i>libre si la table 6 part à 22:15 comme prévu.</i></div>
+    <div class="bd-leg">
+      <span><i class="bh bh-l"></i><b>Libre</b> — une table adaptée est libre sur tout l'intervalle, sans supposer aucun départ</span>
+      <span><i class="bh bh-s"></i><b>Serré</b> — libre seulement si un repas en cours se termine comme prévu, ou seulement en rapprochant deux tables. La condition est nommée</span>
+      <span><i class="bh bh-c"></i><b>Complet</b> — aucune table, aucune combinaison, aucun départ prévu. <b>Reste franchissable</b></span>
+    </div>
+  </div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>FORM-06</b><div>Le vocabulaire est <strong>celui du placement, réutilisé tel quel</strong> : vert plein / ambre pointillé / gris barré. Lisible en noir et blanc.</div></div>
+<div class="rg"><b>FORM-07</b><div><strong>« Complet » n'est jamais un verrou.</strong> Toucher un créneau complet reste possible : le formulaire prévient — « aucune table pour 4 à 20:30 » — et laisse passer. La réservation part en « À placer » avec sa marque.</div></div>
+<div class="rg"><b>FORM-08</b><div>Le formulaire <strong>nomme la condition</strong> d'un créneau serré. Il informe, il ne demande pas.</div></div>
+<div class="rg"><b>FORM-09</b><div>La longueur de la bande suit <code>pas_creneau</code>. Passer de 30 à 15 min la double.</div></div>
+</div>
+
+<h3 id="sec-11.4"><span class="hn">11.4</span>Reconnaissance du client</h3>
+
+<div class="rules">
+<div class="rg"><b>FORM-10</b><div>Dès que le numéro saisi correspond à une fiche, <strong>la fiche s'attache et l'allergie s'affiche dans le formulaire</strong>.</div></div>
+<div class="rg"><b>FORM-11</b><div>Le ratio <code>2 / 41</code> apparaît au même moment, pendant qu'on décide d'accepter.</div></div>
+</div>
+
+<h3 id="sec-11.5"><span class="hn">11.5</span>Comportement du panneau</h3>
+
+<div class="rules">
+<div class="rg"><b>FORM-12</b><div>Panneau de ~322 px. Il <strong>remplace</strong> le panneau déjà ouvert s'il y en a un.</div></div>
+<div class="rg"><b>FORM-13</b><div>Il <strong>recouvre le plan, il ne le pousse pas</strong> — il ne désigne rien sur le plan.</div></div>
+<div class="rg"><b>FORM-14</b><div>Au moment de « Créer et placer », le formulaire se ferme, le placement s'ouvre, <strong>et là le plan se recompose</strong>.</div></div>
+<div class="rg"><b>FORM-15</b><div>La case « envoyer la confirmation » est <strong>cochée d'office si un e-mail est connu</strong>. L'envoi suit la règle des 8 s annulables.</div></div>
+</div>
+
+<h2 id="sec-12"><span class="hn">12</span>Éditeur de plan</h2>
+
+<p>Plein écran, atteint par le crayon, <strong>réservé au rôle administrateur</strong>.</p>
+
+<figure class="fig pleine" id="fig-15">
+  <div class="fig-n">Figure 15 · §12</div>
+  <figcaption class="fig-cap">L'éditeur. Palette à gauche, canevas en mètres au centre, panneau de description à droite. L'en-tête porte en permanence l'état du brouillon.</figcaption>
+  <div class="app app-ed">
+    <div class="ed-h">
+      <span class="ed-back">←</span><b>Éditeur de plan · Salle</b>
+      <span class="ed-uz">↶</span><span class="ed-uz">↷</span>
+      <span class="ed-br">Brouillon · 4 modifications</span>
+      <span class="bt bt-dsc">Abandonner</span><span class="bt bt-or">Publier</span>
+    </div>
+    <div class="ed-b">
+      <div class="pal">
+        <b class="pal-t">TABLES</b>
+        <div class="pl"><span>●</span> Ronde 2</div>
+        <div class="pl"><span>■</span> Carrée 4</div>
+        <div class="pl"><span>▬</span> Rect. 6</div>
+        <div class="pl pl-dup">Dupliquer</div>
+        <b class="pal-t">DÉCOR</b>
+        <div class="pl"><span>│</span> Mur</div>
+        <div class="pl"><span>⌐</span> Porte</div>
+        <div class="pl"><span>▭</span> Bar</div>
+        <div class="pl"><span>▭</span> Passe</div>
+        <div class="pl"><span>●</span> Pilier</div>
+      </div>
+      <div class="ed-cv">
+        <div class="ed-dim">Salle · 8,00 m × 5,50 m · grille 25 cm · rotation par pas de 15°</div>
+        <div class="slate-wrap"><div class="slate">
+          <div class="dc dc-bar" style="left:350px;top:20px;width:44px;height:174px"><i>BAR</i></div>
+          <div class="dc dc-passe" style="left:350px;top:212px;width:44px;height:62px"><i>PASSE</i></div>
+          <div class="dc dc-mur" style="left:0;top:0;width:6px;height:300px"></div>
+          <div class="dc dc-porte" style="left:0;top:104px;width:6px;height:66px"><i>porte</i></div>
+          <div class="tb tb-libre rd" style="left:22px;top:24px;width:54px;height:54px"><b class="craie">1</b><i>2p</i></div>
+          <div class="tb tb-libre rd" style="left:92px;top:24px;width:54px;height:54px"><b class="craie">2</b><i>2p</i></div>
+          <div class="tb tb-libre" style="left:168px;top:20px;width:62px;height:62px"><b class="craie">3</b><i>4p</i></div>
+          <div class="tb tb-libre ed-sel" style="left:248px;top:20px;width:62px;height:62px"><b class="craie">4</b><i>4p</i></div>
+          <div class="tb tb-libre" style="left:22px;top:212px;width:62px;height:62px"><b class="craie">12</b><i>4p</i></div>
+          <div class="tb tb-libre" style="left:88px;top:212px;width:62px;height:62px"><b class="craie">13</b><i>4p</i></div>
+          <div class="lien" style="left:16px;top:206px;width:140px;height:74px"><i>12-13 · 8p</i></div>
+        </div></div>
+        <div class="ed-fond">Fond de plan : <b>plan-architecte.jpg</b> · opacité 35 % · calibré sur 2,10 m · jamais publié</div>
+      </div>
+      <div class="ed-pn">
+        <b class="ed-pt">TABLE SÉLECTIONNÉE</b>
+        <div class="ed-f"><span>Nom</span>4</div>
+        <div class="ed-f"><span>Places</span>4</div>
+        <div class="ed-f"><span>Forme</span>carrée</div>
+        <div class="ed-f"><span>Dim.</span>90 × 90 cm</div>
+        <div class="ed-f"><span>Salle</span>Salle</div>
+        <div class="ed-cb"><b>Combinaison 12-13</b><span>déclarée · 8 places</span></div>
+        <span class="bt">Dupliquer</span>
+        <span class="bt bt-dsc">Désactiver</span>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-12.1"><span class="hn">12.1</span>Le canevas</h3>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>EDIT-01</b><div>Le canevas est <strong>en mètres</strong>, la grille à <strong>25 cm</strong>. La salle se saisit en dimensions réelles, les tables en centimètres.</div></div>
+<div class="rg"><b>EDIT-02</b><div><strong>Tout s'aimante à la grille.</strong> Rotation aimantée par pas de <strong>15°</strong>.</div></div>
+<div class="rg"><b>EDIT-03</b><div>Les <strong>combinaisons sont visibles sur le plan</strong> : une pastille violette porte le nom et la capacité.</div></div>
+</div>
+
+<h3 id="sec-12.2"><span class="hn">12.2</span>Créer une table</h3>
+
+<div class="rules">
+<div class="rg"><b>EDIT-04</b><div>On <strong>glisse un type depuis la palette sur le plan</strong> : la table naît là où on l'a lâchée, nommée automatiquement (T1, T2…), et le panneau de droite prend le relais pour le nom, les places, la forme et les dimensions.</div></div>
+<div class="rg"><b>EDIT-05</b><div><strong>Il n'existe jamais de table sans emplacement.</strong> Aucun formulaire préalable.</div></div>
+<div class="rg"><b>EDIT-06</b><div>La palette se complète d'elle-même : chaque forme utilisée y reste disponible. <strong>« Dupliquer »</strong> couvre les séries identiques.</div></div>
+<div class="rg"><b>EDIT-07</b><div>La <strong>salle</strong> d'une table se change <strong>dans le panneau de droite</strong>, jamais en glissant la table sur un onglet.</div></div>
+</div>
+
+<h3 id="sec-12.3"><span class="hn">12.3</span>Décor et fond de plan</h3>
+
+<div class="rules">
+<div class="rg"><b>EDIT-08</b><div>Le décor disponible : <strong>mur · porte · bar · passe · pilier · escalier · autre</strong>. Ce sont des repères d'orientation, pas de la décoration.</div></div>
+<div class="rg"><b>EDIT-09</b><div>Une image peut être posée en <strong>fond de canevas</strong> pour décalquer un plan existant.</div></div>
+<div class="rg"><b>EDIT-10</b><div><strong>L'image doit être calibrée avant de servir</strong> : on trace une ligne sur une longueur connue et on saisit sa dimension réelle. Le logiciel met l'image à l'échelle.</div></div>
+<div class="rg"><b>EDIT-11</b><div>L'<strong>opacité est réglable</strong>.</div></div>
+<div class="rg"><b>EDIT-12</b><div><strong>Le fond ne se publie jamais.</strong> Il est visible dans l'éditeur seulement, et peut être supprimé une fois le décalquage fini.</div></div>
+</div>
+
+<h3 id="sec-12.4"><span class="hn">12.4</span>L'accolage</h3>
+
+<div class="rules">
+<div class="rg"><b>EDIT-13</b><div>Coller une table contre une autre fait apparaître un cadre orange et propose de créer une table virtuelle : nom pré-rempli à partir des numéros, capacité pré-remplie à la somme, <strong>les deux modifiables</strong>.</div></div>
+<div class="rg"><b>EDIT-14</b><div>Deux boutons <strong>d'importance égale</strong> : « Créer » et « Non, juste les déplacer ». <strong>Le système ne déduit rien tout seul.</strong></div></div>
+</div>
+
+<h3 id="sec-12.5"><span class="hn">12.5</span>Brouillon et publication</h3>
+
+<div class="rules">
+<div class="rg"><b>EDIT-15</b><div><strong>L'éditeur est la seule exception à la règle de l'action immédiate.</strong> On modifie un brouillon, et on publie.</div></div>
+<div class="rg"><b>EDIT-16</b><div>L'en-tête porte en permanence <strong>« Brouillon · N modifications »</strong>, une annulation par étapes (↶ ↷) et un « Abandonner » qui remet tout.</div></div>
+<div class="rg"><b>EDIT-17</b><div><strong>Le plan publié reste celui du service en cours jusqu'à la publication.</strong> L'équipe en service ne voit jamais les tables bouger sous ses doigts.</div></div>
+</div>
+
+<h3 id="sec-12.6"><span class="hn">12.6</span>Désactiver une table</h3>
+
+<div class="rules">
+<div class="rg"><b>EDIT-18</b><div>Désactiver une table qui porte des réservations ouvre un panneau qui <strong>confronte</strong> : liste des réservations à venir sur cette table, combinaisons dont elle est membre, puis trois sorties — <em>Annuler</em>, <em>Replacer ces réservations</em>, <em>Désactiver et les laisser à placer</em>.</div></div>
+<div class="rg"><b>EDIT-19</b><div><strong>Aucune réservation n'est jamais annulée par une modification de plan.</strong> Au pire elle retombe dans « À placer ».</div></div>
+<div class="rg"><b>EDIT-20</b><div>La combinaison dont la table était membre passe <strong>dormante</strong>, elle n'est pas supprimée.</div></div>
+</div>
+
+<h2 id="sec-13"><span class="hn">13</span>Paramètres</h2>
+
+<blockquote><p><strong>Aucun réglage n'est posé nu.</strong> Chacun est suivi d'une phrase qui dit sa conséquence, et — quand c'est possible — d'un aperçu construit avec les vraies tables du restaurant.</p></blockquote>
+
+<figure class="fig" id="fig-16">
+  <div class="fig-n">Figure 16 · §13</div>
+  <figcaption class="fig-cap">Un réglage nu ne sera jamais réglé correctement. Le même réglage avec son aperçu se règle en trois secondes.</figcaption>
+  <div class="split2">
+    <div class="bx bx-ko">
+      <b class="bx-t">Posé nu</b>
+      <div class="reg-nu">Tolérance de places <span class="reg-in">2</span></div>
+    </div>
+    <div class="bx bx-ok">
+      <b class="bx-t">Avec sa conséquence</b>
+      <div class="reg-nu">Tolérance de places <span class="reg-in">2</span></div>
+      <div class="reg-cs">Pour une réservation de <b>4 personnes</b> :</div>
+      <div class="reg-ap">
+        <span class="ap ap-ok">T5 · 4p ✓</span><span class="ap ap-ok">T2 · 5p ✓</span>
+        <span class="ap ap-rs">T7 · 6p ~✓</span><span class="ap ap-no">T11 · 8p ✗</span>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-13.1"><span class="hn">13.1</span>Structure</h3>
+
+<p>Dix sections dans une <strong>colonne permanente de 158 px</strong>, à droite du rail.</p>
+
+<div class="tw"><table><thead><tr><th>Section</th><th>Contenu</th></tr></thead><tbody>
+<tr><td>Ouvertures</td><td>Horaires habituels et exceptionnels</td></tr>
+<tr><td>Services et créneaux</td><td><code>pas_creneau</code>, mode d'occupation, durée prévue, avertissements de cuisine</td></tr>
+<tr><td>Salles et tables</td><td>Liste des salles et des tables, dimensions — puis <strong>porte vers l'éditeur de plan</strong> (chevron <code>›</code>)</td></tr>
+<tr><td>Placement</td><td><code>tolerance_places</code>, <code>rotation_defaut</code>, <code>retard_grace</code>, proposition des rapprochements</td></tr>
+<tr><td>Règles de réservation</td><td>Délai minimum avant réservation, horizon maximum</td></tr>
+<tr><td>No-show</td><td>Conditions d'annulation</td></tr>
+<tr><td>Notifications</td><td>Confirmation automatique, rappel et son délai</td></tr>
+<tr><td>Équipe</td><td>Comptes, rôles</td></tr>
+<tr><td>Widget</td><td>Apparence et activation du parcours public</td></tr>
+<tr><td>Restaurant</td><td>Nom, fuseau, coordonnées</td></tr>
+</tbody></table></div>
+
+<h3 id="sec-13.2"><span class="hn">13.2</span>Ouvertures</h3>
+
+<figure class="fig" id="fig-17">
+  <div class="fig-n">Figure 17 · §13.2</div>
+  <figcaption class="fig-cap">Le calendrier des exceptions. <b>Un jour normal ne porte aucune marque</b> : le défaut est muet pour que l'exception crie. Les états se distinguent par la couleur <b>et</b> la texture.</figcaption>
+  <div class="split2 split-cal">
+    <div class="bx">
+      <b class="bx-t">Août 2026</b>
+      <div class="cal-h"><b>L</b><b>M</b><b>M</b><b>J</b><b>V</b><b>S</b><b>D</b></div>
+      <div class="cal-g">
+        <span class="cd">1</span><span class="cd">2</span><span class="cd habit">3</span><span class="cd">4</span><span class="cd">5</span><span class="cd">6</span><span class="cd">7</span>
+        <span class="cd">8</span><span class="cd">9</span><span class="cd habit">10</span><span class="cd">11</span><span class="cd">12</span><span class="cd">13</span><span class="cd">14</span>
+        <span class="cd ferme">15</span><span class="cd ferme">16</span><span class="cd habit">17</span><span class="cd">18</span><span class="cd">19</span><span class="cd">20</span><span class="cd">21</span>
+        <span class="cd">22</span><span class="cd">23</span><span class="cd habit">24</span><span class="cd modif">25</span><span class="cd">26</span><span class="cd">27</span><span class="cd">28</span>
+      </div>
+      <p class="note" style="margin-top:10px"><b>Hachures corail</b> : fermeture exceptionnelle · <b>pointillé ambre</b> : horaires modifiés · <b>hachures pâles</b> : fermeture habituelle, non cliquable</p>
+    </div>
+    <div class="bx">
+      <b class="bx-t">Horaires habituels — une colonne par jour</b>
+      <p class="note">Les services sont empilés sous chaque jour, avec un « + » pour en ajouter. C'est la seule disposition qui laisse voir la forme d'une semaine d'un coup d'œil.</p>
+      <div class="reg-ap" style="margin-top:11px">
+        <span class="ap ap-ok">Lun · 11:30–14:00 · 19:00–22:30</span>
+        <span class="ap ap-no">Mar · fermé</span>
+        <span class="ap ap-ok">Mer · 11:30–14:00 · 19:00–22:30</span>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>PAR-01</b><div><strong>Un jour normal ne porte aucune marque</strong> sur le calendrier des exceptions.</div></div>
+<div class="rg"><b>PAR-02</b><div>Les états se distinguent par <strong>couleur ET forme</strong> : hachures pour une fermeture, pointillé ambre pour des horaires modifiés. Jamais vert/rouge seuls.</div></div>
+<div class="rg"><b>PAR-03</b><div>Les jours de fermeture habituelle sont légèrement hachurés et <strong>non cliquables</strong>, ici comme dans le sélecteur de service.</div></div>
+</div>
+
+<h3 id="sec-13.3"><span class="hn">13.3</span>Services et créneaux</h3>
+
+<div class="rules">
+<div class="rg"><b>PAR-04</b><div><code>pas_creneau</code> vaut <strong>15 ou 30 min</strong>. Le réglage <strong>montre l'effet avant de valider</strong> : il change la densité de la frise et la longueur de la bande d'heures.</div></div>
+<div class="rg"><b>PAR-05</b><div><code>mode_occupation</code> se règle <strong>par service</strong>.</div></div>
+<div class="rg"><b>PAR-06</b><div><code>duree_prevue</code> hérite de <code>rotation_defaut</code> et se surcharge par service.</div></div>
+<div class="rg"><b>PAR-07</b><div><code>cadence_max</code> et <code>plafond_couverts</code> sont <strong>désactivés par défaut</strong> et produisent des avertissements, jamais un blocage.</div></div>
+</div>
+
+<h3 id="sec-13.4"><span class="hn">13.4</span>Placement et règles de réservation</h3>
+
+<div class="rules">
+<div class="rg"><b>PAR-08</b><div><code>tolerance_places</code>, <code>rotation_defaut</code>, <code>retard_grace</code> : chacun affiche son <strong>aperçu sur les vraies tables</strong> du restaurant.</div></div>
+<div class="rg"><b>PAR-09</b><div>Changer <code>rotation_defaut</code> est <strong>sans effet</strong> sur les réservations existantes, qui gardent la durée reçue à leur création.</div></div>
+<div class="rg"><b>PAR-10</b><div>La <strong>fenêtre de réservation</strong> — délai minimum avant une réservation, horizon maximum — gouverne les jours et heures proposés par le widget.</div></div>
+</div>
+
+<h3 id="sec-13.5"><span class="hn">13.5</span>Conditions d'annulation</h3>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>COND-01</b><div><strong>Chaque enregistrement du texte crée une version.</strong> Aucune version n'est jamais modifiée ni supprimée.</div></div>
+<div class="rg"><b>COND-02</b><div>La réservation stocke <strong>le numéro de version accepté et l'horodatage</strong>, pas un booléen. Le texte exact reste réaffichable.</div></div>
+<div class="rg"><b>COND-03</b><div>Le journal porte alors « conditions acceptées (version 3) ».</div></div>
+<div class="rg"><b>COND-04</b><div><strong>La case n'est jamais pré-cochée</strong>, et le bouton « Réserver » du widget reste éteint tant qu'elle ne l'est pas.</div></div>
+<div class="rg"><b>COND-05</b><div><strong>Texte vide → rien ne s'affiche</strong> sur le widget : ni texte, ni case. Jamais de case « j'accepte » qui ne pointe vers rien.</div></div>
+<div class="rg"><b>COND-06</b><div><strong>Un texte est proposé au départ</strong>, déjà aligné sur les réglages en place.</div></div>
+<div class="rg"><b>COND-07</b><div>L'éditeur affiche, à côté du texte, <strong>ce que le logiciel fait réellement</strong> — <code>retard_grace</code>, état des rappels, délai d'annulation — avec les écarts signalés en corail et une proposition d'alignement.</div></div>
+</div>
+
+<h3 id="sec-13.6"><span class="hn">13.6</span>Fermeture exceptionnelle</h3>
+
+<figure class="fig" id="fig-18">
+  <div class="fig-n">Figure 18 · §13.6</div>
+  <figcaption class="fig-cap">Deux champs, pas un. Le motif alimente le journal et ne sort jamais ; le message est celui que les clients lisent, pré-rédigé et modifiable.</figcaption>
+  <div class="ferm">
+    <div class="fm fm-int">
+      <div class="fm-t"><b>Motif</b><span class="fm-tag">JAMAIS ENVOYÉ</span></div>
+      <div class="fm-p"><span>Fériés</span><span class="on">Maladie</span><span>Travaux</span><span>Privé</span><span>Autre</span></div>
+      <div class="fm-tx">Chef malade, prévenu à 17 h.</div>
+    </div>
+    <div class="fm fm-cli">
+      <div class="fm-t"><b>Message aux clients</b><span class="fm-tag fm-tag-or">LU PAR 3 CLIENTS</span></div>
+      <div class="fm-tx fm-tx-or">Bonjour, nous sommes au regret d'annuler votre table du <b>jeudi 20 août à 20:00</b>. Le restaurant est exceptionnellement fermé ce soir. Nous sommes vraiment désolés — nous serions heureux de vous accueillir un autre soir, appelez-nous et nous vous trouverons une table.</div>
+    </div>
+  </div>
+  <div class="regle"><b>Le panneau confronte d'abord.</b> « Ce jour porte déjà <b>3 réservations confirmées · 11 couverts</b> », la liste avec les heures, les noms et <b>les numéros de téléphone</b>, puis trois sorties : <i>Annuler la fermeture</i> · <i>Fermer et prévenir les clients</i> · <i>Fermer, je les appelle</i>.</div>
+</figure>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>FERM-01</b><div><strong>Deux champs distincts</strong> : <code>motif</code> + <code>motif_detail</code> (fond gris, jamais envoyés) et <code>message_client</code> (pré-rédigé, modifiable).</div></div>
+<div class="rg"><b>FERM-02</b><div>Le motif se pose <strong>en un geste</strong> : pastilles <em>Fériés · Maladie · Travaux · Privé · Autre</em>, plus un texte libre.</div></div>
+<div class="rg"><b>FERM-03</b><div>Fermer un jour occupé, ou raccourcir un service, <strong>confronte</strong> les réservations concernées avec leurs numéros de téléphone affichés, prêts à composer.</div></div>
+<div class="rg"><b>FERM-04</b><div>Dans les trois sorties, les annulations portent <strong><code>annule_par = restaurant</code></strong>. Aucun compteur de fiabilité client ne bouge.</div></div>
+<div class="rg"><b>FERM-05</b><div>Envoi différé de 8 s, et <strong>le bandeau dit le compte</strong> : « 3 messages partent dans 8 s ».</div></div>
+<div class="rg"><b>FERM-06</b><div><strong>Un seul composant, deux points d'entrée</strong> : Paramètres pour prévoir, Accueil pour subir aujourd'hui.</div></div>
+</div>
+
+<h3 id="sec-13.7"><span class="hn">13.7</span>Notifications</h3>
+
+<div class="rules">
+<div class="rg"><b>PAR-11</b><div><code>confirmation_auto</code> est un <strong>simple oui/non</strong>. <strong>Aucun seuil de couverts</strong> ne déclenche une validation manuelle.</div></div>
+<div class="rg"><b>PAR-12</b><div><code>rappel_actif</code> et <code>rappel_delai_h</code> gouvernent le rappel avant la réservation.</div></div>
+<div class="rg"><b>PAR-13</b><div><strong>Désactiver les rappels dit ce que ça coûte</strong> : sans rappel, un client qui ne vient pas n'a jamais eu l'occasion de se dédire, et le compteur de no-show devient plus sévère qu'il n'est juste. La bascule l'affiche en une phrase.</div></div>
+</div>
+
+<h3 id="sec-13.8"><span class="hn">13.8</span>Équipe, widget, restaurant</h3>
+
+<div class="rules">
+<div class="rg"><b>PAR-14</b><div>Section Équipe : création de comptes, attribution des rôles <code>admin</code> / <code>staff</code>.</div></div>
+<div class="rg"><b>PAR-15</b><div>Section Widget : apparence et <strong>activation</strong> du parcours public.</div></div>
+<div class="rg"><b>PAR-16</b><div>Section Restaurant : nom, <strong><code>fuseau</code></strong>, coordonnées. Les services sont toujours exprimés en heure locale du restaurant.</div></div>
+</div>
+
+<h2 id="sec-14"><span class="hn">14</span>Widget public de réservation</h2>
+
+<p>Application publique, séparée du back-office. <strong>Mobile d'abord</strong> : une colonne, cibles larges, aucun survol.</p>
+
+<h3 id="sec-14.1"><span class="hn">14.1</span>Le parcours</h3>
+
+<figure class="fig" id="fig-19">
+  <div class="fig-n">Figure 19 · §14</div>
+  <figcaption class="fig-cap">Les trois écrans du widget. L'ordre des questions est celui de l'appel téléphonique : <b>combien → quel jour → à quelle heure → qui</b>. Les coordonnées ne sont demandées qu'une fois la place trouvée.</figcaption>
+  <div class="tels">
+    <div class="tel">
+      <div class="tel-tt">Créneaux — un « sur demande » en pointillé, un créneau complet simplement absent</div>
+      <div class="tel-e">
+        <div class="tw-h"><b>Le Comptoir</b><span>4 personnes · jeudi 20 août</span></div>
+        <div class="tw-l">SOIR</div>
+        <div class="tw-cr">
+          <div class="tw-c">19:00</div>
+          <div class="tw-c tw-on">19:30</div>
+          <div class="tw-c tw-dm">21:00 · sur demande</div>
+        </div>
+        <div class="tw-note">20:00 et 20:30 ne sont plus disponibles.</div>
+        <div class="tw-dmx">« Sur demande » : le restaurant vous répond par e-mail. Ce n'est pas encore une réservation.</div>
+      </div>
+    </div>
+    <div class="tel">
+      <div class="tel-tt">Coordonnées — allergies et demande sont deux champs distincts</div>
+      <div class="tel-e">
+        <div class="tw-h"><b>Vos coordonnées</b><span>4 personnes · jeudi 20 août · 19:30</span></div>
+        <div class="tw-in">Nom</div>
+        <div class="tw-in">Téléphone</div>
+        <div class="tw-in">E-mail</div>
+        <div class="tw-l">FACULTATIF</div>
+        <div class="tw-in tw-fac">Allergies ou intolérances <i>— transmises en cuisine</i></div>
+        <div class="tw-in tw-fac">Une demande ? <i>— anniversaire, poussette, terrasse…</i></div>
+        <div class="tw-cgu"><span class="tw-box"></span> J'accepte les conditions d'annulation</div>
+        <div class="tw-bt tw-off">Réserver</div>
+      </div>
+    </div>
+    <div class="tel">
+      <div class="tel-tt">Fin de parcours — deux versions selon le statut créé</div>
+      <div class="tel-e">
+        <div class="tw-ok"><b>C'est réservé</b><span>Jeudi 20 août · 19:30 · 4 personnes</span>
+          <i>Le Comptoir · 12 rue des Halles · 01 23 45 67 89</i></div>
+        <div class="tw-lien">Ajouter à mon agenda</div>
+        <div class="tw-sep"></div>
+        <div class="tw-att"><b>Demande envoyée</b>
+          <span class="tw-fort">Ce n'est pas encore une réservation. Le restaurant vous confirme par e-mail.</span></div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<h3 id="sec-14.2"><span class="hn">14.2</span>Ce qui est proposé</h3>
+
+<div class="tw"><table><thead><tr><th>Mode du service</th><th>État du créneau</th><th>Ce que le client voit</th><th>Statut créé</th></tr></thead><tbody>
+<tr><td><code>service_unique</code></td><td>Une table convient pour tout le service</td><td>Un créneau normal</td><td>Selon <code>confirmation_auto</code></td></tr>
+<tr><td><code>service_unique</code></td><td>Aucune table</td><td><strong>Rien</strong></td><td>—</td></tr>
+<tr><td><code>rotation</code></td><td>Libre <strong>sans supposer aucun départ</strong></td><td>Un créneau normal</td><td>Selon <code>confirmation_auto</code></td></tr>
+<tr><td><code>rotation</code></td><td>Libre <strong>seulement si un départ prévu a lieu</strong></td><td>« <strong>Sur demande</strong> », bordure pointillée</td><td><strong>Toujours <code>en_attente</code></strong></td></tr>
+<tr><td><code>rotation</code></td><td>Ni l'un ni l'autre</td><td><strong>Rien</strong></td><td>—</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>WID-01</b><div>En mode <code>service_unique</code>, <strong>« sur demande » n'existe pas</strong>. Il y a de la place, ou il n'y en a pas.</div></div>
+<div class="rg"><b>WID-02</b><div><strong>Un rapprochement n'est jamais une condition pour le client.</strong> Seul le départ prévu franchit le widget ; le rapprochement reste invisible.</div></div>
+<div class="rg"><b>WID-03</b><div><strong>Un créneau complet disparaît</strong>, il ne s'affiche pas barré. Une ligne discrète suffit : « 20:30 n'est plus disponible ».</div></div>
+<div class="rg"><b>WID-04</b><div>La <strong>fenêtre de réservation</strong> gouverne les jours proposés : pas de réservation en deçà du délai minimum, pas au-delà de l'horizon fixé.</div></div>
+<div class="rg"><b>WID-05</b><div>Le client n'a accès à <strong>aucun vocabulaire interne</strong> : ni statut, ni table, ni <code>~✓</code>, ni « serré ».</div></div>
+</div>
+
+<h3 id="sec-14.3"><span class="hn">14.3</span>Les deux barrières</h3>
+
+<div class="tw"><table><thead><tr><th>Barrière</th><th>Nature</th><th>Réglable ?</th></tr></thead><tbody>
+<tr><td>Un créneau serré est <strong>toujours</strong> une demande</td><td><strong>Structurelle</strong> — le restaurant ne peut pas promettre ce qui dépend du départ d'un tiers</td><td class="non">Non</td></tr>
+<tr><td>Confirmation automatique d'un créneau franchement libre</td><td><strong>Politique</strong> — combien de fois par jour le restaurateur veut arbitrer</td><td class="oui">Oui, oui/non</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>WID-06</b><div><strong>Il n'existe aucun seuil de couverts</strong> déclenchant une validation manuelle. Un nombre de couverts ne dit rien de la place disponible.</div></div>
+<div class="rg"><b>WID-07</b><div>Une demande <code>en_attente</code> créée par le widget alimente la file déjà conçue : bandeau violet de la liste, groupe « En attente » de la colonne, badge <code>!</code> de la frise, lignes de l'Accueil.</div></div>
+</div>
+
+<h3 id="sec-14.4"><span class="hn">14.4</span>Confidentialité</h3>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>WID-08</b><div><strong>Le widget ne révèle jamais ce que le restaurant sait d'un numéro.</strong> Le rattachement à une fiche existante se fait <strong>en silence, côté serveur</strong>. Jamais de « bonjour Sophie », jamais d'allergie pré-remplie, jamais de compteur de visites.</div></div>
+<div class="rg"><b>WID-09</b><div><strong>Aucune table n'est montrée ni choisie.</strong> Pas de plan de salle côté client.</div></div>
+<div class="rg"><b>WID-10</b><div>Le client exprime au mieux une <strong>préférence de salle</strong>, qui alimente <code>zone_souhaitee</code>. Une préférence n'est pas une promesse.</div></div>
+</div>
+
+<h3 id="sec-14.5"><span class="hn">14.5</span>Les champs</h3>
+
+<div class="tw"><table><thead><tr><th>Champ du widget</th><th>Destination</th><th>Obligatoire</th></tr></thead><tbody>
+<tr><td>Nom</td><td><code>Client.nom</code></td><td class="oui">Oui</td></tr>
+<tr><td>Téléphone</td><td><code>Client.telephone</code> — clé d'identité</td><td class="oui">Oui</td></tr>
+<tr><td>E-mail</td><td><code>Client.email</code></td><td class="oui">Oui</td></tr>
+<tr><td><strong>« Allergies ou intolérances »</strong></td><td><code>Client.allergies</code> — champ structuré, suit le client</td><td class="non">Non</td></tr>
+<tr><td><strong>« Une demande ? »</strong></td><td><code>Reservation.note</code> — attaché à cette réservation seulement</td><td class="non">Non</td></tr>
+<tr><td>Préférence de salle</td><td><code>Reservation.zone_souhaitee</code></td><td class="non">Non</td></tr>
+<tr><td>Acceptation des conditions</td><td><code>conditions_version_id</code> + <code>conditions_acceptees_le</code></td><td>Oui, si le texte n'est pas vide</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>WID-11</b><div>Le champ allergies est <strong>séparé du commentaire</strong>. Une allergie tapée dans un commentaire libre atterrirait dans <code>Reservation.note</code>, d'où elle ne peut ni être épinglée, ni suivre le client.</div></div>
+<div class="rg"><b>WID-12</b><div>Le champ allergies porte sa <strong>finalité affichée</strong> et reste <strong>facultatif</strong>.</div></div>
+</div>
+
+<h3 id="sec-14.6"><span class="hn">14.6</span>Fin de parcours</h3>
+
+<div class="rules">
+<div class="rg"><b>WID-13</b><div><strong>Page de confirmation immédiate</strong>, puis e-mail récapitulatif.</div></div>
+<div class="rg"><b>WID-14</b><div>Version <strong>confirmée</strong> : « C'est réservé », récapitulatif, adresse, téléphone, conditions rappelées, lien « ajouter à mon agenda ».</div></div>
+<div class="rg"><b>WID-15</b><div>Version <strong>en attente</strong> : « Demande envoyée », suivi de <strong>« Ce n'est pas encore une réservation. Le restaurant vous confirme par e-mail. »</strong></div></div>
+<div class="rg"><b>WID-16</b><div>Modifier ou annuler se fait par e-mail ou téléphone. <strong>Aucun lien d'annulation autonome en V1.</strong></div></div>
+</div>
+<h2 id="sec-15"><span class="hn">15</span>Notifications et envois différés</h2>
+
+<figure class="fig" id="fig-20">
+  <div class="fig-n">Figure 20 · §15</div>
+  <figcaption class="fig-cap">Le bandeau différé. L'effet local est <b>immédiat</b> — la table est réservée, le statut change ; seul ce qui sort du logiciel attend 8 secondes.</figcaption>
+  <div class="differe">
+    <div class="df-b">
+      <span class="df-ic">✓</span>
+      <div>Bouvier acceptée · table 12-13<span>Le message au client part dans <b>8 s</b></span></div>
+      <span class="bt bt-ann">Annuler</span>
+      <span class="df-jauge"></span>
+    </div>
+  </div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>Notification</th><th>Déclencheur</th><th>Contenu</th></tr></thead><tbody>
+<tr><td>Confirmation de réservation</td><td>Création avec e-mail connu, ou acceptation d'une demande</td><td>Récapitulatif complet, adresse, téléphone, conditions d'annulation</td></tr>
+<tr><td>Accusé de demande</td><td>Réservation créée en <code>en_attente</code> par le widget</td><td>« Ce n'est pas encore une réservation »</td></tr>
+<tr><td>Refus d'une demande</td><td>Action « ✗ » sur une demande</td><td>Message de refus</td></tr>
+<tr><td>Rappel</td><td><code>rappel_actif</code>, à <code>rappel_delai_h</code> avant le début</td><td>Rappel de la réservation, avec possibilité de confirmer. Remplit <code>rappel_envoye_le</code></td></tr>
+<tr><td>Fermeture exceptionnelle</td><td>Fermeture d'un jour portant des réservations</td><td><code>message_client</code>, pré-rédigé et modifiable</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>NOTIF-01</b><div><strong>Aucune popup de confirmation sur un geste conséquent.</strong> L'envoi est <strong>différé de 8 secondes</strong> et un bandeau propose « Annuler ».</div></div>
+<div class="rg"><b>NOTIF-02</b><div><strong>L'effet local est immédiat</strong> : la table est réservée, le statut change. Seul le message attend.</div></div>
+<div class="rg"><b>NOTIF-03</b><div>Le bandeau différé couvre : accepter, refuser, marquer un no-show, envoyer une confirmation, envoyer les messages de fermeture — depuis la fiche, la colonne Action ou l'Accueil.</div></div>
+<div class="rg"><b>NOTIF-04</b><div>Quand plusieurs messages partent ensemble, <strong>le bandeau dit le compte</strong> : « 3 messages partent dans 8 s ».</div></div>
+<div class="rg"><b>NOTIF-05</b><div>La popup de raisons d'un dépôt <code>~✓</code> <strong>n'est pas concernée</strong> : elle informe, elle ne demande pas confirmation.</div></div>
+<div class="rg"><b>NOTIF-06</b><div><code>notes_internes</code>, <code>motif</code> et <code>motif_detail</code> <strong>ne figurent dans aucun message sortant</strong>, jamais.</div></div>
+<div class="rg"><b>NOTIF-07</b><div>Tout envoi s'inscrit au journal de la réservation avec l'auteur <em>système</em>.</div></div>
+</div>
+
+<h2 id="sec-16"><span class="hn">16</span>Données personnelles et conservation</h2>
+
+<p>Le restaurateur est <strong>responsable de traitement</strong> du fichier client ; TableUp est <strong>sous-traitant</strong>. Ces règles s'appliquent dès la V1.</p>
+
+<div class="rules">
+<span class="rules-t">Accès</span>
+<div class="rg"><b>RGPD-01</b><div><strong>Aucun compte TableUp n'accède au fichier client d'un restaurant.</strong> Le fichier vit dans l'instance du restaurateur.</div></div>
+<div class="rg"><b>RGPD-02</b><div>À l'inverse, <strong>tous les rôles du restaurant y accèdent</strong> : allergies, téléphone, notes internes et compteurs sont visibles par Service comme par Administrateur.</div></div>
+<div class="rg"><b>RGPD-03</b><div>Toute requête est filtrée par <code>restaurant_id</code>. Aucune donnée ne traverse la frontière d'un tenant.</div></div>
+</div>
+
+<div class="rules">
+<span class="rules-t">Allergies — donnée de santé (art. 9)</span>
+<div class="rg"><b>RGPD-04</b><div>Le champ <code>allergies</code> est une <strong>donnée de santé</strong>. Il est <strong>toujours facultatif</strong>, jamais requis pour réserver.</div></div>
+<div class="rg"><b>RGPD-05</b><div>Sa <strong>finalité est affichée</strong> au point de saisie : « transmises en cuisine ».</div></div>
+<div class="rg"><b>RGPD-06</b><div>Elle est <strong>purgée avec la fiche client</strong>, comme le reste des identifiants.</div></div>
+<div class="rg"><b>RGPD-07</b><div>Elle ne figure dans <strong>aucun message sortant</strong> et n'est jamais pré-remplie côté client.</div></div>
+</div>
+
+<div class="rules">
+<span class="rules-t">Conservation</span>
+<div class="rg"><b>RGPD-08</b><div><strong>Purge automatique 3 ans après le dernier contact</strong> — dernière réservation ou dernier échange. La fiche est <strong>anonymisée</strong>, allergies comprises.</div></div>
+<div class="rg"><b>RGPD-09</b><div><strong>Effacer, c'est anonymiser, jamais supprimer.</strong> Nom, e-mail, téléphone, allergies, notes internes et tags sont effacés ; <code>anonymise_le</code> est horodaté.</div></div>
+<div class="rg"><b>RGPD-10</b><div><strong>Les réservations anonymisées sont conservées définitivement</strong>, avec leurs dates, leurs couverts, leurs statuts et leur table. Les comptes du restaurant restent justes.</div></div>
+<div class="rg"><b>RGPD-11</b><div>Le journal d'événements est conservé : c'est lui qui rend le compteur de no-show défendable devant un client.</div></div>
+<div class="rg"><b>RGPD-12</b><div>L'export CSV des clients est réservé à l'administrateur.</div></div>
+</div>
+
+<div class="hors">
+  <b>PRÉVU, MAIS PAS EN V1</b>
+  <p><strong>Effacement déclenché depuis l'application cliente.</strong> Un client pourra demander l'anonymisation de ses données chez tous les restaurants réservés via TableUp. Cela suppose l'application cliente et le canal central : <span class="vch vch-x">V3</span></p>
+  <p>La réponse à une telle demande est <strong>identique qu'il existe des données ou non</strong> — la même règle de confidentialité que le widget (RG WID-08).</p>
+</div>
+
+<h2 id="sec-17"><span class="hn">17</span>Contraintes techniques de la V1</h2>
+
+<p>Cinq décisions coûtent peu aujourd'hui et se paient en réécriture si elles sont prises trop tard. Elles ne changent rien de visible, mais conditionnent les versions suivantes.</p>
+
+<div class="tw"><table><thead><tr><th>À faire dès la V1</th><th>Forme</th></tr></thead><tbody>
+<tr><td><strong>Le moteur de disponibilité est une fonction pure isolée</strong></td><td>Aucune dépendance au contexte HTTP ni au <code>DbContext</code>. Il doit pouvoir tourner dans un test, dans le tenant, ou ailleurs</td></tr>
+<tr><td><strong>La projection matérialisée existe</strong></td><td><code>(date, créneau, couverts) → libre / serré / complet</code>, recalculée à chaque écriture qui touche l'occupation. C'est ce qui rend la bande d'heures instantanée</td></tr>
+<tr><td><strong><code>restaurant_id</code> sur chaque ligne</strong></td><td>Sans discriminant, un tenant ne s'extrait pas de la base</td></tr>
+<tr><td><strong>Un numéro de version d'API dans l'en-tête</strong></td><td>Ajouter du versionnement à une API déployée coûte une génération de clients</td></tr>
+<tr><td><strong>Aucune supposition de connexion entrante</strong></td><td>Aucun appel entrant vers l'instance d'un restaurateur ne doit être écrit</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<div class="rg"><b>TECH-01</b><div><strong>Multi-tenant dès le départ</strong> : un tenant = un restaurant, même s'il n'y en a qu'un au début.</div></div>
+<div class="rg"><b>TECH-02</b><div>Les horaires de service sont exprimés en <strong>heure locale du restaurant</strong> (<code>Restaurant.fuseau</code>) ; <code>Reservation.debut</code> est stocké en <strong>UTC</strong> ; <code>jour_service</code> est une <strong>date locale</strong>. Les changements d'heure doivent être gérés.</div></div>
+<div class="rg"><b>TECH-03</b><div>Cibles d'affichage : <strong>tablette (Surface Pro 7) et bureau</strong>. Le téléphone est hors périmètre pour le back-office, obligatoire pour le widget.</div></div>
+<div class="rg"><b>TECH-04</b><div>Une couche de services propre est prévue dès la V1 pour accueillir les intégrations POS, Google et marketplaces des versions suivantes.</div></div>
+</div>
+
+<h2 id="sec-A"><span class="hn anx">A</span>Identité visuelle</h2>
+
+<p>Interface beige, plan en ardoise, numéros de table à la craie. <strong>La craie ne touche jamais une donnée qu'on lit vite</strong> : heures, couverts et noms de clients restent en Exo 2.</p>
+
+<figure class="fig" id="fig-21">
+  <div class="fig-n">Figure 21 · §A</div>
+  <figcaption class="fig-cap">La palette. <b>L'orange est le seul accent, et il ne code jamais un statut</b> — il signale la sélection, l'élément actif, l'action.</figcaption>
+  <div class="swatches">
+    <div class="sw"><span style="background:#EDE8E2" class="sw-c sw-d">#EDE8E2</span><b>Fond application</b></div>
+    <div class="sw"><span style="background:#FBFAF8" class="sw-c sw-d">#FBFAF8</span><b>Surfaces</b></div>
+    <div class="sw"><span style="background:#DFD9D1" class="sw-c sw-d">#DFD9D1</span><b>Bordures</b></div>
+    <div class="sw"><span style="background:#3A3A38" class="sw-c sw-l">#3A3A38</span><b>Texte principal</b></div>
+    <div class="sw"><span style="background:#9A968F" class="sw-c sw-l">#9A968F</span><b>Texte secondaire</b></div>
+    <div class="sw"><span style="background:#F5A04A" class="sw-c sw-d">#F5A04A</span><b>Orange — interaction</b></div>
+    <div class="sw"><span style="background:#2E2A26" class="sw-c sw-l">#2E2A26</span><b>Plan (ardoise)</b></div>
+    <div class="sw"><span style="background:#B6AC9C" class="sw-c sw-d">#B6AC9C</span><b>Craie</b></div>
+  </div>
+</figure>
+
+<div class="tw"><table><thead><tr><th>Statut de table</th><th>Fond</th><th>Contour</th><th>Texte</th><th>Forme du trait</th></tr></thead><tbody>
+<tr><td>Libre</td><td><code>rgba(255,255,255,.05)</code></td><td><code>#6A6055</code></td><td><code>#C9BFB0</code></td><td>plein</td></tr>
+<tr><td>Réservée</td><td><code>rgba(120,190,230,.16)</code></td><td><code>#6FA8CC</code></td><td><code>#A8D5F0</code></td><td>plein</td></tr>
+<tr><td>Occupée</td><td><code>rgba(230,120,95,.20)</code></td><td><code>#D9765C</code></td><td><code>#F2A48E</code></td><td>plein</td></tr>
+<tr><td>À nettoyer</td><td><code>rgba(230,200,90,.14)</code></td><td><code>#C9AC52</code></td><td><code>#E3CE86</code></td><td><strong>pointillé</strong></td></tr>
+<tr><td>En retard</td><td><em>fond « réservée »</em></td><td>+ anneau <code>#D9765C</code> 2 px</td><td>—</td><td>plein</td></tr>
+</tbody></table></div>
+
+<div class="tw"><table><thead><tr><th>Aide au placement</th><th>Halo</th><th>Badge</th></tr></thead><tbody>
+<tr><td>Parfaite</td><td><code>#5FBF7A</code>, 3 px</td><td><code>✓</code> vert plein</td></tr>
+<tr><td>Possible, à réserve</td><td><code>#B3BE4E</code>, 3 px</td><td><code>~✓</code> vert-jaune</td></tr>
+<tr><td>Réservations en attente sur un créneau</td><td>—</td><td><code>!</code> violet <code>#5B4A8A</code></td></tr>
+</tbody></table></div>
+
+<div class="tw"><table><thead><tr><th>Rôle typographique</th><th>Police</th></tr></thead><tbody>
+<tr><td>Horloge, chiffres</td><td>Exo 2 · 700</td></tr>
+<tr><td>Courant</td><td>Exo 2 · 600</td></tr>
+<tr><td>Secondaire</td><td>Exo 2 · italique 300–400, gris</td></tr>
+<tr><td>Numéros de table, noms de zone</td><td>Caveat · 600–700</td></tr>
+</tbody></table></div>
+
+<div class="rules">
+<span class="rules-t">Règles de gestion</span>
+<div class="rg"><b>UI-01</b><div><strong>L'orange ne code jamais un statut.</strong></div></div>
+<div class="rg"><b>UI-02</b><div><strong>Deux états ne se distinguent jamais par la teinte seule</strong> : toujours couleur + forme (trait plein / pointillé / barré / hachures).</div></div>
+<div class="rg"><b>UI-03</b><div>Icônes : <strong>SVG dessinés, jamais d'emoji</strong>.</div></div>
+<div class="rg"><b>UI-04</b><div><strong>La couleur porte l'alerte, le dessin porte le sujet.</strong> Allergie = un couvert, blanc sur corail.</div></div>
+<div class="rg"><b>UI-05</b><div>La légende des statuts est <strong>affichée en permanence</strong> sous le plan, jamais dans une aide.</div></div>
+</div>
+
+<h2 id="sec-B"><span class="hn anx">B</span>Fonctionnalités identifiées, non spécifiées</h2>
+
+<p>Issues du cahier des charges. Elles sont <strong>nommées, pas conçues</strong> : aucune n'a de règle de gestion arrêtée à ce jour.</p>
+
+<div class="tw"><table><thead><tr><th>Fonctionnalité</th><th>Contenu identifié</th><th>Cible</th></tr></thead><tbody>
+<tr><td><strong>Liste d'attente</strong></td><td>Ajout de clients en attente avec taille de groupe, lien vers une table libérée, notification quand la table est prête. Le formulaire de création réserve l'emplacement d'un troisième bouton</td><td><span class="vch">V1.1</span></td></tr>
+<tr><td><strong>Pacing avancé</strong></td><td>Limitation de couverts par créneau et par service, blocage automatique au-delà. À concilier avec la règle « la disponibilité se résout sur les tables »</td><td><span class="vch">V1.1</span></td></tr>
+<tr><td><strong>Analytics</strong></td><td>Couverts par jour / semaine / mois, taux d'occupation par service, nombre et taux de no-shows, répartition par canal</td><td><span class="vch">V1.1</span></td></tr>
+<tr><td><strong>Exports</strong></td><td>Export des réservations sur une période, export des statistiques agrégées. <em>L'export des clients existe en V1</em></td><td><span class="vch">V1.1</span></td></tr>
+<tr><td><strong>Intégration POS légère</strong></td><td>État « payée / libérée » par table, hooks internes pour recevoir un changement d'état depuis un POS, mapping des tables POS ↔ TableUp</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Paiement et empreinte CB</strong></td><td>Dépôt configurable par politique (grands groupes, jours spéciaux), montant par couvert ou forfait, délais d'annulation gratuits, intégration PSP et webhooks</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Intégrations externes</strong></td><td>Google Reserve, connecteurs marketplaces activables par canal avec taguage des réservations</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Marketing et fidélisation</strong></td><td>Campagnes e-mail / SMS filtrées par fréquence, canal ou tag ; programmes de fidélité. <em>Exige un consentement marketing distinct de la réservation</em></td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Intelligence</strong></td><td>Allocation automatique des tables, score de risque no-show, suggestions de pacing par saison</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Menu — niveau 1</strong></td><td>Affichage du menu sur le site, tag des allergènes, modification du menu, disponibilité des plats en temps réel</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Menu — niveau 2</strong></td><td>Prise de commande depuis le menu, QR code affilié à une table, paiement en ligne ou en caisse, paramétrage des préférences du restaurateur</td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Vérificateur de QR code</strong></td><td>Petit outil de contrôle des liens de QR codes scannés, contre le <em>quishing</em></td><td><span class="vch vch-x">V2</span></td></tr>
+<tr><td><strong>Import de clients</strong></td><td>Reprise d'un fichier existant. Contourne la règle « le téléphone est la clé » : écran d'import et déduplication à concevoir</td><td><span class="vch vch-x">—</span></td></tr>
+<tr><td><strong>Note de service imprimable</strong></td><td>Briefing d'équipe avant le service : allergies, tablées, VIP du soir, sur un document lisible d'un coup</td><td><span class="vch vch-x">—</span></td></tr>
+</tbody></table></div>
+
+<h2 id="sec-C"><span class="hn anx">C</span>Points à trancher avant l'implémentation</h2>
+
+<div class="tw"><table><thead><tr><th>Sujet</th><th>Ce qui reste à décider</th></tr></thead><tbody>
+<tr><td>Coût de la bande d'heures</td><td>Tester chaque créneau contre l'occupation et les rapprochements possibles à chaque frappe. C'est ce que la projection matérialisée (§17) doit résoudre — son format exact n'est pas arrêté</td></tr>
+<tr><td>Pas des créneaux dans la bande</td><td>La bande affiche des demi-heures. Un service au quart d'heure la rend deux fois plus longue</td></tr>
+<tr><td>Seuil du ratio no-show</td><td>À partir de quel rapport <code>2 / 41</code> passe-t-il en corail plein ? Un seuil absolu punit le nouveau client, un seuil relatif le rare visiteur</td></tr>
+<tr><td>Zoom et déplacement du plan</td><td>Nécessaire pour les grandes salles sur tablette, en service comme dans l'éditeur. Mécanique non conçue</td></tr>
+<tr><td>Hauteur de l'agenda</td><td>Au-delà d'une vingtaine de tables, les lignes ne tiennent plus. Défilement vertical présumé, non conçu</td></tr>
+<tr><td>Agenda et salles</td><td>Les onglets de salle filtrent-ils l'agenda, ou l'agenda montre-t-il toutes les salles groupées ?</td></tr>
+<tr><td>Rapprochements en chaîne</td><td>Le modèle supporte <code>12-13-14</code>. L'ergonomie de création à trois tables ou plus n'est pas dessinée</td></tr>
+<tr><td>File d'envoi différé</td><td>Comportement si l'application est fermée pendant les 8 secondes</td></tr>
+<tr><td>Écran de modification d'une réservation</td><td>Le comportement est défini (RG FICHE-06), l'écran ne l'est pas</td></tr>
+<tr><td>Retour après « Placer » depuis la liste</td><td>L'action bascule vers la vue Plan. Le retour vers la liste n'est pas conçu</td></tr>
+<tr><td>Prévision de départ non tenue</td><td>Ce que fait le logiciel quand le départ attendu n'a pas lieu — prévenir ? proposer une autre table ?</td></tr>
+<tr><td>Deux demandes sur le même créneau serré</td><td>Le comportement métier est arrêté (RG RES-03) ; l'affichage de ce cas ne l'est pas</td></tr>
+<tr><td>Réservation à cheval sur deux services</td><td>Un déjeuner tardif qui déborde sur le dîner n'a pas de comportement défini</td></tr>
+<tr><td>Correction d'une clôture automatique</td><td>« Corriger les heures » est proposé ; l'écran de saisie n'est pas dessiné</td></tr>
+<tr><td>Recomptage nocturne</td><td>Fréquence et coût sur une grosse base non évalués</td></tr>
+<tr><td>Texte proposé des conditions d'annulation</td><td>La rédaction exacte n'est pas écrite, et elle engage le restaurant</td></tr>
+<tr><td>Nombre d'allergies par service</td><td>Repli au-delà de trois derrière « +3 autres ». Seuil posé au jugé</td></tr>
+<tr><td>Formats du fond de plan</td><td>Une image est acceptée. PDF multi-pages ou plan vectoriel demanderaient une conversion</td></tr>
+<tr><td>Rendu sur Surface Pro 7</td><td>Lisibilité du halo vert-jaune sur une table « à nettoyer » (deux jaunes voisins), et lisibilité générale à trois mètres</td></tr>
+<tr><td>Statistiques de fermeture</td><td><code>motif</code> est prévu pour alimenter un « combien de soirs perdus, et pourquoi ». L'écran n'existe pas</td></tr>
+<tr><td>Fichier <code>TableUp.fig</code></td><td>Jamais ouvert. Son contenu n'a été ni lu ni pris en compte</td></tr>
+</tbody></table></div>
+
+<p class="note" style="margin-top:26px"><b>Écarté définitivement.</b> Le partage d'une table entre deux réservations : les tables virtuelles rendent le besoin caduc — la granularité réservable est l'entité, pas la place. Le tag « fidèle » calculé : les tags restent manuels. Le seuil de couverts déclenchant une validation manuelle : la disponibilité se lit sur les tables.</p>
+
+  </div>
+</main>
+
+<script>
+(function(){
+  var links={}; document.querySelectorAll('.nv').forEach(function(a){links[a.getAttribute('href').slice(1)]=a;});
+  var o=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      var a=links[e.target.id]; if(!a||!e.isIntersecting) return;
+      Object.keys(links).forEach(function(k){links[k].classList.remove('on');});
+      a.classList.add('on');
+      if(a.offsetTop<a.parentNode.scrollTop||a.offsetTop>a.parentNode.scrollTop+a.parentNode.clientHeight-40)
+        a.parentNode.scrollTop=a.offsetTop-120;
+    });
+  },{rootMargin:'-8% 0px -78% 0px'});
+  document.querySelectorAll('h2[id],h3[id]').forEach(function(h){o.observe(h);});
+})();
+</script>
+</body>
+</html>
