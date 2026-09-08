@@ -1,0 +1,5 @@
+TURO     : Table UP Restaurant Owner -> onlinerestaurant.tableup.fr / myrestaurant.tableup.fr
+TUApp    : Table UP Application      -> 
+TUAppApi : Table UP Application      -> app.tableup.fr
+TUC      : Table UP Cloud            -> cloud.tableup.fr
+TUM      : Table UP Manager          -> restaurant.tableup.fr
