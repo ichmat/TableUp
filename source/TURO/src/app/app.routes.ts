@@ -3,7 +3,7 @@ import { HomeComponent } from './features/home-component/home-component';
 import { ServiceComponent } from './features/service-component/service-component';
 import { BookingComponent } from './features/booking-component/booking-component';
 import { ClientsComponent } from './features/clients-component/clients-component';
-import { SettingsComponent } from './features/settings-component/settings-component';
+import { SettingsComponent } from './features/settings/settings-component/settings-component';
 
 export const routes: Routes = [
     {path: "", component: HomeComponent},

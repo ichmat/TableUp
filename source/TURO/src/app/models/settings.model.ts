@@ -1,0 +1,1 @@
+export type SettingsPages = 'Openings' | 'Services & time slots' | 'Room & tables' | 'Placement'

@@ -1,0 +1,23 @@
+<div class="flex flex-row h-full w-full gap-3">
+    <!-- PARAMÈTRES -->
+    <div class="flex flex-col
+    w-72 h-full bg-surface rounded-xl shadow-xl p-2 px-3 gap-1
+    
+    [&>div]:text-lg [&>div]:rounded-lg [&>div]:p-2 [&>div]:px-3 [&>div]:cursor-pointer [&>div]:hover:bg-app [&>div]:hover:text-black">
+        <p class="font-black text-text-muted text-sm m-2">PARAMÈTRES</p>
+        
+        <div [class]="isActive('Openings')" (click)="changeSettingPage('Openings')">
+            <p>Ouvertures</p></div>
+        <div [class]="isActive('Services & time slots')" (click)="changeSettingPage('Services & time slots')">
+            <p>Services et créneaux</p></div>
+        <div [class]="isActive('Room & tables')" (click)="changeSettingPage('Room & tables')">
+            <p>Salle et tables</p></div>
+        <div [class]="isActive('Placement')" (click)="changeSettingPage('Placement')">
+            <p>Placement</p></div>
+    </div>
+
+    <!-- FENÊTRES -->
+    <div class="flex flex-col h-full w-full bg-surface rounded-xl shadow-xl p-2 px-3">
+
+    </div>
+</div>

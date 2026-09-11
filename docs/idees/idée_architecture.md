@@ -8,7 +8,7 @@ L'objectif à **long terme** de tableUp c'est de posséder :
 
 ## Idées 
 
-![](images\architecture.png)
+![](/images/architecture.png)
 
 Je verrais bien plusieurs instances : 
 - *app.tableup.fr* : serveur web et api pour les utilisateurs clients TableUp
@@ -33,7 +33,7 @@ L'instance du serveur restaurateur est hébergé chez le restaurateur lui-même
 - ⛔ Cela demande une installation physique supplémentaire
 - ⛔ Impossibilité d'accéder à l'application en dehors du réseau du restaurateur
 
-![](images\architecture_local.png)
+![](/images/architecture_local.png)
 
 **Version Hébergé** : 
 
@@ -45,13 +45,13 @@ L'instance du serveur restaurateur est hébergé chez TableUP
 - ⛔ Non accessible si plus de réseau chez le restaurateur
 - ⛔ Plus de charge côté serveurs TableUP
 
-![](images\architecture_heberge.png)
+![](/images/architecture_heberge.png)
 
 ### Redis
 
 Utilisation de Redis pour *app.tableup.fr*
 
-![Utilisation Redis](images\idee_redis.png)
+![Utilisation Redis](/images/idee_redis.png)
 
 ### SSO
 
@@ -59,11 +59,11 @@ Utilisation de Redis pour *app.tableup.fr*
 
 Mise en place d'un service SSO Général pour gérer tout les connexions dans TableUP
 
-![](images\idee_sso_global.png)
+![](/images/idee_sso_global.png)
 
 **Double SSO** : 
 
 - Un service SSO pour les activités clientes : pc, tablette restaurateur, client.
 - Un autre pour les connexions machines : instance restaurateur, cloud, serveur central
 
-![](images\idee_2_sso.png)
+![](/images/idee_2_sso.png)
