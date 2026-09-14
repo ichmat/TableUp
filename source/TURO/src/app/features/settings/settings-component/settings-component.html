@@ -18,6 +18,10 @@
 
     <!-- FENÊTRES -->
     <div class="flex flex-col h-full w-full bg-surface rounded-xl shadow-xl p-2 px-3">
-
+        @switch (currentSetting) {
+            @case('Openings'){
+                <app-openings-component/>
+            }
+        }
     </div>
 </div>

@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 import { SettingsPages } from '../../../models/settings.model';
+import { OpeningsComponent } from '../openings-component/openings-component';
 
 @Component({
-  imports: [],
+  imports: [OpeningsComponent],
   selector: 'app-settings-component',
   templateUrl: './settings-component.html',
   styles:``
