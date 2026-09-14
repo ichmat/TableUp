@@ -1,0 +1,43 @@
+<div class="bg-app w-64 shadow-xl flex flex-col flex-nowrap rounded-md p-3 h-72">
+    <div class="flex flex-row flex-nowrap">
+        <p class="font-bold text-text-muted tracking-[0.10rem] grow ">XX-XX</p>
+        <button (click)="setToNow()" class="text-interactive font-bold">NOW</button>
+    </div>
+    <div class="flex flex-row flex-nowrap mt-1
+            [&>p]:grow [&>p]:text-center ">
+        <p>Heure</p>
+        <p>Minute</p>
+    </div>
+    <div class="grow flex flex-row flex-nowrap overflow-hidden">
+        <div class="w-1/2 flex flex-col flex-nowrap text-center">
+            <div class="h-[calc(50%-0.5rem)]  overflow-hidden flex flex-col-reverse">
+                @for (ch of this.hours.filter(h => h < this.currentHour).reverse(); track $index) {
+                    <p>{{ this.twoDigitNumber(ch.toString()) }}</p>
+                }
+            </div>
+            <div class="h-6 shrink-0 bg-amber-400"><p>{{ this.currentHour}}</p></div>
+            <div class="h-[calc(50%-0.5rem)] shrink-0  overflow-hidden">
+                @for (ch of this.hours.filter(h => h > this.currentHour); track $index) {
+                    <p>{{ this.twoDigitNumber(ch.toString()) }}</p>
+                }
+            </div>
+        </div>
+        <div class=" w-1/2 flex flex-col flex-nowrap text-center">
+            <div class="h-[calc(50%-0.5rem)]  overflow-hidden flex flex-col-reverse">
+                @for (ch of this.allMinutes().filter(m => m < this.currentMin).reverse(); track $index) {
+                    <p>{{ this.twoDigitNumber(ch.toString()) }}</p>
+                }
+            </div>
+            <div class="h-6 shrink-0 bg-amber-400"><p>{{ this.currentMin}}</p></div>
+            <div class="h-[calc(50%-0.5rem)] shrink-0 overflow-hidden">
+                @for (cm of this.allMinutes().filter(m => m > this.currentMin); track $index) {
+                    <p>{{ this.twoDigitNumber(cm.toString()) }}</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-row flex-nowrap">
+        <app-button class="grow" buttonClass="bg-app w-full h-10" type="Secondary" text="Valider"></app-button>
+        <app-button class="grow" buttonClass="bg-app w-full border-0 h-10" type="Tertiary" text="Anuler"></app-button>
+    </div>
+</div>

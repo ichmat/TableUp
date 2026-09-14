@@ -1,0 +1,37 @@
+<div [class]="wrapperClass()" (click)="displayPicker()" >
+    <hugeicons-icon
+        [icon]="clock"
+        [size]="24"
+        color="currentColor"
+        [strokeWidth]="1.5"
+        class="cursor-pointer hover:brightness-125"
+        (click)="displayPicker()"
+        />
+
+    <input
+        #inputHour
+        placeholder="--" 
+        max="23"
+        min="0"
+        type="number"
+        class="w-6 text-center focus:bg-interactive"
+        (change)="hourChange()"
+        (focus)="selectAllOnFocus($event)"
+        (keyup.enter)="onEnterKey(true)"
+        />
+
+    <p class="font-black -mx-1">:</p>
+
+    <input
+        #inputMin
+        placeholder="--" 
+        max="59"
+        min="0"
+        type="number"
+        class="w-6 text-center focus:bg-interactive"
+        (change)="minChange()"
+        (focus)="selectAllOnFocus($event)"
+        (keyup.enter)="onEnterKey(false)"
+        />
+</div>
+

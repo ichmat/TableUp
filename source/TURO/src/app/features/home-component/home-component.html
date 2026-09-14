@@ -1,1 +1,12 @@
-<p>home-component works!</p>
+<div class="h-full w-full bg-surface flex flex-col gap-4">
+
+    <app-button text="test"></app-button>
+    <app-input [(value)]="inputVal" type="number" [icon]="user" [iconClickable]="true"></app-input>
+    <p> {{ inputVal }}</p>
+    <app-time-input [(timeValueString)]="timeValue"></app-time-input>
+    
+    <p>{{ timeValue }}</p>
+
+    <app-time-picker></app-time-picker>
+</div>
+

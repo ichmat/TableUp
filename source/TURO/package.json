@@ -10,6 +10,7 @@
   },
   "private": true,
   "dependencies": {
+    "@angular/aria": "^22.1.6",
     "@angular/common": "^22.1.6",
     "@angular/compiler": "^22.1.6",
     "@angular/core": "^22.1.6",
@@ -19,6 +20,7 @@
     "@hugeicons/angular": "^1.0.11",
     "@hugeicons/core-free-icons": "^4.3.2",
     "rxjs": "~7.8.0",
+    "tailwind-merge": "^3.7.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
