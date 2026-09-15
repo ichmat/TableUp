@@ -1,4 +1,4 @@
-<div [class]="wrapperClass()" (click)="displayPicker()" >
+<div [id]="randomId" [class]="wrapperClass()">
     <hugeicons-icon
         [icon]="clock"
         [size]="24"
@@ -34,4 +34,6 @@
         (keyup.enter)="onEnterKey(false)"
         />
 </div>
+
+<app-time-picker [idFor]="randomId" (validate)="pickerNewDate($event)" [step]="step()" />
 

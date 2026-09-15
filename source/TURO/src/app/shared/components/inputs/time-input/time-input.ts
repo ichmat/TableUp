@@ -1,12 +1,12 @@
-import { AfterViewInit, Component, computed, ElementRef, input, model, viewChild } from '@angular/core';
-import { form, validate } from '@angular/forms/signals';
+import { Component, computed, ElementRef, input, model, viewChild } from '@angular/core';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Time03Icon } from '@hugeicons/core-free-icons';
 import { twMerge } from 'tailwind-merge';
 import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
+import { TimePicker } from '../../pickers/time-picker/time-picker';
 
 @Component({
-  imports: [HugeiconsIconComponent],
+  imports: [HugeiconsIconComponent, TimePicker],
   selector: 'app-time-input',
   templateUrl: './time-input.html',
   styles: `
@@ -20,22 +20,22 @@ import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
   `
 })
 export class TimeInput {
+
   inputClass = input<string>();
-  step = input<number>();
+  step = input<number>(1);
   timeValue = model<Date>();
   timeValueString = model<string>();
 
   inputHour = viewChild.required<ElementRef<HTMLInputElement>>('inputHour');
   inputMin = viewChild.required<ElementRef<HTMLInputElement>>('inputMin');
 
-  clock = Time03Icon
+  picker = viewChild.required(TimePicker);
+
+  clock = Time03Icon;
+
+  randomId = self.crypto.randomUUID();
   
   wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none' , this.inputClass()))
-
-  // timeValueForm = form(this.timeValueInternal, (path) => {
-  //   validate(path.hour, ({value}) => value() < 0 || value() > 23 ? { kind: 'range', message: 'Heure invalide' } : null)
-  //   validate(path.minute, ({value}) => value() < 0 || value() > 59 ? { kind: 'range', message: 'Minute invalide' } : null)
-  // })
 
   ngAfterViewInit(){
     if(this.timeValueString() && this.timeValue() === undefined){
@@ -88,7 +88,19 @@ export class TimeInput {
   }
 
   displayPicker(){
-    
+    if(this.picker().isHidden){
+      this.picker().openPicker(this.timeValue() ?? new Date());
+    }else{
+      this.picker().closePicker();
+    }
+  }
+
+  pickerNewDate(newDate: Date) {
+    this.picker().closePicker();
+    this.timeValue.set(newDate);
+    this.timeValueString.set(
+        this.twoDigitNumber(newDate.getHours().toString())+':'+ this.twoDigitNumber(newDate.getMinutes().toString()))
+    this.resetInputs();
   }
 
   selectAllOnFocus(event: FocusEvent) {
