@@ -1,4 +1,5 @@
 import { afterRenderEffect, Component, computed, ElementRef, input, linkedSignal, model, viewChild } from '@angular/core';
+import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Calendar03Icon } from '@hugeicons/core-free-icons';
 import { twMerge } from 'tailwind-merge';
 import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
@@ -6,7 +7,7 @@ import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
 import { DatePicker } from '../../pickers/date-picker/date-picker';
 
 @Component({
-  imports: [ DatePicker],
+  imports: [HugeiconsIconComponent, DatePicker],
   selector: 'app-date-input',
   templateUrl: './date-input.html',
   styles: `
