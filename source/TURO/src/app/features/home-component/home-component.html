@@ -7,6 +7,8 @@
     
     <p>{{ timeValue }}</p>
 
-    <app-time-picker></app-time-picker>
+    <app-date-input [(dateValue)]="dateValue" [(dateValueString)]="dateValueString"></app-date-input>
+
+    <p>{{ dateValue?.toLocaleDateString() }} | {{ dateValueString }}</p>
 </div>
 

@@ -1,0 +1,36 @@
+<div [class]="isHidden ? 'hidden' : 'flex'" class="bg-app w-72 shadow-xl flex-col flex-nowrap rounded-md p-3 fixed z-50"
+    [style.top.px]="position().top" [style.left.px]="position().left">
+    <div class="flex flex-row flex-nowrap">
+        <p class="font-bold text-text-muted tracking-[0.10rem] grow">
+            {{ currentDateLabel() }}
+        </p>
+        <button (click)="setToToday()" class="text-interactive font-bold cursor-pointer">AUJOURD'HUI</button>
+    </div>
+    <!-- MOIS AFFICHÉ -->
+    <div class="flex flex-row flex-nowrap items-center mt-1">
+        <button (click)="changeMonth(-1)" aria-label="Mois précédent" class="p-1 rounded-md cursor-pointer hover:bg-interactive">
+            <hugeicons-icon [icon]="arrowLeft" [size]="20" color="currentColor" [strokeWidth]="1.5" />
+        </button>
+        <p class="grow text-center">{{ monthLabel() }}</p>
+        <button (click)="changeMonth(1)" aria-label="Mois suivant" class="p-1 rounded-md cursor-pointer hover:bg-interactive">
+            <hugeicons-icon [icon]="arrowRight" [size]="20" color="currentColor" [strokeWidth]="1.5" />
+        </button>
+    </div>
+    <div class="grid grid-cols-7 mt-1 text-center text-sm font-bold text-text-muted">
+        @for (wd of weekDays; track $index) {
+            <p>{{ wd }}</p>
+        }
+    </div>
+    <!-- JOURS -->
+    <div (wheel)="onScroll($event)"
+        (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel()"
+        class="grid grid-cols-7 gap-y-0.5 text-center touch-none">
+        @for (day of days(); track day.date.getTime()) {
+            <p (click)="setDate(day.date)" [class]="day.class">{{ day.date.getDate() }}</p>
+        }
+    </div>
+    <div class="flex flex-row flex-nowrap mt-2">
+        <app-button (click)="onValidate()" class="grow" buttonClass="bg-app w-full h-10" type="Secondary" text="Valider"></app-button>
+        <app-button (click)="onCancel()" class="grow" buttonClass="bg-app w-full border-0 h-10" type="Tertiary" text="Annuler"></app-button>
+    </div>
+</div>
