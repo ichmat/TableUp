@@ -3,6 +3,9 @@
 .claude/
 .superpowers/
 
+# Secrets locaux (voir source/TURO/.env.example)
+.env
+
 ### TURO
 
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.

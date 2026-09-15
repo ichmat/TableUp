@@ -1,0 +1,29 @@
+# Artefacts de build et dépendances : toujours reconstruits dans l'image
+**/node_modules
+**/dist
+**/.angular
+**/bin
+**/obj
+**/publish
+
+# Outils et IDE
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/.git
+**/.gitignore
+
+# Secrets
+**/.env
+**/.env.*
+**/secrets.json
+
+# Fichiers Docker eux-mêmes
+**/Dockerfile*
+**/.dockerignore
+**/compose*.yaml
+**/docker-compose*
+
+**/*.log
+**/coverage
