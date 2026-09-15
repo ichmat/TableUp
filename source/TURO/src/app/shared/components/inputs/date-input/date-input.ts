@@ -1,12 +1,12 @@
 import { afterRenderEffect, Component, computed, ElementRef, input, linkedSignal, model, viewChild } from '@angular/core';
-import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Calendar03Icon } from '@hugeicons/core-free-icons';
 import { twMerge } from 'tailwind-merge';
+import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
 import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
 import { DatePicker } from '../../pickers/date-picker/date-picker';
 
 @Component({
-  imports: [HugeiconsIconComponent, DatePicker],
+  imports: [ DatePicker],
   selector: 'app-date-input',
   templateUrl: './date-input.html',
   styles: `
@@ -34,6 +34,8 @@ export class DateInput {
   picker = viewChild.required(DatePicker);
 
   calendar = Calendar03Icon;
+  readonly minYear = MIN_YEAR;
+  readonly maxYear = MAX_YEAR;
 
   randomId = self.crypto.randomUUID();
 
@@ -172,6 +174,3 @@ function setInputValue(input: HTMLInputElement, value: string){
     input.value = value;
   }
 }
-
-const MIN_YEAR = 1900;
-const MAX_YEAR = 2100;

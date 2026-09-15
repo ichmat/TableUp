@@ -39,8 +39,8 @@
     <input
         #inputYear
         placeholder="----"
-        max="2100"
-        min="1900"
+        [max]="maxYear"
+        [min]="minYear"
         type="number"
         class="w-10 text-center focus:bg-interactive"
         (change)="triggerChangeDateValue($event)"
