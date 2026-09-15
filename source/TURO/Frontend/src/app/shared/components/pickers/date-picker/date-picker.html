@@ -1,0 +1,93 @@
+<div [class]="isHidden ? 'hidden' : 'flex'" class="bg-app w-72 shadow-xl flex-col flex-nowrap rounded-md p-3 fixed z-50"
+    [style.top.px]="position().top" [style.left.px]="position().left">
+    <div class="flex flex-row flex-nowrap">
+        <p class="font-bold text-text-muted tracking-[0.10rem] grow">
+            {{ currentDateLabel() }}
+        </p>
+        <button (click)="setToToday()" class="text-interactive font-bold cursor-pointer">AUJOURD'HUI</button>
+    </div>
+    <!-- MOIS AFFICHÉ -->
+    <div class="flex flex-row flex-nowrap items-center mt-1">
+        <button (click)="changeMonth(-1)" aria-label="Mois précédent" class="p-1 rounded-md cursor-pointer hover:bg-interactive">
+            <hugeicons-icon [icon]="arrowLeft" [size]="20" color="currentColor" [strokeWidth]="1.5" />
+        </button>
+        <div [class]="view() === 'months' ? 'font-bold' : ''" class="grow flex flex-row flex-nowrap justify-center
+                [&>button]:px-1 [&>button]:rounded-md [&>button]:cursor-pointer [&>button]:hover:bg-interactive">
+            <button (click)="toggleMonthsView()">{{ months[displayedMonth().getMonth()] }}</button>
+            <button (click)="toggleMonthsView()">{{ displayedMonth().getFullYear() }}</button>
+        </div>
+        <button (click)="changeMonth(1)" aria-label="Mois suivant" class="p-1 rounded-md cursor-pointer hover:bg-interactive">
+            <hugeicons-icon [icon]="arrowRight" [size]="20" color="currentColor" [strokeWidth]="1.5" />
+        </button>
+    </div>
+    <div class="relative">
+        <!-- Le calendrier reste en place (invisible) sous la vue des mois pour conserver la hauteur du picker -->
+        <div [class]="view() === 'months' ? 'invisible' : ''">
+            <div class="grid grid-cols-7 mt-1 text-center text-sm font-bold text-text-muted">
+                @for (wd of weekDays; track $index) {
+                    <p>{{ wd }}</p>
+                }
+            </div>
+            <!-- JOURS -->
+            <div (wheel)="onScroll($event)"
+                (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel()"
+                class="grid grid-cols-7 gap-y-0.5 text-center touch-none">
+                @for (day of days(); track $index) {
+                    <p (click)="setDate(day.date)" [class]="day.class">{{ day.date.getDate() }}</p>
+                }
+            </div>
+        </div>
+
+        @if (view() === 'months') {
+            <div class="absolute inset-0 flex flex-col flex-nowrap">
+                <div class="flex flex-row flex-nowrap mt-1
+                        [&>p]:grow [&>p]:text-center ">
+                    <p>Mois</p>
+                    <p>Année</p>
+                </div>
+                <div class="grow flex flex-row flex-nowrap overflow-hidden">
+                    <!-- MOIS -->
+                    <div (wheel)="onColumnScroll($event, 'month')"
+                        (touchstart)="onColumnTouchStart($event)" (touchmove)="onColumnTouchMove($event, 'month')"
+                        (touchend)="onColumnTouchEnd()" (touchcancel)="onColumnTouchEnd()"
+                        class="w-1/2 flex flex-col flex-nowrap text-center touch-none">
+                        <div class="h-[calc(50%-0.75rem)] overflow-hidden flex flex-col-reverse">
+                            @for (m of monthsBefore(); track $index) {
+                                <p (click)="setMonth(m)" class="hover:bg-interactive cursor-pointer">{{ months[m] }}</p>
+                            }
+                        </div>
+                        <!-- MOIS ACTUEL -->
+                        <div class="h-6 shrink-0 bg-text-muted shadow-md rounded-l-md"><p>{{ months[displayedMonth().getMonth()] }}</p></div>
+                        <div class="h-[calc(50%-0.75rem)] shrink-0 overflow-hidden">
+                            @for (m of monthsAfter(); track $index) {
+                                <p (click)="setMonth(m)" class="hover:bg-interactive cursor-pointer">{{ months[m] }}</p>
+                            }
+                        </div>
+                    </div>
+                    <!-- ANNÉES -->
+                    <div (wheel)="onColumnScroll($event, 'year')"
+                        (touchstart)="onColumnTouchStart($event)" (touchmove)="onColumnTouchMove($event, 'year')"
+                        (touchend)="onColumnTouchEnd()" (touchcancel)="onColumnTouchEnd()"
+                        class="w-1/2 flex flex-col flex-nowrap text-center touch-none">
+                        <div class="h-[calc(50%-0.75rem)] overflow-hidden flex flex-col-reverse">
+                            @for (y of yearsBefore(); track $index) {
+                                <p (click)="setYear(y)" class="hover:bg-interactive cursor-pointer">{{ y }}</p>
+                            }
+                        </div>
+                        <!-- ANNÉE ACTUELLE -->
+                        <div class="h-6 shrink-0 bg-text-muted shadow-md rounded-r-md"><p>{{ displayedMonth().getFullYear() }}</p></div>
+                        <div class="h-[calc(50%-0.75rem)] shrink-0 overflow-hidden">
+                            @for (y of yearsAfter(); track $index) {
+                                <p (click)="setYear(y)" class="hover:bg-interactive cursor-pointer">{{ y }}</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="flex flex-row flex-nowrap mt-2">
+        <app-button (click)="onValidate()" class="grow" buttonClass="bg-app w-full h-10" type="Secondary" text="Valider"></app-button>
+        <app-button (click)="onCancel()" class="grow" buttonClass="bg-app w-full border-0 h-10" type="Tertiary" text="Annuler"></app-button>
+    </div>
+</div>

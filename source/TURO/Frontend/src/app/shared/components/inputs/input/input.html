@@ -1,0 +1,20 @@
+<div [class]="wrapperClass()" (click)="onClickParent()">
+    @if (icon() !== undefined) {
+        <hugeicons-icon
+            [icon]="icon()!"
+            [size]="24"
+            color="currentColor"
+            [strokeWidth]="1.5"
+            [class]="iconClickable() ? 'cursor-pointer hover:brightness-125' : ''"
+            (click)="iconClickable() && onIconClick.emit()"
+            />
+    }
+
+    <input
+        #myInput
+        [type]="type()"
+        class="outline-none grow w-full [&::-webkit-calendar-picker-indicator]:hidden"
+        [placeholder]="placeholder()" [value]="value()"
+        (input)="onInput($event)"
+        />
+</div>

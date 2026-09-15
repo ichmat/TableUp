@@ -1,0 +1,56 @@
+<div [class]="isHidden ? 'hidden' : 'flex'" class="bg-app w-64 shadow-xl flex-col flex-nowrap rounded-md p-3 h-72 fixed"
+    [style.top.px]="position().top" [style.left.px]="position().left">
+    <div class="flex flex-row flex-nowrap">
+        <p class="font-bold text-text-muted tracking-[0.10rem] grow ">
+            {{ this.twoDigitNumber(currentHour.toString()) }}:{{ this.twoDigitNumber(currentMin.toString()) }}
+        </p>
+        <button (click)="setToNow()" class="text-interactive font-bold cursor-pointer">NOW</button>
+    </div>
+    <div class="flex flex-row flex-nowrap mt-1
+            [&>p]:grow [&>p]:text-center ">
+        <p>Heure</p>
+        <p>Minute</p>
+    </div>
+    <div class="grow flex flex-row flex-nowrap overflow-hidden">
+        <!-- HEURE -->
+        <div (wheel)="onHourScroll($event)"
+            (touchstart)="onHourTouchStart($event)" (touchmove)="onHourTouchMove($event)"
+            (touchend)="onHourTouchEnd()" (touchcancel)="onHourTouchEnd()"
+            class="w-1/2 flex flex-col flex-nowrap text-center touch-none">
+            <div class="h-[calc(50%-0.5rem)]  overflow-hidden flex flex-col-reverse">
+                @for (ch of this.hours.filter(h => h < this.currentHour).reverse(); track $index) {
+                    <p (click)="setHour(ch)" class="hover:bg-interactive cursor-pointer">{{ this.twoDigitNumber(ch.toString()) }}</p>
+                }
+            </div>
+            <!-- HEURE ACTUEL -->
+            <div class="h-6 shrink-0 bg-text-muted shadow-md rounded-l-md"><p>{{ this.twoDigitNumber(this.currentHour.toString())}}</p></div>
+            <div class="h-[calc(50%-0.5rem)] shrink-0  overflow-hidden">
+                @for (ch of this.hours.filter(h => h > this.currentHour); track $index) {
+                    <p (click)="setHour(ch)" class="hover:bg-interactive cursor-pointer">{{ this.twoDigitNumber(ch.toString()) }}</p>
+                }
+            </div>
+        </div>
+        <!-- MINUTES -->
+        <div (wheel)="onMinScroll($event)"
+            (touchstart)="onMinTouchStart($event)" (touchmove)="onMinTouchMove($event)"
+            (touchend)="onMinTouchEnd()" (touchcancel)="onMinTouchEnd()"
+            class="w-1/2 flex flex-col flex-nowrap text-center touch-none">
+            <div class="h-[calc(50%-0.5rem)]  overflow-hidden flex flex-col-reverse">
+                @for (cm of this.allMinutes().filter(m => m < this.currentMin).reverse(); track $index) {
+                    <p (click)="setMinute(cm)" class="hover:bg-interactive cursor-pointer">{{ this.twoDigitNumber(cm.toString()) }}</p>
+                }
+            </div>
+            <!-- MINUTES ACTUEL -->
+            <div class="h-6 shrink-0 bg-text-muted shadow-md rounded-r-md"><p>{{ this.twoDigitNumber(this.currentMin.toString())}}</p></div>
+            <div class="h-[calc(50%-0.5rem)] shrink-0 overflow-hidden">
+                @for (cm of this.allMinutes().filter(m => m > this.currentMin); track $index) {
+                    <p (click)="setMinute(cm)" class="hover:bg-interactive cursor-pointer">{{ this.twoDigitNumber(cm.toString()) }}</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-row flex-nowrap">
+        <app-button (click)="onValidate()" class="grow" buttonClass="bg-app w-full h-10" type="Secondary" text="Valider"></app-button>
+        <app-button (click)="onCancel()" class="grow" buttonClass="bg-app w-full border-0 h-10" type="Tertiary" text="Anuler"></app-button>
+    </div>
+</div>
