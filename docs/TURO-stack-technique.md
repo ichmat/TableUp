@@ -322,7 +322,7 @@ Le développeur n'a jamais accès à une implémentation de référence. Le test
 
 | Sujet | État |
 |---|---|
-| Connexion du personnel dans TURO | Le §7.2 de l'architecture impose une authentification locale d'abord, valide hors ligne. La mécanique front (stockage du jeton, rafraîchissement, PIN sur tablette partagée) n'est pas conçue |
+| Connexion du personnel dans TURO | Tranché côté API : **access token JWT court + jeton de rafraîchissement opaque révocable**, émis par l'API du tenant elle-même — le §7.2 de l'architecture interdit qu'un SSO central soit la seule autorité. La mécanique front (stockage du jeton, rafraîchissement silencieux) reste à concevoir |
 | Forme exacte des contrats d'API | Les handlers MSW en tiennent lieu. Le passage à OpenAPI, et la génération de types depuis le C#, ne sont pas décidés |
 | Comportement du délai de 8 s si l'application est fermée | §13 de la conception. Non tranché ; la persistance de la file du §5.2 est l'endroit où la réponse se trouvera |
 | Zoom et déplacement du plan | §13 de la conception. Hors tranche, mais influencera le choix SVG contre canevas — donc à trancher avant la tranche Plan |

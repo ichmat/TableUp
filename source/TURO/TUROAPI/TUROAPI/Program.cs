@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text.Json.Serialization;
 
 namespace TUROAPI
 {
@@ -7,11 +9,23 @@ namespace TUROAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            IConfiguration conf = new ConfigurationBuilder()
+                .SetBasePath(builder.Environment.ContentRootPath)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            // Les enums partent en chaînes ("Pending"), jamais en nombres : le front les type ainsi
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
             var app = builder.Build();
 
@@ -27,6 +41,8 @@ namespace TUROAPI
             app.UseStaticFiles();
 
             app.UseAuthorization();
+
+            app.UseAuthentication();
 
 
             app.MapControllers();

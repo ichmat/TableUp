@@ -272,7 +272,7 @@ Trois populations, qui ne partagent presque rien :
 | Population | Identité | Durée de vie | Facteur | Volume |
 |---|---|---|---|---|
 | **Clients TableUp** | e-mail | années | mot de passe, lien magique | milliers → millions |
-| **Personnel** | login court, borné à **un** restaurant | mois (turnover) | PIN sur tablette partagée, session longue | dizaines par restaurant |
+| **Personnel** | login court, borné à **un** restaurant | mois (turnover) | mot de passe, session longue tenue par un jeton de rafraîchissement | dizaines par restaurant |
 | **Machines** | certificat | vie de l'instance | mTLS | une par tenant |
 
 ### 8.1 La troisième n'est pas du SSO
@@ -283,7 +283,9 @@ Une machine n'a ni session, ni redirection, ni écran de consentement, ni mot de
 
 ### 8.2 Clients et personnel restent séparés
 
-Le personnel se connecte sur **une tablette partagée en cuisine** : PIN court, session permanente, sémantique « qui est de service ». Le client se connecte une fois sur son téléphone. Une seule politique de mot de passe ne peut pas servir les deux.
+Le personnel se connecte avec un **login court borné à un restaurant**, sur un poste de salle qu'il partage avec l'équipe : session longue, renouvelée sans ressaisie par le jeton de rafraîchissement du §7.2. Le client se connecte une fois sur son téléphone, avec son e-mail, pour des années. Une seule politique de mot de passe ne peut pas servir les deux.
+
+⛔ **Le PIN sur tablette partagée est abandonné.** Il séparait l'authentification de l'appareil de celle de la personne, et coûtait pour cela un second niveau de jetons : un rafraîchissement lié à la tablette, un accès lié au serveur de service. Le gain de traçabilité ne payait pas cette complexité. **Une session par personne**, et le jeton de rafraîchissement appartient à l'utilisateur.
 
 ℹ️ Un restaurateur est aussi, parfois, un client TableUp. Deux comptes, même adresse e-mail : c'est normal et sans conséquence — comme un compte Workspace et un compte Gmail.
 
