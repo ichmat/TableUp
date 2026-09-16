@@ -24,7 +24,7 @@ namespace TUROAPI.Controllers.Filters
             }
             else
             {
-                context.HttpContext.Items[RequestLoggingMiddleware.ErrorKey] = context.Exception.Message;
+                context.HttpContext.Items[RequestLoggingMiddleware.ErrorKey] = context.Exception;
 
                 var response = new ApiErrorResponse(new ApiErrorException(ApiError.Unknown));
 

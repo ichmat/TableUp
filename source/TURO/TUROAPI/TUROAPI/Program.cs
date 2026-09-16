@@ -4,8 +4,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using TUROAPI.Middleware;
 using TUROAPI.Services;
 using TUROAPI.Tools;
+using TUROAPI.Tools.Logging;
 
 namespace TUROAPI
 {
@@ -51,13 +53,21 @@ namespace TUROAPI
                     };
                 });
 
-            builder.Logging.ClearProviders();
-            builder.Logging.AddConsole();
-
             builder.Services.AddSingleton<TokenService>();
             builder.Services.AddSingleton<PasswordHash>();
 
+            builder.Logging.ClearProviders();
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddSingleton<ILoggerProvider>(sp => new TuroLoggerProvider(
+                conf["Logging:File:Path"] ?? "logs",
+                sp.GetRequiredService<IHttpContextAccessor>()));
+            
+
             var app = builder.Build();
+
+            AppLogger.Init(app.Services.GetRequiredService<ILoggerFactory>());
+
+            app.UseMiddleware<RequestLoggingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
