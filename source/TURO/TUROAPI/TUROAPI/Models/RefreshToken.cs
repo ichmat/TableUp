@@ -6,7 +6,7 @@ namespace TUROAPI.Models
     public class RefreshToken
     {
         [Key]
-        public required Guid Token { get; set; }
+        public Guid Token { get; set; }
 
         [ForeignKey(nameof(User))]
         public Guid UserId { get; set; }

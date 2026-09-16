@@ -1,5 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using System.Text.Json.Serialization;
+using TUROAPI.Services;
+using TUROAPI.Tools;
 
 namespace TUROAPI
 {
@@ -25,7 +31,31 @@ namespace TUROAPI
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            builder.Services.AddDbContext<Context.TuroDBContext>(options =>
+                options.UseNpgsql(conf.GetConnectionString("TuroDB")));
+
+            builder.Services
+                .AddAuthentication()
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, option =>
+                {
+                    option.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = conf["JWT:Issuer"],
+                        ValidAudience = conf["JWT:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["JWT:Key"]!)),
+                        RequireExpirationTime = true,
+                    };
+                });
+
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+
+            builder.Services.AddSingleton<TokenService>();
+            builder.Services.AddSingleton<PasswordHash>();
 
             var app = builder.Build();
 
