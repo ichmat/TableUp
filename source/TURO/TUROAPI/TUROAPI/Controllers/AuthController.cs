@@ -19,7 +19,7 @@ namespace TUROAPI.Controllers
         [HttpPost("login")]
         public Task<IActionResult> Login(LoginRequest model)
         {
-            
+            throw new NotImplementedException();
         }
     }
 }

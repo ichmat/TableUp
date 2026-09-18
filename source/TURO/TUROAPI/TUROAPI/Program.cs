@@ -93,6 +93,8 @@ namespace TUROAPI
             // Toute autre route qui n'est pas un fichier est une route Angular : on renvoie index.html
             app.MapFallbackToFile("index.html");
 
+           AppLogger.Log<Program>(LogType.Info, "Application started");
+
             app.Run();
         }
     }
