@@ -3,17 +3,17 @@
     <img src="images\TableUp.png" />
 </p>
 
-Le projet **TableUP** a pour vocation d'être un <u>système de restauration</u> incluant la gestion du restaurant pour les restaurateur et une application mobile utilisés par les clients qui veulent chercher et reserver un restaurant.
+Le projet **TableUP** a pour vocation d'être un <u>système de restauration</u> incluant la gestion du restaurant pour les restaurateurs et une application mobile utilisée par les clients qui veulent chercher et réserver un restaurant.
 
-Les fonctionnalités finaux sont : 
+Les fonctionnalités finales sont : 
 - **Gestion du restaurant** avec 2 modes de fonctionnements : 
     - ☁️ Solution dans le cloud
     - 💻 Solution en local chez le restaurateur
-- **Cloud backup** utiliser pour sauvegarder les données restaurateurs
-- **Application recherche et reservation** de restaurant pour les clients
-- **Le service central** qui relis et met à disposition les informations pour réserver
+- **Cloud backup** utilisé pour sauvegarder les données des restaurateurs
+- **Application de recherche et réservation** de restaurant pour les clients
+- **Le service central** qui relie et met à disposition les informations pour réserver
 
-> ℹ️ *Sachant que la réservation sera possible à partir de l'application, par google map et sur un site en direct*
+> ℹ️ *La réservation sera possible à partir de l'application, par Google Maps et sur un site en direct*
 
 ![Architecture V1](images/architecture.png)
 
@@ -26,8 +26,8 @@ Application restaurateur :
 > *Code disponible dans `source\TURO`*
 
 - Angular v22
-- Typescript
+- TypeScript
 - C# 
-- ASP NET Core v10
+- ASP.NET Core v10
 - Entity Framework Core v10
 - PostgreSQL
