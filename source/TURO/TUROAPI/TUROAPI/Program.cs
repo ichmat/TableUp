@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using TUROAPI.Context;
 using TUROAPI.Middleware;
 using TUROAPI.Services;
 using TUROAPI.Tools;
@@ -67,12 +68,38 @@ namespace TUROAPI
 
             AppLogger.Init(app.Services.GetRequiredService<ILoggerFactory>());
 
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<TuroDBContext>();
+                try
+                {
+                    var pending = dbContext.Database.GetPendingMigrations().ToList();
+                    if (pending.Count > 0)
+                    {
+                        AppLogger.Log(LogType.Info,
+                            $"Applying {pending.Count} pending EF migration(s): {string.Join(", ", pending)}");
+                        dbContext.Database.Migrate();
+                        AppLogger.Log(LogType.Info, "EF migrations applied successfully.");
+                    }
+                    else
+                    {
+                        AppLogger.Log(LogType.Info, "No pending EF migrations.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Log(LogType.Error, "Failed to apply EF migrations on startup.", ex);
+                    throw;
+                }
+            }
+
             app.UseMiddleware<RequestLoggingMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                SeedDatabase.Seed(app.Services.CreateScope().ServiceProvider.GetRequiredService<TuroDBContext>());
             }
 
             app.UseHttpsRedirection();
@@ -93,7 +120,7 @@ namespace TUROAPI
             // Toute autre route qui n'est pas un fichier est une route Angular : on renvoie index.html
             app.MapFallbackToFile("index.html");
 
-           AppLogger.Log<Program>(LogType.Info, "Application started");
+            AppLogger.Log(LogType.Info, "Application started");
 
             app.Run();
         }
