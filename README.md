@@ -15,7 +15,7 @@ Les fonctionnalités finaux sont :
 
 > ℹ️ *Sachant que la réservation sera possible à partir de l'application, par google map et sur un site en direct*
 
-![Architecture V1](images\architecture.png)
+![Architecture V1](images/architecture.png)
 
 ➡️ **La version 1 ne prévoit que la partie restaurateur pour le moment**
 
