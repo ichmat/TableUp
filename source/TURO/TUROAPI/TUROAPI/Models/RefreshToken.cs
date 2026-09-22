@@ -6,12 +6,13 @@ namespace TUROAPI.Models
     public class RefreshToken
     {
         [Key]
-        public Guid Token { get; set; }
+        public required string Token { get; set; }
 
         [ForeignKey(nameof(User))]
         public Guid UserId { get; set; }
         public UserStaff User { get; set; } = null!;
 
+        public DateTime CreatedAt { get; set; }
         public DateTime? DestroyAt { get; set; }
         public DateTime? UsedAt { get; set; }
     }

@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { ModalService } from '../../../../core/services/modal.service';
+import { ModalService } from '../../../../core/services/modal/modal.service';
 
 @Component({
   imports: [],

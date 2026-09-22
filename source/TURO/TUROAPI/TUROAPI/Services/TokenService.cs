@@ -10,6 +10,7 @@ namespace TUROAPI.Services
     public class TokenService
     {
         private readonly IConfiguration _config;
+        public static readonly TimeSpan RefreshTokenValidity = TimeSpan.FromDays(7);
 
         public TokenService(IConfiguration config)
         {

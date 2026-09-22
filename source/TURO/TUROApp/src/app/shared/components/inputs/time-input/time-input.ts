@@ -1,30 +1,40 @@
-import { Component, computed, ElementRef, input, model, viewChild } from '@angular/core';
+import { afterRenderEffect, Component, computed, ElementRef, inject, input, linkedSignal, model, output, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Time03Icon } from '@hugeicons/core-free-icons';
 import { twMerge } from 'tailwind-merge';
-import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
+import { DEFAULT_INPUT_STYLE, INPUT_DISABLED_STYLE, INPUT_ERROR_STYLE } from '../../constants/input-style';
 import { TimePicker } from '../../pickers/time-picker/time-picker';
 
 @Component({
   imports: [HugeiconsIconComponent, TimePicker],
   selector: 'app-time-input',
   templateUrl: './time-input.html',
+  host: { '(focusout)': 'onFocusOut($event)' },
   styles: `
-  input[type=number]::-webkit-inner-spin-button, 
-  input[type=number]::-webkit-outer-spin-button { 
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
-      margin: 0; 
+      margin: 0;
   }
   `
 })
-export class TimeInput {
+export class TimeInput implements FormValueControl<string> {
+  /** Format `HH:mm`, comme la valeur d'un `<input type="time">`. Chaîne vide si aucune heure */
+  value = model<string>('');
+  timeValue = model<Date>();
+  touch = output<void>();
+
+  disabled = input(false);
+  readonly = input(false);
+  invalid = input(false);
+  touched = input(false);
+  required = input(false);
 
   inputClass = input<string>();
   step = input<number>(1);
-  timeValue = model<Date>();
-  timeValueString = model<string>();
 
   inputHour = viewChild.required<ElementRef<HTMLInputElement>>('inputHour');
   inputMin = viewChild.required<ElementRef<HTMLInputElement>>('inputMin');
@@ -34,62 +44,83 @@ export class TimeInput {
   clock = Time03Icon;
 
   randomId = self.crypto.randomUUID();
-  
-  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none' , this.inputClass()))
 
-  ngAfterViewInit(){
-    if(this.timeValueString() && this.timeValue() === undefined){
-      const splitted = this.timeValueString()!.split(':')
-      console.log(splitted);
-      if(splitted.length === 2){
-        const hour = Number(splitted[0]);
-        const min = Number(splitted[1]);
-        if(!isNaN(hour) && !isNaN(min) && hour >= 0 && hour <= 23 && min >= 0 && min <= 59){
-          const newDate = new Date();
-          newDate.setHours(hour, min, 0);
-          this.timeValue.set(newDate);
-        }
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  showError = computed(() => this.invalid() && this.touched());
+
+  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none', this.inputClass(),
+    this.showError() ? INPUT_ERROR_STYLE : '',
+    this.disabled() ? INPUT_DISABLED_STYLE : '',
+  ));
+
+  /** Heure affichée : suit la dernière des deux valeurs modifiées par le parent (`timeValue` ou `value`) */
+  private currentTime = linkedSignal<{ date?: Date; text: string }, Date | undefined>({
+    source: () => ({ date: this.timeValue(), text: this.value() }),
+    computation: (source, previous) => {
+      if(previous === undefined){
+        return source.date ?? parseTime(source.text);
       }
-    }
+      if(source.date !== previous.source.date){
+        return source.date;
+      }
+      return parseTime(source.text);
+    },
+  });
 
-    this.resetInputs();
+  /** Heure actuellement écrite dans les champs, au format `HH:mm` */
+  private displayedTime?: string;
+
+  constructor(){
+    afterRenderEffect(() => {
+      const time = this.currentTime();
+      if(formatTime(time) !== this.displayedTime){
+        this.resetInputs(time);
+      }
+    });
   }
 
-  twoDigitNumber(number:string):string{
-    if(number.length === 1){
-      return '0'+number;
+  focus(options?: FocusOptions){
+    if(!this.disabled()){
+      this.inputHour().nativeElement.focus(options);
     }
-    return number;
   }
 
-  resetInputs(){
-    if(this.timeValue() !== undefined){
-      this.inputHour().nativeElement.value = 
-        this.twoDigitNumber(this.timeValue()!.getHours().toString())
-      this.inputMin().nativeElement.value = 
-         this.twoDigitNumber(this.timeValue()!.getMinutes().toString())
-    }else{
-      this.inputHour().nativeElement.value = ""
-      this.inputMin().nativeElement.value = ""
+  protected onFocusOut(event: FocusEvent){
+    if(!this.host.nativeElement.contains(event.relatedTarget as Node | null)){
+      this.touch.emit();
     }
+  }
+
+  private resetInputs(time: Date | undefined){
+    this.displayedTime = formatTime(time);
+    this.inputHour().nativeElement.value = time ? twoDigitNumber(time.getHours()) : '';
+    this.inputMin().nativeElement.value = time ? twoDigitNumber(time.getMinutes()) : '';
+  }
+
+  private setTime(time: Date | undefined){
+    this.timeValue.set(time);
+    this.value.set(formatTime(time));
+    this.resetInputs(time);
   }
 
   triggerChangeTimeValue(){
-     const hour = Number(this.inputHour().nativeElement.value);
-     const minute = Number(this.inputMin().nativeElement.value);
+    const hour = Number(this.inputHour().nativeElement.value);
+    const minute = Number(this.inputMin().nativeElement.value);
 
-     if(isNaN(hour) === false && isNaN(minute) === false){
+    if(!isNaN(hour) && !isNaN(minute)){
       const newDate = new Date();
-      newDate.setHours(hour, minute, 0);
-      this.timeValue.set(newDate);
-      this.timeValueString.set(
-        this.twoDigitNumber(hour.toString())+':'+ this.twoDigitNumber(minute.toString()))
+      newDate.setHours(hour, minute, 0, 0);
+      this.setTime(newDate);
     }
   }
 
   displayPicker(){
+    if(this.disabled() || this.readonly()){
+      return;
+    }
     if(this.picker().isHidden){
-      this.picker().openPicker(this.timeValue() ?? new Date());
+      this.picker().openPicker(this.currentTime() ?? new Date());
     }else{
       this.picker().closePicker();
     }
@@ -97,10 +128,8 @@ export class TimeInput {
 
   pickerNewDate(newDate: Date) {
     this.picker().closePicker();
-    this.timeValue.set(newDate);
-    this.timeValueString.set(
-        this.twoDigitNumber(newDate.getHours().toString())+':'+ this.twoDigitNumber(newDate.getMinutes().toString()))
-    this.resetInputs();
+    this.setTime(newDate);
+    this.touch.emit();
   }
 
   selectAllOnFocus(event: FocusEvent) {
@@ -116,29 +145,65 @@ export class TimeInput {
   }
 
   hourChange() {
-    const hour = Number(this.inputHour().nativeElement.value)
-    if(isNaN(hour) || hour < 0 || this.inputHour().nativeElement.value.length > 2){
-      this.inputHour().nativeElement.value = "00"
+    const hourInput = this.inputHour().nativeElement;
+    if(hourInput.value === ''){
+      this.setTime(undefined);
+      return;
+    }
+
+    const hour = Number(hourInput.value);
+    if(isNaN(hour) || hour < 0 || hourInput.value.length > 2){
+      hourInput.value = "00";
     }
     else if(hour > 23){
-      this.inputHour().nativeElement.value = "23"
+      hourInput.value = "23";
     }
 
     if(this.inputMin().nativeElement.value === ""){
-      this.inputMin().nativeElement.value = "00"
+      this.inputMin().nativeElement.value = "00";
     }
 
     this.triggerChangeTimeValue();
   }
 
-   minChange() {
-    const minute = Number(this.inputMin().nativeElement.value)
-    if(isNaN(minute) || minute < 0 || this.inputMin().nativeElement.value.length > 2){
-      this.inputMin().nativeElement.value = "00"
+  minChange() {
+    const minInput = this.inputMin().nativeElement;
+    if(minInput.value === ''){
+      this.setTime(undefined);
+      return;
+    }
+
+    const minute = Number(minInput.value);
+    if(isNaN(minute) || minute < 0 || minInput.value.length > 2){
+      minInput.value = "00";
     }
     else if(minute > 59){
-      this.inputMin().nativeElement.value = "59"
+      minInput.value = "59";
     }
     this.triggerChangeTimeValue();
   }
+}
+
+function twoDigitNumber(number: number): string {
+  return number.toString().padStart(2, '0');
+}
+
+function formatTime(time: Date | undefined): string {
+  return time ? twoDigitNumber(time.getHours()) + ':' + twoDigitNumber(time.getMinutes()) : '';
+}
+
+/** `HH:mm` → Date du jour à cette heure, ou `undefined` si la chaîne n'est pas une heure valide */
+function parseTime(text: string): Date | undefined {
+  const match = /^(\d{2}):(\d{2})$/.exec(text);
+  if(match === null){
+    return undefined;
+  }
+  const hour = Number(match[1]);
+  const min = Number(match[2]);
+  if(hour > 23 || min > 59){
+    return undefined;
+  }
+  const date = new Date();
+  date.setHours(hour, min, 0, 0);
+  return date;
 }

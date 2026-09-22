@@ -1,4 +1,4 @@
-<div [class]="wrapperClass()" (click)="onClickParent()">
+<div [class]="wrapperClass()" (click)="focus()">
     @if (icon() !== undefined) {
         <hugeicons-icon
             [icon]="icon()!"
@@ -13,8 +13,15 @@
     <input
         #myInput
         [type]="type()"
+        [name]="name()"
+        [attr.autocomplete]="autocomplete() || null"
+        [disabled]="disabled()"
+        [readOnly]="readonly()"
+        [required]="required()"
+        [attr.aria-invalid]="showError()"
         class="outline-none grow w-full [&::-webkit-calendar-picker-indicator]:hidden"
         [placeholder]="placeholder()" [value]="value()"
         (input)="onInput($event)"
+        (blur)="touch.emit()"
         />
 </div>

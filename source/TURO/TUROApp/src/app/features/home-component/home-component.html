@@ -1,13 +1,13 @@
 <div class="h-full w-full bg-surface flex flex-col gap-4">
 
     <app-button text="test"></app-button>
-    <app-input [(value)]="inputVal" type="number" [icon]="user" [iconClickable]="true"></app-input>
+    <app-input [(value)]="inputVal"[icon]="user" [iconClickable]="true"></app-input>
     <p> {{ inputVal }}</p>
-    <app-time-input [(timeValueString)]="timeValue"></app-time-input>
+    <app-time-input [(value)]="timeValue"></app-time-input>
     
     <p>{{ timeValue }}</p>
 
-    <app-date-input [(dateValue)]="dateValue" [(dateValueString)]="dateValueString"></app-date-input>
+    <app-date-input [(dateValue)]="dateValue" [(value)]="dateValueString"></app-date-input>
 
     <p>{{ dateValue?.toLocaleDateString() }} | {{ dateValueString }}</p>
 </div>

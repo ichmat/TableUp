@@ -15,5 +15,9 @@ namespace TUROAPI.Models.Enums
         UnreadableToken = 2,
         [ApiErrorInfo(HttpStatusCode.Forbidden, "The token does not have admin privileges.")]
         NotAdmin = 3,
+        [ApiErrorInfo(HttpStatusCode.Unauthorized, "Invalid login or password")]
+        InvalidLoginOrPassword = 4,
+        [ApiErrorInfo(HttpStatusCode.Forbidden, "The token has expired.")]
+        TokenExpired = 5,
     }
 }

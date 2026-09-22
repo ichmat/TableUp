@@ -50,4 +50,17 @@ export class ModalService {
             })
         });
     }
+
+    infoModal(title:string, desc: string, okText: string = "Ok"): Promise<void> {
+        return new Promise<void>((resolve) => {
+            this.addModal({
+                title: title,
+                description: desc,
+                buttons: [
+                    {text: okText, type: 'Primary', onClick: () => {this.removeLastModal();resolve()}},
+                ],
+                onCrossClicked: () => {this.removeLastModal();resolve()},
+            })
+        });
+    }
 }

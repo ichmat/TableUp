@@ -10,7 +10,10 @@ import { twMerge } from 'tailwind-merge';
 export class Button {
   text = input<string>();
   type = input<'Primary' | 'Secondary' | 'Tertiary'>('Primary');
+  typeButton = input<'button' | 'reset' | 'submit'>('button');
   buttonClass = input<string>("");
+
+  disabled = input<boolean>(false);
 
   typeClass = computed(() => {
     let typeCSS = "";
@@ -26,7 +29,8 @@ export class Button {
         break;
     }
     return twMerge(
-      "rounded-lg font-bold cursor-pointer hover:brightness-110 min-w-24 h-12",
+      "rounded-lg font-bold cursor-pointer  min-w-24 h-12",
+      this.disabled() ? "opacity-50" : "hover:brightness-110",
       typeCSS, 
       this.buttonClass())
   })

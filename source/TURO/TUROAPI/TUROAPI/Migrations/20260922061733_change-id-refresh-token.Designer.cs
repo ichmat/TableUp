@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TUROAPI.Context;
@@ -11,9 +12,11 @@ using TUROAPI.Context;
 namespace TUROAPI.Migrations
 {
     [DbContext(typeof(TuroDBContext))]
-    partial class TuroDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260922061733_change-id-refresh-token")]
+    partial class changeidrefreshtoken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -290,9 +293,6 @@ namespace TUROAPI.Migrations
                 {
                     b.Property<string>("Token")
                         .HasColumnType("text");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DestroyAt")
                         .HasColumnType("timestamp with time zone");

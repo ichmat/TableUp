@@ -14,7 +14,7 @@ import { DateInput } from '../../shared/components/inputs/date-input/date-input'
 export class HomeComponent {
   user = User03FreeIcons;
 
-  inputVal:number = 0;
+  inputVal: string = "";
 
   timeValue: string = "12:00";
 

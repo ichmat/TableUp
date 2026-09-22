@@ -1,15 +1,17 @@
-import { afterRenderEffect, Component, computed, ElementRef, input, linkedSignal, model, viewChild } from '@angular/core';
+import { afterRenderEffect, Component, computed, ElementRef, inject, input, linkedSignal, model, output, viewChild } from '@angular/core';
+import { FormValueControl } from '@angular/forms/signals';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Calendar03Icon } from '@hugeicons/core-free-icons';
 import { twMerge } from 'tailwind-merge';
 import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
-import { DEFAULT_INPUT_STYLE } from '../../constants/input-style';
+import { DEFAULT_INPUT_STYLE, INPUT_DISABLED_STYLE, INPUT_ERROR_STYLE } from '../../constants/input-style';
 import { DatePicker } from '../../pickers/date-picker/date-picker';
 
 @Component({
   imports: [HugeiconsIconComponent, DatePicker],
   selector: 'app-date-input',
   templateUrl: './date-input.html',
+  host: { '(focusout)': 'onFocusOut($event)' },
   styles: `
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button {
@@ -20,13 +22,20 @@ import { DatePicker } from '../../pickers/date-picker/date-picker';
   }
   `
 })
-export class DateInput {
-
-  inputClass = input<string>();
+export class DateInput implements FormValueControl<string> {
+  /** Format `AAAA-MM-JJ`, comme la valeur d'un `<input type="date">`. Chaîne vide si aucune date */
+  value = model<string>('');
   /** Date émise à minuit (heure locale) */
   dateValue = model<Date>();
-  /** Format `AAAA-MM-JJ`, comme la valeur d'un `<input type="date">`. Chaîne vide si aucune date */
-  dateValueString = model<string>();
+  touch = output<void>();
+
+  disabled = input(false);
+  readonly = input(false);
+  invalid = input(false);
+  touched = input(false);
+  required = input(false);
+
+  inputClass = input<string>();
 
   inputDay = viewChild.required<ElementRef<HTMLInputElement>>('inputDay');
   inputMonth = viewChild.required<ElementRef<HTMLInputElement>>('inputMonth');
@@ -40,11 +49,18 @@ export class DateInput {
 
   randomId = self.crypto.randomUUID();
 
-  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none' , this.inputClass()))
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** Date affichée : suit la dernière des deux valeurs modifiées par le parent (`dateValue` ou `dateValueString`) */
-  private currentDate = linkedSignal<{ date?: Date; text?: string }, Date | undefined>({
-    source: () => ({ date: this.dateValue(), text: this.dateValueString() }),
+  showError = computed(() => this.invalid() && this.touched());
+
+  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none', this.inputClass(),
+    this.showError() ? INPUT_ERROR_STYLE : '',
+    this.disabled() ? INPUT_DISABLED_STYLE : '',
+  ));
+
+  /** Date affichée : suit la dernière des deux valeurs modifiées par le parent (`dateValue` ou `value`) */
+  private currentDate = linkedSignal<{ date?: Date; text: string }, Date | undefined>({
+    source: () => ({ date: this.dateValue(), text: this.value() }),
     computation: (source, previous) => {
       if(previous === undefined){
         return source.date ?? parseIsoDate(source.text);
@@ -70,6 +86,18 @@ export class DateInput {
     });
   }
 
+  focus(options?: FocusOptions){
+    if(!this.disabled()){
+      this.inputDay().nativeElement.focus(options);
+    }
+  }
+
+  protected onFocusOut(event: FocusEvent){
+    if(!this.host.nativeElement.contains(event.relatedTarget as Node | null)){
+      this.touch.emit();
+    }
+  }
+
   private resetInputs(date: Date | undefined){
     this.displayedDate = date;
     setInputValue(this.inputDay().nativeElement, date ? twoDigitNumber(date.getDate()) : '');
@@ -80,7 +108,7 @@ export class DateInput {
   private setDateValue(date: Date | undefined){
     if(date?.getTime() !== this.currentDate()?.getTime()){
       this.dateValue.set(date);
-      this.dateValueString.set(date ? toIsoDate(date) : '');
+      this.value.set(date ? toIsoDate(date) : '');
     }
     // Mise à jour immédiate : le focus passe au champ suivant avant le prochain rendu
     this.resetInputs(date);
@@ -116,6 +144,9 @@ export class DateInput {
   }
 
   displayPicker(){
+    if(this.disabled() || this.readonly()){
+      return;
+    }
     if(this.picker().isHidden){
       this.picker().openPicker(this.currentDate() ?? new Date());
     }else{
@@ -126,6 +157,7 @@ export class DateInput {
   pickerNewDate(newDate: Date) {
     this.picker().closePicker();
     this.setDateValue(newDate);
+    this.touch.emit();
   }
 
   selectAllOnFocus(event: FocusEvent) {

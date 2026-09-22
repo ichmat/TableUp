@@ -4,17 +4,21 @@
         [size]="24"
         color="currentColor"
         [strokeWidth]="1.5"
-        class="cursor-pointer hover:brightness-125"
+        [class]="disabled() || readonly() ? '' : 'cursor-pointer hover:brightness-125'"
         (click)="displayPicker()"
         />
 
     <input
         #inputHour
-        placeholder="--" 
+        placeholder="--"
         max="23"
         min="0"
         type="number"
         class="w-6 text-center focus:bg-interactive"
+        [disabled]="disabled()"
+        [readOnly]="readonly()"
+        [required]="required()"
+        [attr.aria-invalid]="showError()"
         (change)="hourChange()"
         (focus)="selectAllOnFocus($event)"
         (keyup.enter)="onEnterKey(true)"
@@ -24,11 +28,15 @@
 
     <input
         #inputMin
-        placeholder="--" 
+        placeholder="--"
         max="59"
         min="0"
         type="number"
         class="w-6 text-center focus:bg-interactive"
+        [disabled]="disabled()"
+        [readOnly]="readonly()"
+        [required]="required()"
+        [attr.aria-invalid]="showError()"
         (change)="minChange()"
         (focus)="selectAllOnFocus($event)"
         (keyup.enter)="onEnterKey(false)"
@@ -36,4 +44,3 @@
 </div>
 
 <app-time-picker [idFor]="randomId" (validate)="pickerNewDate($event)" [step]="step()" />
-
