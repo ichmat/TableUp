@@ -5,6 +5,8 @@ namespace TUROAPI.Models.Enums
 {
     public enum ApiError
     {
+        [ApiErrorInfo(HttpStatusCode.InternalServerError, "Critical data error : {0}")]
+        CriticalDataInternalError = -2,
         [ApiErrorInfo(HttpStatusCode.InternalServerError, "An unknown error occurred.")]
         Unknown = -1,
         [ApiErrorInfo(HttpStatusCode.OK, "No error.")]

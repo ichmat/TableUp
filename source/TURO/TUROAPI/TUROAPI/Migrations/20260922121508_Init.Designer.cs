@@ -12,7 +12,7 @@ using TUROAPI.Context;
 namespace TUROAPI.Migrations
 {
     [DbContext(typeof(TuroDBContext))]
-    [Migration("20260916122556_Init")]
+    [Migration("20260922121508_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -291,9 +291,11 @@ namespace TUROAPI.Migrations
 
             modelBuilder.Entity("TUROAPI.Models.RefreshToken", b =>
                 {
-                    b.Property<Guid>("Token")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Token")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DestroyAt")
                         .HasColumnType("timestamp with time zone");

@@ -11,7 +11,7 @@ namespace TUROAPI
         internal new readonly string Message;
         internal readonly ApiError ApiError;
 
-        internal ApiErrorException(ApiError error) : base()
+        internal ApiErrorException(ApiError error, params string[] args) : base()
         {
             var fieldInfo = error.GetType().GetField(error.ToString());
             ApiErrorInfoAttribute? infoAttribute = fieldInfo?.GetCustomAttribute<ApiErrorInfoAttribute>();
@@ -22,7 +22,7 @@ namespace TUROAPI
             }
 
             HttpStatusCode = infoAttribute.StatusCode;
-            Message = infoAttribute.Message;
+            Message = string.Format(infoAttribute.Message, args);
             ApiError = error;
         }
     }

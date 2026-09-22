@@ -1,18 +1,13 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using TUROAPI.Models.Enums;
 
-namespace TUROAPI.Models
+namespace TUROAPI.Models.Responses
 {
-    // Physical, indivisible table. Never deleted, only deactivated (MOD-01).
-    public class Table
+    public class TableResponse
     {
-        [Key]
         public Guid Id { get; set; }
 
-        [ForeignKey(nameof(Zone))]
         public Guid ZoneId { get; set; }
-        public Zone Zone { get; set; } = null!;
 
         public string Name { get; set; } = string.Empty;
         public int Capacity { get; set; }
@@ -27,8 +22,5 @@ namespace TUROAPI.Models
         public DateTime? NeedsCleaningSince { get; set; }
 
         public bool IsActive { get; set; } = true;
-
-        public List<Combination> Combinations { get; set; } = [];
-        public List<Assignment> Assignments { get; set; } = [];
     }
 }

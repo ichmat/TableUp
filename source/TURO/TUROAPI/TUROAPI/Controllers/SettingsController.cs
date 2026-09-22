@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TUROAPI.Context;
 using TUROAPI.Controllers.Base;
+using TUROAPI.Models;
+using TUROAPI.Models.Enums;
 
 namespace TUROAPI.Controllers
 {
@@ -12,5 +15,7 @@ namespace TUROAPI.Controllers
         public SettingsController(TuroDBContext context) : base(context)
         {
         }
+
+        
     }
 }

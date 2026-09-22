@@ -16,10 +16,11 @@ interface ModalRequest {
 @Service()
 export class ModalService {
     /** NE PAS UTILISER */
-    readonly displayModals = signal<ModalRequest[] | null>(null);
+    private _displayModals = signal<ModalRequest[] | null>(null);
+    displayModals = this._displayModals.asReadonly();
 
     private addModal(modal: ModalRequest){
-        this.displayModals.update((oldValue) => {
+        this._displayModals.update((oldValue) => {
             if(oldValue === null){
                 return [modal];
             }
@@ -28,7 +29,7 @@ export class ModalService {
     }
 
     private removeLastModal(){
-        this.displayModals.update((oldValue) => {
+        this._displayModals.update((oldValue) => {
             if(oldValue === null || oldValue.length === 1){
                 return null;
             }

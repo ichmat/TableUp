@@ -291,7 +291,7 @@ namespace TUROAPI.Migrations
                     b.Property<string>("Token")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DestroyAt")
