@@ -1,8 +1,10 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { Input } from '../../shared/components/inputs/input/input';
 import { User03Icon, SecurityPasswordFreeIcons } from '@hugeicons/core-free-icons';
 import { Button } from '../../shared/components/button/button';
 import {form, FormField, required, email, schema, minLength, FormRoot, disabled} from '@angular/forms/signals';
+import { AuthService } from '../../core/services/auth/auth.service';
+import { Router } from '@angular/router';
 
 interface LoginData {
   login: string;
@@ -16,6 +18,9 @@ interface LoginData {
 })
 
 export class LoginComponents {
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
   userIcon = User03Icon;
   passwordIcon = SecurityPasswordFreeIcons;
   submitAttempted = signal<boolean>(false);
@@ -41,9 +46,11 @@ export class LoginComponents {
   }, {
     submission:{
       action: async (fields) => {
-        console.log("fields", fields);
-        await new Promise<void>((resolve) => {setTimeout(() => resolve(), 5000)})
-        console.log("finished");
+        const { login, password } = fields().value();
+
+        if(await this.authService.attemptLogin(login, password)){
+          this.router.navigate(["/"]);
+        }
       },
       onInvalid: () => {this.submitAttempted.set(true)},
     },

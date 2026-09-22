@@ -1,4 +1,4 @@
-<div class="h-full w-full bg-surface flex flex-col gap-4">
+<div class="h-full w-full bg-surface flex flex-col items-center justify-center gap-4">
 
     <app-button text="test"></app-button>
     <app-input [(value)]="inputVal"[icon]="user" [iconClickable]="true"></app-input>
@@ -7,8 +7,13 @@
     
     <p>{{ timeValue }}</p>
 
-    <app-date-input [(dateValue)]="dateValue" [(value)]="dateValueString"></app-date-input>
+    <app-date-input [(dateValue)]="dateValue"></app-date-input>
 
-    <p>{{ dateValue?.toLocaleDateString() }} | {{ dateValueString }}</p>
+    <p>{{ dateValue?.toLocaleDateString() }} </p>
+
+    <app-number-input [(value)]="numberValue"></app-number-input>
+
+    <p>{{ numberValue }} </p>
+
 </div>
 

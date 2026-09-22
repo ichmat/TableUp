@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Service } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { computed, inject, Service, signal } from '@angular/core';
 import { ModalService } from '../modal/modal.service';
+import { ApiError, isApiErrorResponse } from '../../../models';
 
 const KEY_JWT = "jwt";
 
@@ -9,35 +10,40 @@ export class AuthService {
     private http = inject(HttpClient);
     private modal = inject(ModalService);
 
-    token: string | null = null;
-    isConnected: boolean = false;
-
-    constructor(){
-        this.token = localStorage.getItem(KEY_JWT);
-        this.isConnected = this.token !== null;
-    }
+    private _token = signal<string | null>(localStorage.getItem(KEY_JWT));
+    token = this._token.asReadonly();
+    isConnected = computed(() => this._token() !== null);
 
     private changeToken(newToken: string | null){
-        this.token = newToken;
+        this._token.set(newToken);
 
         if(newToken === null){
             localStorage.removeItem(KEY_JWT);
-            this.isConnected = false;
         }else{
             localStorage.setItem(KEY_JWT, newToken);
-            this.isConnected = true;
         }
     }
 
     attemptLogin(login: string, password:string): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
-            this.http.post<string>("/api/auth/login", { login, password}).subscribe({
-                next: (jwt) => {
-                    this.changeToken(jwt);
+            this.http.post<{jwt:string}>("/api/auth/login", { login, password}).subscribe({
+                next: (respnse) => {
+                    this.changeToken(respnse.jwt);
                     resolve(true);
                     },
                 error: (err) => {
-                    this.modal.infoModal("Connexion échoué",`Le login ou le mot de passe ne correspond pas. \n ${err}`);
+                    if(err instanceof HttpErrorResponse && isApiErrorResponse(err.error)){
+                        switch(err.error.error){
+                            case ApiError.InvalidLoginOrPassword:
+                                this.modal.infoModal("Echec du login","Le login ou le mot de passe ne correspond pas.");
+                                break;
+                            default:
+                                this.modal.infoModal("Echec du login","Erreur inconnu, veuillez ressayez");
+                                break;
+                        }
+                    }else{
+                        this.modal.infoModal("Echec du login","Erreur inconnu, veuillez ressayez");
+                    }
                     console.error("attemptLogin", err);
                     resolve(false);
                 }

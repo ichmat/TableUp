@@ -30,7 +30,7 @@ export class Button {
     }
     return twMerge(
       "rounded-lg font-bold cursor-pointer  min-w-24 h-12",
-      this.disabled() ? "opacity-50" : "hover:brightness-110",
+      this.disabled() ? "opacity-50 cursor-not-allowed" : "hover:brightness-110",
       typeCSS, 
       this.buttonClass())
   })

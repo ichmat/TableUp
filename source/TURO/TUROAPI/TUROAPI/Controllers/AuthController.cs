@@ -25,13 +25,13 @@ namespace TUROAPI.Controllers
         }
 
         [HttpPost("login")]
-        [ProducesResponseType<string>(StatusCodes.Status200OK)]
+        [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
         [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login(LoginRequest model)
         {
             var user = await context.UserStaffs.FirstOrDefaultAsync(u => u.Login == model.Login);
 
-            if (user == null || _passwordHash.VerifyHashedPassword(user, model.Password, user.PasswordHash) == PasswordVerificationResult.Failed)
+            if (user == null || _passwordHash.VerifyHashedPassword(user, user.PasswordHash, model.Password) == PasswordVerificationResult.Failed)
             {
                 throw new ApiErrorException(ApiError.InvalidLoginOrPassword);
             }
@@ -50,7 +50,7 @@ namespace TUROAPI.Controllers
 
             Response.Cookies.Append("refreshToken", refreshToken.Token, cookieOptions);
 
-            return Ok(JWT);
+            return Ok(new TokenResponse() { JWT = JWT});
         }
 
         [HttpDelete("logout")]
@@ -71,7 +71,7 @@ namespace TUROAPI.Controllers
         }
 
         [HttpPost("refresh")]
-        [ProducesResponseType<string>(StatusCodes.Status200OK)]
+        [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
         [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> RefreshToken()
@@ -109,7 +109,7 @@ namespace TUROAPI.Controllers
             Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
 
             string JWT = _tokenService.GenerateJWT(token.User);
-            return Ok(JWT);
+            return Ok(new TokenResponse() { JWT = JWT });
         }
 
         private async Task<RefreshToken> GenerateAndSaveRefreshToken(Guid userId)
