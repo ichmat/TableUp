@@ -13,7 +13,7 @@ export interface Reservation {
     /** Début de la réservation, horodatage ISO 8601 **en UTC** */
     start: string,
     /**
-     * Durée en minutes, copiée de `Restaurant.defaultRotationMin` à la création.
+     * Durée en minutes, copiée de `Restaurant.defaultRotation` à la création.
      * @see ℹ️ Changer la rotation par défaut ne modifie aucune réservation existante
      */
     durationMin: number,

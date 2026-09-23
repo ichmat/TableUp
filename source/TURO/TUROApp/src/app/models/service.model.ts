@@ -29,7 +29,7 @@ export interface RestaurantService {
      * @see ℹ️ Voir `OccupancyMode` pour plus d'info
      * */
     occupancyMode: OccupancyMode,
-    /** Détermine le temps moyen d'une réservation. `null` hérite de `Restaurant.defaultRotationMin` */
+    /** Détermine le temps moyen d'une réservation. `null` hérite de `Restaurant.defaultRotation` */
     plannedRotationMin: number | null,
     /** Plafond nombre de couverts par créneau (avertissement seulement) */
     thersholdCoversTimeSlot: number | null,

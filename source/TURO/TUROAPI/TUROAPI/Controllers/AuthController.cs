@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TUROAPI.Context;
@@ -22,6 +23,15 @@ namespace TUROAPI.Controllers
         {
             _passwordHash = passwordHash;
             _tokenService = tokenService;
+        }
+
+        [Authorize]
+        [HttpGet("check")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
+        public IActionResult CheckAuth()
+        {
+            return Ok();
         }
 
         [HttpPost("login")]

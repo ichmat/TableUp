@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json.Serialization;
 using TUROAPI.Context;
 using TUROAPI.Middleware;
+using TUROAPI.Models.Enums;
+using TUROAPI.Models.Responses;
 using TUROAPI.Services;
 using TUROAPI.Tools;
 using TUROAPI.Tools.Logging;
@@ -51,6 +53,22 @@ namespace TUROAPI
                         ValidAudience = conf["JWT:Audience"],
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["JWT:Key"]!)),
                         RequireExpirationTime = true,
+                    };
+                    option.Events = new JwtBearerEvents
+                    {
+                        OnChallenge = async context =>
+                        {
+                            context.HandleResponse(); // supprime le 401 vide par défaut
+
+                            ApiError error = context.AuthenticateFailure switch
+                            {
+                                SecurityTokenExpiredException => ApiError.TokenExpired,
+                                null => ApiError.NoAuthenticationTokenGiven, // aucun en-tête Authorization
+                                _ => ApiError.UnreadableToken,               // signature, émetteur, format…
+                            };
+                            await WriteApiError(context.HttpContext, error);
+                        },
+                        OnForbidden = context => WriteApiError(context.HttpContext, ApiError.NotAdmin),
                     };
                 });
 
@@ -107,10 +125,10 @@ namespace TUROAPI
             // Front Angular embarqué dans l'image : fichiers servis depuis wwwroot
             app.UseStaticFiles();
 
-            app.UseAuthorization();
-
+            // l'authentification doit précéder l'autorisation, sinon [Authorize] ne voit jamais d'utilisateur
             app.UseAuthentication();
 
+            app.UseAuthorization();
 
             app.MapControllers();
 
@@ -122,5 +140,17 @@ namespace TUROAPI
 
             app.Run();
         }
+
+        private static Task WriteApiError(HttpContext http, ApiError error)
+        {
+            var response = new ApiErrorResponse(new ApiErrorException(error));
+            http.Items[RequestLoggingMiddleware.ErrorKey] = response.Message; // même trace que le filtre
+            http.Response.StatusCode = response.StatusCode;
+
+            // les options JSON de MVC, pour garder les enums en chaînes
+            var json = http.RequestServices.GetRequiredService<IOptions<Microsoft.AspNetCore.Mvc.JsonOptions>>();
+            return http.Response.WriteAsJsonAsync(response, json.Value.JsonSerializerOptions);
+        }
     }
 }
+
