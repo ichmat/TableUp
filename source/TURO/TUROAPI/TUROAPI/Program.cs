@@ -37,7 +37,12 @@ namespace TUROAPI
             builder.Services.AddOpenApi();
 
             builder.Services.AddDbContext<Context.TuroDBContext>(options =>
-                options.UseNpgsql(conf.GetConnectionString("TuroDB")));
+                options.UseNpgsql(conf.GetConnectionString("TuroDB"), o =>
+                {
+                    // Utilisation des requête splitter dans le cas de multiple `Inlucde` dans une requête
+                    // voir : https://learn.microsoft.com/fr-fr/ef/core/querying/single-split-queries
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             builder.Services
                 .AddAuthentication()

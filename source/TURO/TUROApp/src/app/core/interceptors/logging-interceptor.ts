@@ -3,12 +3,14 @@ import { AuthService } from '../services/auth/auth.service';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { ApiError, isApiErrorResponse } from '../../models';
+import { Router } from '@angular/router';
 
 /** Routes qui ne doivent jamais déclencher de refresh (sinon boucle ou refresh inutile) */
 const NO_REFRESH_URLS = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout'];
 
 export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
 
   return next(withToken(req, authService.token())).pipe(
     catchError((httpError: unknown) => {
@@ -17,7 +19,10 @@ export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
         && isApiErrorResponse(httpError.error)
         && httpError.error.error === ApiError.UnreadableToken) {
         authService.clearToken();
-        return throwError(() => httpError);
+        return throwError(() => {
+          router.navigate(["/login"]);
+          return httpError;
+        });
       }
 
       // seul un JWT expiré justifie un refresh ; sur /api/auth/refresh, `TokenExpired`
@@ -33,7 +38,10 @@ export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
 
       return authService.refreshToken().pipe(
         // refresh refusé : l'appelant reçoit l'erreur d'origine, pas celle du refresh
-        catchError(() => throwError(() => httpError)),
+        catchError(() => {
+          router.navigate(["/login"]);
+          return throwError(() => httpError)
+        }),
         // `next` ne repasse pas par cet intercepteur : une seule relance au maximum
         switchMap((jwt) => next(withToken(req, jwt))),
       );

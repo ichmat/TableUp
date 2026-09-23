@@ -7,7 +7,7 @@
     @else if(currentServices() === undefined || currentServices()!.length === 0 ){
         <p class="italic text-xs text-center text-text-muted"> fermé </p>
 
-        <app-button class="self-center w-full" type="Dashed" buttonClass="h-8 min-w-0 w-full" text="+"></app-button>
+        <app-button (click)="addService()" class="self-center w-full" type="Dashed" buttonClass="h-8 min-w-0 w-full" text="+"></app-button>
     }
     @else {
         @for (service of currentServices(); track $index) {
@@ -21,6 +21,6 @@
             </div>
         }
 
-        <app-button class="self-center w-full" type="Primary" buttonClass="h-8 min-w-0 w-full" text="+"></app-button>
+        <app-button (click)="addService()" class="self-center w-full" type="Primary" buttonClass="h-8 min-w-0 w-full" text="+"></app-button>
     }
 </div>

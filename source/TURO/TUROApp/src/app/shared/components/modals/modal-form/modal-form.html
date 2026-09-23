@@ -1,0 +1,32 @@
+<div class="w-96 min-h-52 rounded-lg bg-surface
+    flex flex-col gap-2 p-4">
+    <p class="text-4xl font-bold text-center text-text"> {{ model().title }} </p>
+    <hr class="border-border"/>
+    @if (model().desc) {
+        <p class="text-text"> {{ model().desc }}</p>
+    }
+
+    @for (field of fields(); track $index) {
+        <label class="text-text font-bold">{{ field.label }}</label>
+        @switch (field.type) {
+            @case ('string') {
+                <app-input [(value)]="field.value"></app-input>
+            }
+            @case ('number') {
+                <app-number-input [(value)]="field.value"></app-number-input>
+            }
+            @case ('date') {
+                <app-date-input [(value)]="field.value"></app-date-input>
+            }
+            @case ('time') {
+                <app-time-input [(value)]="field.value"></app-time-input>
+            }
+        }
+    }
+
+    <div class="flex flex-row items-stretch flex-nowrap h-12 gap-2 mt-2
+    [&>button]:grow [&>button]:rounded-lg [&>button]:font-bold [&>button]:cursor-pointer [&>button]:hover:brightness-110">
+        <button (click)="validate()" class="bg-interactive text-surface">Valider</button>
+        <button (click)="model().onCancel()" class="bg-app text-text">Annuler</button>
+    </div>
+</div>

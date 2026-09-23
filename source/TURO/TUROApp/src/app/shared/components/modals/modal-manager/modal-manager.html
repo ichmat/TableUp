@@ -1,29 +1,16 @@
-@if (modalService.displayModals() !== null) {
-<div class="grid grid-rows-1 grid-cols-1 absolute top-0 left-0 w-dvw h-dvh items-center justify-items-center bg-gray-700/25">
-    @for (modal of modalService.displayModals(); track $index) {
-        <div class="w-96 min-h-52 rounded-lg bg-surface
-            flex flex-col gap-2 p-4">
-            <p class="text-4xl font-bold text-center text-text"> {{ modal.title }} </p>
-            <hr class="border-border"/>
-            <p class="text-text grow"> {{ modal.description }}</p>
-            <div class="flex flex-row items-stretch content flex-nowrap h-12 gap-2
-            [&>button]:grow [&>button]:rounded-lg [&>button]:font-bold [&>button]:cursor-pointer [&>button]:hover:brightness-110">
-
-            @for (button of modal.buttons; track $index) {
-                @switch (button.type) {
-                    @case ('Primary') {
-                        <button (click)="button.onClick()" class="bg-interactive text-surface">{{button.text}}</button>
-                    }
-                    @case ('Secondary') {
-                        <button (click)="button.onClick()" class="bg-app text-text">{{button.text}}</button>
-                    }
-                    @case ('Tertiary') {
-                        <button (click)="button.onClick()" class="border-4 border-slate text-slate">{{button.text}}</button>
-                    }
-                }
-            }
-            </div>
-        </div>
+@if (modalService.displayModals() !== null && modalService.displayModals()!.length > 0) {
+<div #host 
+    class="grid grid-rows-1 grid-cols-1 
+    absolute top-0 left-0 
+    w-dvw h-dvh 
+    items-center justify-items-center
+    [&>*]:row-start-1 [&>*]:col-start-1
+    bg-gray-700/25">
+     @for (modal of modalService.displayModals(); track $index) {
+        @switch (modal.kind) {
+            @case ('confirm') { <app-modal-confirm [model]="modal" /> }
+            @case ('form')    { <app-modal-form [model]="modal" /> }
+        }
     }
 </div>
 }
