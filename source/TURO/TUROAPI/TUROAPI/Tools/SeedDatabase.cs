@@ -27,6 +27,20 @@ namespace TUROAPI.Tools
                     AutoConfirmation = false,
                 });
 
+            Guid idService = Guid.Parse("11111111-1111-1111-1111-111111111112");
+
+            db.Services.AddRangeIfNotExists(x => x.Id == idService,
+                new Service()
+                {
+                    Id = idService,
+                    RestaurantId = guidRestaurant,
+                    Day = DayOfWeek.Tuesday,
+                    Opening = TimeOnly.FromTimeSpan(TimeSpan.FromHours(11)),
+                    Closing = TimeOnly.FromTimeSpan(TimeSpan.FromHours(13)),
+                    SlotStep = 30,
+                    OccupancyMode = OccupancyMode.SingleService,
+                });
+
             Guid guidAdmin = Guid.Parse("11111111-1111-1111-1111-A11111111111");
             string passwordAdmin = "admin";
 

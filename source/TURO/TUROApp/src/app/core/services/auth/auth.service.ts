@@ -19,6 +19,7 @@ export class AuthService {
     private _refresh$: Observable<string> | null = null;
 
     constructor(){
+        console.log("AuthService")
         this._token.set(localStorage.getItem(KEY_JWT));
         this._http.get("/api/auth/check");
         // le refresh de token est gérée dans :
