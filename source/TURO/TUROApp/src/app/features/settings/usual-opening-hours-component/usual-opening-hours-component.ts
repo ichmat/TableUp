@@ -70,7 +70,9 @@ export class UsualOpeningHoursComponent {
         {valueType: 'number', label: "Nb couvert max du service", setValue: (val) => data.coverCap = val },
       ]
     ).then((isOk) => {
-      console.log("isOk", isOk, "data", data);
+      if(isOk){
+        this.restaurantService.createService(data);
+      }
     });
   }
 }

@@ -42,6 +42,7 @@ namespace TUROAPI.Controllers
 
             context.Services.Add(service);
             await context.SaveChangesAsync();
+            await NotifyChangedAsync(DataScope.Restaurant);
             return Ok(service.ToResponse());
         }
 
@@ -62,7 +63,7 @@ namespace TUROAPI.Controllers
             service.CoverCap = request.CoverCap;
 
             await context.SaveChangesAsync();
-
+            await NotifyChangedAsync(DataScope.Restaurant);
             return Ok(service.ToResponse());
         }
 
