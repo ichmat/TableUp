@@ -67,6 +67,21 @@ namespace TUROAPI.Controllers
             return Ok(service.ToResponse());
         }
 
+        [HttpDelete("service/{id:guid}")]
+        [ProducesResponseType<ServiceResponse>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> DeleteService([FromRoute] Guid id)
+        {
+            Service service = await context.Services
+                .GetOrThrowAsync(x => x.Id == id && x.RestaurantId == CurrentRestaurantId);
+            await CheckImpactedReservations(service);
+
+            context.Services.Remove(service);
+
+            await context.SaveChangesAsync();
+            await NotifyChangedAsync(DataScope.Restaurant);
+            return Ok(service.ToResponse());
+        }
+
         /// <param name="existing">Le service modifié, null pour une création</param>
         private async Task CheckModificationValidity(AddOrUpdateServiceRequest request, Service? existing = null)
         {
@@ -108,7 +123,7 @@ namespace TUROAPI.Controllers
             // Une création n'ôte aucun horaire : elle ne peut pas laisser de réservation hors service
             if (existing != null)
             {
-                await CheckImpactedReservations(request, existing);
+                await CheckImpactedReservations(existing, request);
             }
         }
 
@@ -116,7 +131,7 @@ namespace TUROAPI.Controllers
         /// Refuse la modification si des réservations actives, prises dans les horaires actuels du service,
         /// tomberaient hors des nouveaux horaires 
         /// </summary>
-        private async Task CheckImpactedReservations(AddOrUpdateServiceRequest request, Service existing)
+        private async Task CheckImpactedReservations(Service existing, AddOrUpdateServiceRequest? request = null)
         {
             string timeZoneId = await context.Restaurants
                 .Where(r => r.Id == CurrentRestaurantId)
@@ -141,7 +156,7 @@ namespace TUROAPI.Controllers
                 .Where(r => r.ServiceDay.DayOfWeek == existing.Day)
                 .Select(r => new { Reservation = r, LocalStart = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.Start, timeZone)) })
                 .Where(x => x.LocalStart.IsBetween(existing.Opening, existing.Closing)
-                    && !x.LocalStart.IsBetween(request.Opening, request.Closing))
+                    && (request != null & !x.LocalStart.IsBetween(request!.Opening, request.Closing)))
                 .Select(x => x.Reservation)
                 .ToList();
 

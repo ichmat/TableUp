@@ -31,4 +31,22 @@ export class RestaurantService {
             })
         })
     }
+
+    updateService(id: string, service: ServiceModel) : Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            this._http.put(`/api/restaurant/settings/service/${id}`, service).subscribe({
+                next: () => {resolve(true)},
+                error: () => {resolve(false)}
+            })
+        })
+    }
+
+    deleteService(id: string) : Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            this._http.delete(`/api/restaurant/settings/service/${id}`).subscribe({
+                next: () => {resolve(true)},
+                error: () => {resolve(false)}
+            })
+        })
+    }
 }

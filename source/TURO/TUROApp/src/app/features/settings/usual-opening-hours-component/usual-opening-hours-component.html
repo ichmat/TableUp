@@ -11,7 +11,7 @@
     }
     @else {
         @for (service of currentServices(); track $index) {
-            <div class="bg-surface min-h-8 text-center rounded-sm border-2 border-border
+            <div (click)="displayAction(service)" class="bg-surface min-h-8 text-center rounded-sm border-2 border-border
                     flex flex-row justify-center items-center cursor-pointer hover:shadow-xl">
                 <p class="text-lg text-text"> 
                     {{ service.opening | timeOnly }} 

@@ -22,7 +22,10 @@ import { TimePicker } from '../../pickers/time-picker/time-picker';
   `
 })
 export class TimeInput implements FormValueControl<string> {
-  /** Format `HH:mm`, comme la valeur d'un `<input type="time">`. Chaîne vide si aucune heure */
+  /**
+   * Format `HH:mm`, comme la valeur d'un `<input type="time">`. Chaîne vide si aucune heure.
+   * En entrée, `HH:mm:ss` (un `TimeOnly` de l'API) est aussi accepté
+   */
   value = model<string>('');
   timeValue = model<Date>();
   touch = output<void>();
@@ -192,9 +195,12 @@ function formatTime(time: Date | undefined): string {
   return time ? twoDigitNumber(time.getHours()) + ':' + twoDigitNumber(time.getMinutes()) : '';
 }
 
-/** `HH:mm` → Date du jour à cette heure, ou `undefined` si la chaîne n'est pas une heure valide */
+/**
+ * `HH:mm` → Date du jour à cette heure, ou `undefined` si la chaîne n'est pas une heure valide.
+ * Accepte aussi `HH:mm:ss`, le format d'un `TimeOnly` renvoyé par l'API (les secondes sont ignorées)
+ */
 function parseTime(text: string): Date | undefined {
-  const match = /^(\d{2}):(\d{2})$/.exec(text);
+  const match = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(text);
   if(match === null){
     return undefined;
   }

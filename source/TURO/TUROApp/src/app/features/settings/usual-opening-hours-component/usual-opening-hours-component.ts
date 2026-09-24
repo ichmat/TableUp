@@ -21,7 +21,6 @@ export class UsualOpeningHoursComponent {
     this.restaurantService.model()?.services.filter(
       (service) => service.day === this.dayOfWeek()
     ));
-  private _containService = computed(() => this.currentServices !== undefined && this.currentServices.length > 0);
 
   addService(){
     let data : ServiceModel = {
@@ -36,16 +35,60 @@ export class UsualOpeningHoursComponent {
       maxCadence: null,
       coverCap: null,
     }
-    this._modalService.formModal(
-      "Ajouter service",
+    this.displayModal("Ajouter service", data).then((isOk) => {
+      if(isOk){
+        this.restaurantService.createService(data);
+      }
+    });
+  }
+
+  displayAction(service:ServiceModel){
+    this._modalService.actionModal(
+      "Actions", 
+      "Voulez vous Modifier ou Supprimer l'horraire ?",
       [
-        {valueType: 'time', label: "Ouverture Service", required: true, setValue: (val) => data.opening = val ?? '' },
-        {valueType: 'time', label: "Fermeture Service", required: true, setValue: (val) => data.closing = val ?? '' },
+        {text: "Modifier", type: 'Primary', onClick: () => this.updateService(service)},
+        {text: "Supprimer", type: 'Tertiary', onClick: () => this.deleteService(service)},
+      ]
+    )
+  }
+
+  updateService(service:ServiceModel){
+    this.displayModal("Modifier service", service).then((isOk) => {
+      if(isOk){
+        this.restaurantService.updateService(service.id, service);
+      }
+    });
+  }
+
+  deleteService(service:ServiceModel){
+    this.restaurantService.deleteService(service.id);
+  }
+
+  displayModal(title:string, data:ServiceModel): Promise<boolean>{
+    return this._modalService.formModal(
+      title,
+      [
+        {
+          valueType: 'time', 
+          label: "Ouverture Service", 
+          defaultValue: data.opening,
+          required: true, 
+          setValue: (val) => data.opening = val ?? '' 
+        },
+        {
+          valueType: 'time', 
+          label: "Fermeture Service", 
+          defaultValue: data.closing,
+          required: true, 
+          setValue: (val) => data.closing = val ?? '' 
+        },
         
         {
           valueType: 'radio-number', 
           label: "Pas pour chaque créneaux", 
           required: true,
+          defaultValue: data.slotStep,
           options: [
             {label:"15 min", value: 15},
             {label:"30 min", value: 30},
@@ -58,6 +101,7 @@ export class UsualOpeningHoursComponent {
           valueType: 'radio', 
           label: "Type d'occupation", 
           required: true,
+          defaultValue: data.occupancyMode,
           options: [
             {label:"Rotation", value: 'Rotate'},
             {label:"Service unique", value: 'SingleService'},
@@ -65,14 +109,10 @@ export class UsualOpeningHoursComponent {
           setValue: (val) => data.occupancyMode = val as OccupancyMode
         },
 
-        {valueType: 'number', label: "Durée moyen d'une réservation", setValue: (val) => data.expectedDuration = val },
-        {valueType: 'number', label: "Nb couvert max par créneaux", setValue: (val) => data.maxCadence = val },
-        {valueType: 'number', label: "Nb couvert max du service", setValue: (val) => data.coverCap = val },
+        {valueType: 'number', label: "Durée moyen d'une réservation", defaultValue: data.expectedDuration, setValue: (val) => data.expectedDuration = val },
+        {valueType: 'number', label: "Nb couvert max par créneaux", defaultValue: data.maxCadence, setValue: (val) => data.maxCadence = val },
+        {valueType: 'number', label: "Nb couvert max du service", defaultValue: data.coverCap, setValue: (val) => data.coverCap = val },
       ]
-    ).then((isOk) => {
-      if(isOk){
-        this.restaurantService.createService(data);
-      }
-    });
+    )
   }
 }
