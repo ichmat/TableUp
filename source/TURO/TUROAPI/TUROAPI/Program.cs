@@ -5,7 +5,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using TUROAPI.Context;
+using TUROAPI.Hubs;
 using TUROAPI.Middleware;
+using TUROAPI.Models.Enums;
+using TUROAPI.Models.Responses;
 using TUROAPI.Services;
 using TUROAPI.Tools;
 using TUROAPI.Tools.Logging;
@@ -35,7 +38,12 @@ namespace TUROAPI
             builder.Services.AddOpenApi();
 
             builder.Services.AddDbContext<Context.TuroDBContext>(options =>
-                options.UseNpgsql(conf.GetConnectionString("TuroDB")));
+                options.UseNpgsql(conf.GetConnectionString("TuroDB"), o =>
+                {
+                    // Utilisation des requête splitter dans le cas de multiple `Inlucde` dans une requête
+                    // voir : https://learn.microsoft.com/fr-fr/ef/core/querying/single-split-queries
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             builder.Services
                 .AddAuthentication()
@@ -52,10 +60,41 @@ namespace TUROAPI
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(conf["JWT:Key"]!)),
                         RequireExpirationTime = true,
                     };
+                    option.Events = new JwtBearerEvents
+                    {
+                        // Un navigateur ne peut pas poser d'en-tête Authorization sur un WebSocket :
+                        // le client SignalR passe le JWT en ?access_token, accepté uniquement sur le hub
+                        OnMessageReceived = context =>
+                        {
+                            var token = context.Request.Query["access_token"];
+                            if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(TuroHub.Path))
+                                context.Token = token;
+                            return Task.CompletedTask;
+                        },
+                        OnChallenge = async context =>
+                        {
+                            context.HandleResponse(); // supprime le 401 vide par défaut
+
+                            ApiError error = context.AuthenticateFailure switch
+                            {
+                                SecurityTokenExpiredException => ApiError.TokenExpired,
+                                null => ApiError.NoAuthenticationTokenGiven, // aucun en-tête Authorization
+                                _ => ApiError.UnreadableToken,               // signature, émetteur, format…
+                            };
+                            await WriteApiError(context.HttpContext, error);
+                        },
+                        OnForbidden = context => WriteApiError(context.HttpContext, ApiError.NotAdmin),
+                    };
                 });
 
             builder.Services.AddSingleton<TokenService>();
             builder.Services.AddSingleton<PasswordHash>();
+
+            // SignalR a ses propres options JSON, indépendantes de celles de MVC : les enums doivent y partir en chaînes aussi
+            builder.Services.AddSignalR()
+                .AddJsonProtocol(options =>
+                    options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            builder.Services.AddSingleton<ChangeNotifier>();
 
             builder.Logging.ClearProviders();
             builder.Services.AddHttpContextAccessor();
@@ -107,12 +146,15 @@ namespace TUROAPI
             // Front Angular embarqué dans l'image : fichiers servis depuis wwwroot
             app.UseStaticFiles();
 
-            app.UseAuthorization();
-
+            // l'authentification doit précéder l'autorisation, sinon [Authorize] ne voit jamais d'utilisateur
             app.UseAuthentication();
 
+            app.UseAuthorization();
 
             app.MapControllers();
+
+            // La connexion est coupée à l'expiration du JWT : le client se reconnecte avec un token rafraîchi
+            app.MapHub<TuroHub>(TuroHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
             // Une URL /api inconnue reste une 404, jamais la page Angular
             app.Map("/api/{**rest}", () => Results.NotFound());
@@ -120,9 +162,19 @@ namespace TUROAPI
             // Toute autre route qui n'est pas un fichier est une route Angular : on renvoie index.html
             app.MapFallbackToFile("index.html");
 
-            AppLogger.Log(LogType.Info, "Application started");
-
             app.Run();
+        }
+
+        private static Task WriteApiError(HttpContext http, ApiError error)
+        {
+            var response = new ApiErrorResponse(new ApiErrorException(error));
+            http.Items[RequestLoggingMiddleware.ErrorKey] = response.Message; // même trace que le filtre
+            http.Response.StatusCode = response.StatusCode;
+
+            // les options JSON de MVC, pour garder les enums en chaînes
+            var json = http.RequestServices.GetRequiredService<IOptions<Microsoft.AspNetCore.Mvc.JsonOptions>>();
+            return http.Response.WriteAsJsonAsync(response, json.Value.JsonSerializerOptions);
         }
     }
 }
+

@@ -4,9 +4,10 @@ import { Input } from '../../shared/components/inputs/input/input';
 import { User03FreeIcons } from '@hugeicons/core-free-icons';
 import { TimeInput } from '../../shared/components/inputs/time-input/time-input';
 import { DateInput } from '../../shared/components/inputs/date-input/date-input';
+import { NumberInput } from '../../shared/components/inputs/number-input/number-input';
 
 @Component({
-  imports: [Button, Input, TimeInput, DateInput],
+  imports: [Button, Input, TimeInput, DateInput, NumberInput],
   selector: 'app-home-component',
   templateUrl: './home-component.html',
   styles:``
@@ -14,10 +15,11 @@ import { DateInput } from '../../shared/components/inputs/date-input/date-input'
 export class HomeComponent {
   user = User03FreeIcons;
 
-  inputVal:number = 0;
+  inputVal: string = "";
 
   timeValue: string = "12:00";
 
   dateValue?: Date;
-  dateValueString: string = "2026-09-15";
+
+  numberValue: number | null = null;
 }

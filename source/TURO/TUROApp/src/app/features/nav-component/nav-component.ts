@@ -1,7 +1,8 @@
-import { Component, ElementRef, viewChild } from '@angular/core';
+import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from "@angular/router";
 import { Home01Icon, User03Icon, Ticket01Icon, Table01Icon, Setting07Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
+import { AuthService } from '../../core/services/auth/auth.service';
 
 @Component({
   imports: [RouterLink, RouterLinkActive, HugeiconsIconComponent],
@@ -11,6 +12,8 @@ import { HugeiconsIconComponent } from '@hugeicons/angular';
   `
 })
 export class NavComponent {
+  authService = inject(AuthService)
+
   home = Home01Icon;
   client = User03Icon;
   booking = Ticket01Icon;

@@ -288,9 +288,11 @@ namespace TUROAPI.Migrations
 
             modelBuilder.Entity("TUROAPI.Models.RefreshToken", b =>
                 {
-                    b.Property<Guid>("Token")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Token")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DestroyAt")
                         .HasColumnType("timestamp with time zone");

@@ -13,9 +13,9 @@ export interface RestaurantService {
     /** Le jour de la semaine du service */
     day: DayWeek,
     /** Heure d'ouverture du service @example '11:30' */
-    open: string,
+    opening: string,
     /** Heure de fermeture du service @example '14:00' */
-    close: string,
+    closing: string,
     /**
      * Détermine le pas pour chaque créneau, 15 ou 30 min
      * @example 30 -> représente `30 min`, donc entre 12h et 13h, il y a le créneau :
@@ -23,16 +23,16 @@ export interface RestaurantService {
      * - 12h30
      * - 13h
      * */
-    stepTimeSlotMin: number,
+    slotStep: number,
     /**
      * Mode d'occupation
      * @see ℹ️ Voir `OccupancyMode` pour plus d'info
      * */
     occupancyMode: OccupancyMode,
-    /** Détermine le temps moyen d'une réservation. `null` hérite de `Restaurant.defaultRotationMin` */
-    plannedRotationMin: number | null,
+    /** Détermine le temps moyen d'une réservation. `null` hérite de `Restaurant.defaultRotation` */
+    expectedDuration: number | null,
     /** Plafond nombre de couverts par créneau (avertissement seulement) */
-    thersholdCoversTimeSlot: number | null,
+    maxCadence: number | null,
     /** Plafond nombre de couverts (avertissement seulement) */
-    thersholdCovers: number | null,
+    coverCap: number | null,
 }

@@ -185,8 +185,9 @@ namespace TUROAPI.Migrations
                 name: "RefreshTokens",
                 columns: table => new
                 {
-                    Token = table.Column<Guid>(type: "uuid", nullable: false),
+                    Token = table.Column<string>(type: "text", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DestroyAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },

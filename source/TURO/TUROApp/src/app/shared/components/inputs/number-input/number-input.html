@@ -1,0 +1,30 @@
+<div [class]="wrapperClass()" (click)="focus()">
+    @if (icon() !== undefined) {
+        <hugeicons-icon
+            [icon]="icon()!"
+            [size]="24"
+            color="currentColor"
+            [strokeWidth]="1.5"
+            [class]="iconClickable() ? 'cursor-pointer hover:brightness-125' : ''"
+            (click)="iconClickable() && onIconClick.emit()"
+            />
+    }
+
+    <input
+        #myInput
+        type="number"
+        [name]="name()"
+        [attr.min]="min() ?? null"
+        [attr.max]="max() ?? null"
+        [attr.step]="step()"
+        [disabled]="disabled()"
+        [readOnly]="readonly()"
+        [required]="required()"
+        [attr.aria-invalid]="showError()"
+        class="outline-none grow w-full"
+        [class]="disabled() ? 'cursor-not-allowed' : ''"
+        [placeholder]="placeholder()" [value]="value() ?? ''"
+        (input)="onInput($event)"
+        (blur)="touch.emit()"
+        />
+</div>

@@ -9,8 +9,11 @@ import { twMerge } from 'tailwind-merge';
 })
 export class Button {
   text = input<string>();
-  type = input<'Primary' | 'Secondary' | 'Tertiary'>('Primary');
+  type = input<'Primary' | 'Secondary' | 'Tertiary' | 'Dashed'>('Primary');
+  typeButton = input<'button' | 'reset' | 'submit'>('button');
   buttonClass = input<string>("");
+
+  disabled = input<boolean>(false);
 
   typeClass = computed(() => {
     let typeCSS = "";
@@ -24,9 +27,13 @@ export class Button {
       case 'Tertiary':
         typeCSS = 'border-4 border-text-muted text-text-muted';
         break;
+      case 'Dashed':
+        typeCSS = 'border-3 border-dashed border-interactive text-interactive'
+        break;
     }
     return twMerge(
-      "rounded-lg font-bold cursor-pointer hover:brightness-110 min-w-24 h-12",
+      "rounded-lg font-bold cursor-pointer min-w-24 h-12",
+      this.disabled() ? "opacity-50 cursor-not-allowed" : "hover:brightness-110",
       typeCSS, 
       this.buttonClass())
   })

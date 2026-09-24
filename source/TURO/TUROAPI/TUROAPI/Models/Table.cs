@@ -24,7 +24,6 @@ namespace TUROAPI.Models
         public double Height { get; set; }
         public double Rotation { get; set; }
 
-        // The only physical state stored
         public DateTime? NeedsCleaningSince { get; set; }
 
         public bool IsActive { get; set; } = true;

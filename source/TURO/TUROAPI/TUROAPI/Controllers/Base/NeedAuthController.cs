@@ -5,6 +5,7 @@ using System.Security.Claims;
 using TUROAPI.Context;
 using TUROAPI.Models;
 using TUROAPI.Models.Enums;
+using TUROAPI.Services;
 
 namespace TUROAPI.Controllers.Base
 {
@@ -32,5 +33,11 @@ namespace TUROAPI.Controllers.Base
                 await context.UserStaffs.FirstOrDefaultAsync(x => x.Id == CurrentUserId);
             return _currentUser!;
         }
+
+        /// <summary>
+        /// Demande aux écrans du restaurant courant de recharger <paramref name="scope"/>. À appeler après le SaveChanges.
+        /// </summary>
+        protected Task NotifyChangedAsync(DataScope scope) =>
+            HttpContext.RequestServices.GetRequiredService<ChangeNotifier>().NotifyAsync(CurrentRestaurantId, scope);
     }
 }

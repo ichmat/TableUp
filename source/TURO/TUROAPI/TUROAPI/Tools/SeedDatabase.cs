@@ -13,7 +13,7 @@ namespace TUROAPI.Tools
 
             Guid guidRestaurant = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-            db.Restaurants.AddRangeIfNotExists((x, y) => x.Id == y.Id,
+            db.Restaurants.AddRangeIfNotExists(x => x.Id == guidRestaurant,
                 new Restaurant()
                 {
                     Id = guidRestaurant,
@@ -27,7 +27,21 @@ namespace TUROAPI.Tools
                     AutoConfirmation = false,
                 });
 
-            Guid guidAdmin = Guid.Parse("11111111-1111-1111-1111-A111111111111");
+            Guid idService = Guid.Parse("11111111-1111-1111-1111-111111111112");
+
+            db.Services.AddRangeIfNotExists(x => x.Id == idService,
+                new Service()
+                {
+                    Id = idService,
+                    RestaurantId = guidRestaurant,
+                    Day = DayOfWeek.Tuesday,
+                    Opening = TimeOnly.FromTimeSpan(TimeSpan.FromHours(11)),
+                    Closing = TimeOnly.FromTimeSpan(TimeSpan.FromHours(13)),
+                    SlotStep = 30,
+                    OccupancyMode = OccupancyMode.SingleService,
+                });
+
+            Guid guidAdmin = Guid.Parse("11111111-1111-1111-1111-A11111111111");
             string passwordAdmin = "admin";
 
             var admin = new UserStaff
@@ -41,7 +55,7 @@ namespace TUROAPI.Tools
 
             admin.PasswordHash = hash.HashPassword(admin, passwordAdmin);
 
-            db.UserStaffs.AddRangeIfNotExists((x, y) => x.Id == y.Id, admin);
+            db.UserStaffs.AddRangeIfNotExists(x => x.Id == guidAdmin, admin);
 
             db.SaveChanges();
         }

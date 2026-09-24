@@ -1,0 +1,68 @@
+<div class="w-96 min-h-52 rounded-lg bg-surface
+    flex flex-col gap-2 p-4">
+    <p class="text-4xl font-bold text-center text-text"> {{ model().title }} </p>
+    <hr class="border-border"/>
+    @if (model().desc) {
+        <p class="text-text"> {{ model().desc }}</p>
+    }
+
+    @for (field of fields(); track $index; let fieldIndex = $index) {
+        <!-- La case à cocher porte son libellé à côté d'elle -->
+        @if (field.type !== 'check') {
+            <label class="text-text font-bold">{{ field.label }}@if (field.required) { * }</label>
+        }
+        @switch (field.type) {
+            @case ('select') {
+                <div class="flex flex-col gap-1">
+                    @for (option of field.options; track $index; let optionIndex = $index) {
+                        <label class="flex flex-row items-center gap-2 text-text cursor-pointer">
+                            <input type="checkbox" class="size-4 accent-interactive cursor-pointer"
+                                [checked]="field.value().includes(optionIndex)"
+                                (change)="toggleOption(field.value, optionIndex)" />
+                            {{ option.label }}
+                        </label>
+                    }
+                </div>
+            }
+            @case ('radio') {
+                <div class="flex flex-col gap-1">
+                    @for (option of field.options; track $index; let optionIndex = $index) {
+                        <label class="flex flex-row items-center gap-2 text-text cursor-pointer">
+                            <input type="radio" class="size-4 accent-interactive cursor-pointer"
+                                [name]="formId + '-' + fieldIndex"
+                                [checked]="field.value() === optionIndex"
+                                (change)="field.value.set(optionIndex)" />
+                            {{ option.label }}
+                        </label>
+                    }
+                </div>
+            }
+            @case ('check') {
+                <label class="flex flex-row items-center gap-2 text-text font-bold cursor-pointer">
+                    <input #checkbox type="checkbox" class="size-4 accent-interactive cursor-pointer"
+                        [checked]="field.value()"
+                        (change)="field.value.set(checkbox.checked)" />
+                    {{ field.label }}@if (field.required) { * }
+                </label>
+            }
+            @case ('string') {
+                <app-input [(value)]="field.value"></app-input>
+            }
+            @case ('number') {
+                <app-number-input class="w-full" inputClass="w-full" [(value)]="field.value"></app-number-input>
+            }
+            @case ('date') {
+                <app-date-input class="w-full" inputClass="w-full" [(value)]="field.value"></app-date-input>
+            }
+            @case ('time') {
+                <app-time-input class="w-full" inputClass="w-full" [(value)]="field.value"></app-time-input>
+            }
+        }
+    }
+
+    <div class="flex flex-row items-stretch flex-nowrap h-12 gap-2 mt-2
+    [&>button]:grow [&>button]:rounded-lg [&>button]:font-bold [&>button]:cursor-pointer [&>button]:hover:brightness-110">
+        <button (click)="validate()" class="bg-interactive text-surface">Valider</button>
+        <button (click)="model().onCancel()" class="bg-app text-text">Annuler</button>
+    </div>
+</div>
