@@ -31,10 +31,5 @@ export class ModalManager {
 
   //   return components;
   // });
-
-  constructor(){
-   effect(() => {
-    console.log("displayModals", this.modalService.displayModals())
-   })
-  }
+  
 }

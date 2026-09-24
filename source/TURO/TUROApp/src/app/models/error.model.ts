@@ -7,6 +7,9 @@ export enum ApiError{
     NotAdmin = 'NotAdmin',
     InvalidLoginOrPassword = 'InvalidLoginOrPassword',
     TokenExpired = 'TokenExpired',
+    InvalidModification = 'InvalidModification',
+    NotFound = 'NotFound',
+    ReservationsImpacted = 'ReservationsImpacted',
 }
 
 export interface ApiErrorResponse{

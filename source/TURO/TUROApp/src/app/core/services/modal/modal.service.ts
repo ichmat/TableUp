@@ -64,7 +64,7 @@ export class ModalService {
     /** Résout `true` si le formulaire est validé (les `setValue` ont alors été appelés), `false` s'il est annulé */
     formModal(title: string, inputs: ModalFormInput[], desc?: string): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
-            const close = (validated: boolean) => {this.removeLastModal(); resolve(validated)};
+            const close = (validated: boolean) => { resolve(validated);this.removeLastModal();};
             this.addModal({
                 kind: 'form',
                 title: title,
@@ -73,7 +73,7 @@ export class ModalService {
                 onValidate: () => close(true),
                 onCancel: () => close(false),
                 onCrossClicked: () => close(false),
-            });
+            } as ModalFormModel);
         });
     }
 }

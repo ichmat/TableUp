@@ -194,6 +194,25 @@ Comme l'interception se fait au niveau réseau, aucun code applicatif ne connaî
 
 Les handlers **sont** le contrat d'API tant que le C# n'existe pas. Ils doivent donc être écrits avec le sérieux d'une spécification : ce sont eux que le backend devra honorer.
 
+### 5.6 Rafraîchissement — notifications SignalR
+
+Plusieurs écrans d'un même restaurant affichent les mêmes données. Quand l'une d'elles change, l'API le dit à tous — par SignalR, sur le hub `/api/hubs/turo`.
+
+**Une notification ne transporte aucune donnée.** Elle dit seulement *quoi* a changé : `DataChanged(scope)`, où `DataScope` (miroir de l'enum C#) nomme un GET à refaire. Le front recharge sa ressource ; la lecture reste l'unique chemin des données, avec ses contrôles d'accès.
+
+| Règle | Pourquoi |
+|---|---|
+| Les écritures restent en REST ; le hub ne reçoit rien du client | Validation, `ApiError` et journalisation n'existent qu'une fois, dans les contrôleurs |
+| Le contrôleur notifie **après** `SaveChanges` (`NotifyChangedAsync`) | Une exception annule la notification : on n'annonce jamais un changement qui n'a pas eu lieu |
+| Tout le groupe du restaurant est notifié, auteur compris | L'auteur refait un GET de trop ; l'exclure demanderait de transmettre son `connectionId` à chaque requête |
+| À chaque reconnexion, **tout** est rechargé | Les notifications ne sont pas durables : celles émises pendant une coupure sont perdues |
+
+Côté front, `RealtimeService` porte la connexion, qui suit l'authentification. Chaque service de données s'y abonne pour son scope et recharge sa `httpResource` ; aucun composant ne connaît SignalR.
+
+⚠️ Les requêtes de SignalR ne passent pas par l'intercepteur HTTP. Le JWT est fourni par `accessTokenFactory`, qui le rafraîchit lui-même lorsqu'il approche de son expiration — l'API ferme la connexion à ce moment-là (`CloseOnAuthenticationExpiration`).
+
+ℹ️ Ce canal est interne au tenant. Il ne se confond pas avec le canal persistant tenant → central du §5 de l'architecture, qui utilise la même technologie pour un tout autre rôle.
+
 ---
 
 ## 6. La couche UI
@@ -314,7 +333,7 @@ Le développeur n'a jamais accès à une implémentation de référence. Le test
 | L'API .NET | Après stabilisation des contrats portés par les handlers MSW |
 | Persistance de la file d'écritures | Quand un écran de service en aura besoin (§6.3 de l'architecture) |
 | Authentification | Aucune décision ici. Voir §10 |
-| SignalR, canal persistant, projection | Concernent le tenant, pas le front restaurateur |
+| Canal persistant tenant → central, projection | Concernent le tenant, pas le front restaurateur. Le front n'utilise SignalR que pour les notifications de changement (§5.6) |
 
 ---
 

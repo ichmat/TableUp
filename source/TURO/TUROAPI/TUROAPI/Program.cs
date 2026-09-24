@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using TUROAPI.Context;
+using TUROAPI.Hubs;
 using TUROAPI.Middleware;
 using TUROAPI.Models.Enums;
 using TUROAPI.Models.Responses;
@@ -61,6 +62,15 @@ namespace TUROAPI
                     };
                     option.Events = new JwtBearerEvents
                     {
+                        // Un navigateur ne peut pas poser d'en-tête Authorization sur un WebSocket :
+                        // le client SignalR passe le JWT en ?access_token, accepté uniquement sur le hub
+                        OnMessageReceived = context =>
+                        {
+                            var token = context.Request.Query["access_token"];
+                            if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(TuroHub.Path))
+                                context.Token = token;
+                            return Task.CompletedTask;
+                        },
                         OnChallenge = async context =>
                         {
                             context.HandleResponse(); // supprime le 401 vide par défaut
@@ -79,6 +89,12 @@ namespace TUROAPI
 
             builder.Services.AddSingleton<TokenService>();
             builder.Services.AddSingleton<PasswordHash>();
+
+            // SignalR a ses propres options JSON, indépendantes de celles de MVC : les enums doivent y partir en chaînes aussi
+            builder.Services.AddSignalR()
+                .AddJsonProtocol(options =>
+                    options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            builder.Services.AddSingleton<ChangeNotifier>();
 
             builder.Logging.ClearProviders();
             builder.Services.AddHttpContextAccessor();
@@ -136,6 +152,9 @@ namespace TUROAPI
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // La connexion est coupée à l'expiration du JWT : le client se reconnecte avec un token rafraîchi
+            app.MapHub<TuroHub>(TuroHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
             // Une URL /api inconnue reste une 404, jamais la page Angular
             app.Map("/api/{**rest}", () => Results.NotFound());

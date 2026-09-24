@@ -7,5 +7,7 @@ export default {
     target,
     secure: false,
     changeOrigin: true,
+    // le hub SignalR (/api/hubs/turo) passe en WebSocket
+    ws: true,
   },
 };

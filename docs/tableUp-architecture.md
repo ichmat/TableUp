@@ -196,6 +196,8 @@ Un seul mécanisme rend alors quatre services :
 
 Le keep-alive remplace le ping. La dérive entre la projection et la réalité se compte en secondes, pas en minutes.
 
+ℹ️ Ne pas confondre avec les notifications de changement que l'API du tenant envoie à ses propres écrans, elles aussi par SignalR : ce canal-là reste dans le tenant et ne transporte aucune donnée (`TURO-stack-technique.md` §5.6).
+
 ---
 
 ## 6. Les deux modes d'hébergement

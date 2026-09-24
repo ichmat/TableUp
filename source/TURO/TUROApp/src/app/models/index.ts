@@ -13,3 +13,4 @@ export * from './cancellation-conditions.model';
 export * from './user.model';
 export * from './settings.model';
 export * from './error.model';
+export * from './data-scope.model';

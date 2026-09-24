@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using TUROAPI.Models.Enums;
 
 namespace TUROAPI.Extensions
 {
@@ -25,6 +26,19 @@ namespace TUROAPI.Extensions
                     dbSet.Add(entity);
                 }
             }
+        }
+
+        public static Task<T> GetOrThrowAsync<T>(this DbSet<T> dbSet, Expression<Func<T, bool>> predicate, string? errorMessage = null) where T : class
+        {
+            return dbSet.FirstOrDefaultAsync(predicate).ContinueWith(task =>
+            {
+                var result = task.Result;
+                if (result == null)
+                {
+                    throw new ApiErrorException(ApiError.NotFound, errorMessage ?? $"{typeof(T).Name} not found.");
+                }
+                return result;
+            });
         }
     }
 }

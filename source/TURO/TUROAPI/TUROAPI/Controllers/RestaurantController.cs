@@ -4,18 +4,21 @@ using TUROAPI.Context;
 using TUROAPI.Controllers.Base;
 using TUROAPI.Models;
 using TUROAPI.Models.Enums;
+using TUROAPI.Models.Responses;
 using TUROAPI.Models.Wrapper;
 
 namespace TUROAPI.Controllers
 {
     [Route("api/restaurant")]
+    [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status401Unauthorized)]
     public class RestaurantController : NeedAuthController
     {
         public RestaurantController(TuroDBContext context) : base(context)
         {
         }
 
-        [HttpGet()]
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFullInfoRestaurant()
         {
             Restaurant restaurant =

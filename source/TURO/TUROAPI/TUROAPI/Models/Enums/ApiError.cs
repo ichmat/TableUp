@@ -21,5 +21,11 @@ namespace TUROAPI.Models.Enums
         InvalidLoginOrPassword = 4,
         [ApiErrorInfo(HttpStatusCode.Forbidden, "The token has expired.")]
         TokenExpired = 5,
+        [ApiErrorInfo(HttpStatusCode.Forbidden, "Invalid modification : {0}")]
+        InvalidModification = 6,
+        [ApiErrorInfo(HttpStatusCode.NotFound, "{0}")]
+        NotFound = 7,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "{0} active reservation(s) ({1} covers) would fall outside the new service hours.")]
+        ReservationsImpacted = 8,
     }
 }
