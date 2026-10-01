@@ -13,6 +13,7 @@ describe('UsualOpeningHoursComponent', () => {
 
     fixture = TestBed.createComponent(UsualOpeningHoursComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('dayOfWeek', 'Monday');
     fixture.detectChanges();
   });
 

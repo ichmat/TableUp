@@ -1,7 +1,8 @@
-import { computed, inject, Service, signal, } from '@angular/core';
+import { computed, inject, Service, } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { HttpClient, httpResource } from '@angular/common/http';
-import { DataScope, Restaurant } from '../../../models';
+import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { DataScope, isApiErrorResponse, Restaurant } from '../../../models';
 import { RealtimeService } from '../realtime/realtime.service';
 import { RestaurantService as ServiceModel } from '../../../models';
 
@@ -23,30 +24,31 @@ export class RestaurantService {
         inject(RealtimeService).onDataChanged(DataScope.Restaurant, () => this._restaurant.reload());
     }
 
-    createService(service: ServiceModel): Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.post("/api/restaurant/settings/service", service).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    createService(service: ServiceModel): Promise<string | null> {
+        return toResult(this._http.post("/api/restaurant/settings/service", service));
     }
 
-    updateService(id: string, service: ServiceModel) : Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.put(`/api/restaurant/settings/service/${id}`, service).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    updateService(id: string, service: ServiceModel): Promise<string | null> {
+        return toResult(this._http.put(`/api/restaurant/settings/service/${id}`, service));
     }
 
-    deleteService(id: string) : Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.delete(`/api/restaurant/settings/service/${id}`).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    deleteService(id: string): Promise<string | null> {
+        return toResult(this._http.delete(`/api/restaurant/settings/service/${id}`));
     }
+}
+
+function toResult(request: Observable<unknown>): Promise<string | null> {
+    return new Promise<string | null>((resolve) => {
+        request.subscribe({
+            next: () => resolve(null),
+            error: (error: unknown) => resolve(
+                error instanceof HttpErrorResponse && isApiErrorResponse(error.error)
+                    ? error.error.message
+                    : "La modification n'a pas été enregistrée."
+            ),
+        });
+    });
 }

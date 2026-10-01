@@ -96,10 +96,7 @@ namespace TUROAPI.Controllers
             //    throw new ApiErrorException(ApiError.InvalidModification, "closing time must be after opening time.");
             //}
 
-            if (request.SlotStep <= 0 || request.SlotStep > 120 || request.SlotStep % 15 != 0)
-            {
-                throw new ApiErrorException(ApiError.InvalidModification, "slot step must be between 1 and 120 and be a multiple of 15.");
-            }
+            CheckSlotSettings(request);
 
             var conflictServices = await context.Services
                 .Where(s =>
@@ -126,6 +123,40 @@ namespace TUROAPI.Controllers
                 await CheckImpactedReservations(existing, request);
             }
         }
+
+        /// <summary>
+        /// Réglages de créneaux d'un service (§9.4) : pas de la frise, durée prévue et avertissements de cuisine
+        /// </summary>
+        private static void CheckSlotSettings(AddOrUpdateServiceRequest request)
+        {
+            // PAR-04 : la frise ne connaît que ces deux densités
+            if (!AllowedSlotSteps.Contains(request.SlotStep))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "slot step must be 15 or 30 minutes.");
+            }
+
+            if (!Enum.IsDefined(request.OccupancyMode))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "unknown occupancy mode.");
+            }
+
+            // Null hérite de Restaurant.DefaultRotation (PAR-06)
+            if (request.ExpectedDuration is <= 0 or > MaxExpectedDuration)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, $"expected duration must be between 1 and {MaxExpectedDuration} minutes.");
+            }
+
+            // Null désactive l'avertissement (PAR-07)
+            if (request.MaxCadence is <= 0 || request.CoverCap is <= 0)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "kitchen warning thresholds must be positive.");
+            }
+        }
+
+        private static readonly int[] AllowedSlotSteps = [15, 30];
+
+        // Une journée : au-delà, la durée n'a plus de sens pour un repas
+        private const int MaxExpectedDuration = 24 * 60;
 
         /// <summary>
         /// Refuse la modification si des réservations actives, prises dans les horaires actuels du service,
@@ -155,8 +186,9 @@ namespace TUROAPI.Controllers
             var impacted = activeReservations
                 .Where(r => r.ServiceDay.DayOfWeek == existing.Day)
                 .Select(r => new { Reservation = r, LocalStart = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.Start, timeZone)) })
+                // Sans nouveaux horaires (suppression), toute réservation du service est impactée
                 .Where(x => x.LocalStart.IsBetween(existing.Opening, existing.Closing)
-                    && (request != null & !x.LocalStart.IsBetween(request!.Opening, request.Closing)))
+                    && (request == null || !x.LocalStart.IsBetween(request.Opening, request.Closing)))
                 .Select(x => x.Reservation)
                 .ToList();
 

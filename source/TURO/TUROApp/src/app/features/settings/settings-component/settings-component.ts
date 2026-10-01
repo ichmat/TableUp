@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { SettingsPages } from '../../../models/settings.model';
 import { OpeningsComponent } from '../openings-component/openings-component';
+import { ServicesAndTimeSlotsComponents } from '../services-and-time-slots-components/services-and-time-slots-components';
 
 @Component({
-  imports: [OpeningsComponent],
+  imports: [OpeningsComponent, ServicesAndTimeSlotsComponents],
   selector: 'app-settings-component',
   templateUrl: './settings-component.html',
   styles:``

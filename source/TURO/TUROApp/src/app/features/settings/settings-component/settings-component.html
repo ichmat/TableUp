@@ -17,10 +17,13 @@
     </div>
 
     <!-- FENÊTRES -->
-    <div class="flex flex-col h-full w-full bg-surface rounded-xl shadow-xl p-2 px-3">
+    <div class="flex flex-col h-full w-full bg-surface rounded-xl shadow-xl p-2 px-3 overflow-y-auto overflow-x-hidden">
         @switch (currentSetting) {
             @case('Openings'){
                 <app-openings-component/>
+            }
+            @case ('Services & time slots') {
+                <app-services-and-time-slots-components />
             }
         }
     </div>
