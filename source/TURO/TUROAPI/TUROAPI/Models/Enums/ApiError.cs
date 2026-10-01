@@ -27,5 +27,7 @@ namespace TUROAPI.Models.Enums
         NotFound = 7,
         [ApiErrorInfo(HttpStatusCode.Conflict, "{0} active reservation(s) ({1} covers) would fall outside the new service hours.")]
         ReservationsImpacted = 8,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "{0} active reservation(s) ({1} covers) fall on the closed days or outside the replacement hours.")]
+        ClosureImpactsReservations = 9,
     }
 }

@@ -1,10 +1,10 @@
 import { computed, inject, Service, } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { DataScope, isApiErrorResponse, Restaurant } from '../../../models';
+import { HttpClient, httpResource } from '@angular/common/http';
+import { DataScope, Restaurant } from '../../../models';
 import { RealtimeService } from '../realtime/realtime.service';
 import { RestaurantService as ServiceModel } from '../../../models';
+import { toApiResult } from '../api-result';
 
 @Service()
 export class RestaurantService {
@@ -15,7 +15,8 @@ export class RestaurantService {
         this._authService.isConnected() ? '/api/restaurant' : undefined
     );
 
-    model = computed(() => this._restaurant.value() ?? null);
+    // `value()` lève une exception quand la ressource est en erreur : elle figerait tout écran qui la lit
+    model = computed(() => this._restaurant.hasValue() ? this._restaurant.value() : null);
     isLoading = this._restaurant.isLoading;
     error = this._restaurant.error;
 
@@ -25,30 +26,17 @@ export class RestaurantService {
     }
 
     /** Résout `null` en cas de succès, le message d'erreur sinon */
-    createService(service: ServiceModel): Promise<string | null> {
-        return toResult(this._http.post("/api/restaurant/settings/service", service));
+    async createService(service: ServiceModel): Promise<string | null> {
+        return (await toApiResult(this._http.post("/api/restaurant/settings/service", service))).error;
     }
 
     /** Résout `null` en cas de succès, le message d'erreur sinon */
-    updateService(id: string, service: ServiceModel): Promise<string | null> {
-        return toResult(this._http.put(`/api/restaurant/settings/service/${id}`, service));
+    async updateService(id: string, service: ServiceModel): Promise<string | null> {
+        return (await toApiResult(this._http.put(`/api/restaurant/settings/service/${id}`, service))).error;
     }
 
     /** Résout `null` en cas de succès, le message d'erreur sinon */
-    deleteService(id: string): Promise<string | null> {
-        return toResult(this._http.delete(`/api/restaurant/settings/service/${id}`));
+    async deleteService(id: string): Promise<string | null> {
+        return (await toApiResult(this._http.delete(`/api/restaurant/settings/service/${id}`))).error;
     }
-}
-
-function toResult(request: Observable<unknown>): Promise<string | null> {
-    return new Promise<string | null>((resolve) => {
-        request.subscribe({
-            next: () => resolve(null),
-            error: (error: unknown) => resolve(
-                error instanceof HttpErrorResponse && isApiErrorResponse(error.error)
-                    ? error.error.message
-                    : "La modification n'a pas été enregistrée."
-            ),
-        });
-    });
 }

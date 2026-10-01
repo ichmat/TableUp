@@ -2,4 +2,6 @@
 export enum DataScope {
     /** GET /api/restaurant */
     Restaurant = 'Restaurant',
+    /** GET /api/restaurant/closures */
+    Closures = 'Closures',
 }

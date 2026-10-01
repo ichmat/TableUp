@@ -10,6 +10,7 @@ export enum ApiError{
     InvalidModification = 'InvalidModification',
     NotFound = 'NotFound',
     ReservationsImpacted = 'ReservationsImpacted',
+    ClosureImpactsReservations = 'ClosureImpactsReservations',
 }
 
 export interface ApiErrorResponse{

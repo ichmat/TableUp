@@ -1,4 +1,5 @@
 ﻿using TUROAPI.Models.Responses;
+using TUROAPI.Services;
 
 namespace TUROAPI.Models.Wrapper
 {
@@ -41,6 +42,42 @@ namespace TUROAPI.Models.Wrapper
                 ExpectedDuration = service.ExpectedDuration,
                 MaxCadence = service.MaxCadence,
                 CoverCap = service.CoverCap
+            };
+        }
+
+        public static ClosureResponse ToResponse(this Closure closure)
+        {
+            return new ClosureResponse
+            {
+                Id = closure.Id,
+                RestaurantId = closure.RestaurantId,
+                From = closure.From,
+                To = closure.To,
+                Type = closure.Type,
+                ReplacementHours = closure.ReplacementHours?
+                    .Select(h => new ReplacementHoursResponse { Opening = h.Opening, Closing = h.Closing })
+                    .ToList(),
+                Reason = closure.Reason,
+                ReasonDetail = closure.ReasonDetail,
+                CustomerMessage = closure.CustomerMessage
+            };
+        }
+
+        public static ImpactedReservationResponse ToImpactedResponse(this ReservationImpact.LocalReservation impacted)
+        {
+            Reservation reservation = impacted.Reservation;
+            return new ImpactedReservationResponse
+            {
+                Id = reservation.Id,
+                ServiceDay = reservation.ServiceDay,
+                LocalStart = impacted.LocalStart,
+                Covers = reservation.Covers,
+                ClientName = reservation.Client?.Name,
+                ClientPhone = reservation.Client?.Phone,
+                Tables = reservation.Assignments
+                    .Select(a => a.Table?.Name ?? a.Combination?.Name)
+                    .OfType<string>()
+                    .ToList()
             };
         }
 

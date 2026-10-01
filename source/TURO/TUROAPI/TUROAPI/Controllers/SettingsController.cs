@@ -9,6 +9,7 @@ using TUROAPI.Models.Enums;
 using TUROAPI.Models.Requests;
 using TUROAPI.Models.Responses;
 using TUROAPI.Models.Wrapper;
+using TUROAPI.Services;
 
 namespace TUROAPI.Controllers
 {
@@ -164,28 +165,13 @@ namespace TUROAPI.Controllers
         /// </summary>
         private async Task CheckImpactedReservations(Service existing, AddOrUpdateServiceRequest? request = null)
         {
-            string timeZoneId = await context.Restaurants
-                .Where(r => r.Id == CurrentRestaurantId)
-                .Select(r => r.TimeZone)
-                .FirstAsync();
-            TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-            DateOnly today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone));
+            TimeZoneInfo timeZone = await ReservationImpact.GetTimeZoneAsync(context, CurrentRestaurantId);
+            var activeReservations = await ReservationImpact.ActiveAsync(
+                context, CurrentRestaurantId, timeZone, ReservationImpact.Today(timeZone));
 
-            var activeReservations = await context.Reservations
-                .Where(r =>
-                    r.RestaurantId == CurrentRestaurantId
-                    && r.ServiceDay >= today
-                    && (r.Status == ReservationStatus.Pending
-                        || r.Status == ReservationStatus.Confirmed))
-                .ToListAsync();
-
-            // Le jour de la semaine et l'heure locale se calculent en mémoire : Start est en UTC,
-            // et le fuseau du restaurant ne s'applique pas côté base.
-            // ServiceDay rattache déjà un repas commencé après minuit au jour du service (RES-02).
-            // TimeOnly.IsBetween gère les services qui passent minuit (fin exclue).
+            // TimeOnly.IsBetween gère les services qui passent minuit (fin exclue)
             var impacted = activeReservations
-                .Where(r => r.ServiceDay.DayOfWeek == existing.Day)
-                .Select(r => new { Reservation = r, LocalStart = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.Start, timeZone)) })
+                .Where(x => x.Reservation.ServiceDay.DayOfWeek == existing.Day)
                 // Sans nouveaux horaires (suppression), toute réservation du service est impactée
                 .Where(x => x.LocalStart.IsBetween(existing.Opening, existing.Closing)
                     && (request == null || !x.LocalStart.IsBetween(request.Opening, request.Closing)))

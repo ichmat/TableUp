@@ -6,6 +6,8 @@ namespace TUROAPI.Models.Enums
     public enum DataScope
     {
         /// <summary>GET /api/restaurant</summary>
-        Restaurant
+        Restaurant,
+        /// <summary>GET /api/restaurant/closures</summary>
+        Closures
     }
 }

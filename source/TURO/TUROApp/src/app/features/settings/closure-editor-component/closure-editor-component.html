@@ -1,0 +1,141 @@
+@if (conflict(); as impacted) {
+    <!-- PANNEAU DE CONFLIT (§9.5) -->
+    <div class="flex flex-col gap-3 text-text">
+        <p class="font-bold text-lg">
+            {{ draft().type === 'Closed' ? 'Fermer' : 'Modifier les horaires' }} {{ period() }} ?
+        </p>
+        <p class="text-sm text-text-muted">
+            {{ draft().from === draft().to ? 'Ce jour porte' : 'Ces jours portent' }} déjà
+            <b class="text-coral">{{ impacted.length }} réservation{{ impacted.length > 1 ? 's' : '' }} · {{ conflictCovers() }} couverts</b>
+            {{ draft().type === 'Closed' ? '' : 'hors des nouvelles plages' }}.
+            Enregistrer ne les annule pas tout seul.
+        </p>
+
+        <div class="flex flex-col rounded-lg border border-border bg-app">
+            @for (reservation of impacted; track reservation.id) {
+                <div class="flex flex-row items-baseline gap-3 px-3 py-2 border-b border-border last:border-b-0 text-sm">
+                    <span class="font-bold tabular-nums shrink-0">
+                        @if (conflictSpansDays()) { {{ formatLongDate(reservation.serviceDay) }} · }
+                        {{ formatMinutes(toMinutes(reservation.localStart)) }}
+                    </span>
+                    <span class="grow min-w-0 truncate">
+                        {{ reservation.clientName ?? 'Client de passage' }} · {{ reservation.covers }}p
+                        @if (reservation.tables.length > 0) { · {{ reservation.tables.join(', ') }} }
+                    </span>
+                    <span class="shrink-0 text-text-muted tabular-nums">{{ reservation.clientPhone ?? 'pas de téléphone' }}</span>
+                </div>
+            }
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <app-button text="Annuler la fermeture" type="Secondary" buttonClass="w-full" (click)="backToForm()" />
+            <div class="flex flex-col gap-1">
+                <app-button buttonClass="w-full" [disabled]="true"
+                    [text]="'Fermer et prévenir ' + (impacted.length > 1 ? 'les ' + impacted.length + ' clients' : 'le client')" />
+                <p class="text-xs text-text-muted text-center">L'envoi des messages aux clients n'est pas encore disponible.</p>
+            </div>
+            <app-button buttonClass="w-full" [disabled]="isSaving()"
+                [text]="draft().type === 'Closed' ? 'Fermer, je les appelle' : 'Modifier, je les appelle'"
+                (click)="!isSaving() && closeAndCall()" />
+            <p class="text-xs text-text-muted">
+                Les réservations sont annulées par le restaurant : le compteur de fiabilité des clients ne bouge pas.
+            </p>
+        </div>
+    </div>
+}
+@else {
+    <div class="flex flex-col gap-4 text-text">
+        <p class="font-bold text-lg">{{ isNew() ? 'Nouvelle exception' : 'Exception' }} {{ period() }}</p>
+
+        <!-- TYPE -->
+        <div class="flex flex-row gap-2 *:flex-1">
+            <button type="button" (click)="setType('Closed')"
+                class="h-10 rounded-lg font-bold cursor-pointer border-2"
+                [class]="draft().type === 'Closed' ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                Fermé
+            </button>
+            <button type="button" (click)="setType('ModifiedHours')"
+                class="h-10 rounded-lg font-bold cursor-pointer border-2"
+                [class]="draft().type === 'ModifiedHours' ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                Horaires modifiés
+            </button>
+        </div>
+
+        <!-- PÉRIODE -->
+        <div class="flex flex-row flex-wrap gap-3">
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold">Du</label>
+                <app-date-input [formField]="closureForm.from" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold">Au (inclus)</label>
+                <app-date-input [formField]="closureForm.to" />
+            </div>
+        </div>
+        @for (error of [closureForm.from().errors(), closureForm.to().errors()].flat(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+
+        <!-- PLAGES OUVERTES -->
+        @if (draft().type === 'ModifiedHours') {
+            <div class="flex flex-col gap-2">
+                <p class="text-sm font-bold">Ouvert ces jours-là</p>
+                @for (hours of closureForm.hours; track $index; let index = $index) {
+                    <div class="flex flex-row items-center gap-2">
+                        <app-time-input inputClass="w-32" [formField]="hours.opening" />
+                        <span class="text-text-muted">–</span>
+                        <app-time-input inputClass="w-32" [formField]="hours.closing" />
+                        <button type="button" (click)="removeHours(index)" aria-label="Retirer la plage"
+                            class="size-8 rounded-lg text-text-muted cursor-pointer hover:bg-app">✕</button>
+                    </div>
+                }
+                <app-button type="Dashed" text="+ Ajouter une plage" buttonClass="h-9 self-start px-3" (click)="addHours()" />
+                <p class="text-sm text-text-muted">Ces plages remplacent les services habituels. Une réservation qui commence en dehors est en conflit.</p>
+            </div>
+        }
+
+        <!-- MOTIF : JAMAIS ENVOYÉ (§9.7) -->
+        <div class="flex flex-col gap-2 rounded-lg bg-app p-3">
+            <div class="flex flex-row items-baseline justify-between">
+                <p class="text-sm font-bold">Motif</p>
+                <p class="text-xs text-text-muted">jamais envoyé</p>
+            </div>
+            <div class="flex flex-row flex-wrap gap-1">
+                @for (reason of reasons; track reason.value) {
+                    <button type="button" (click)="setReason(reason.value)"
+                        class="px-3 h-8 rounded-full text-sm cursor-pointer border"
+                        [class]="draft().reason === reason.value ? 'bg-slate text-app border-slate' : 'bg-surface border-border hover:brightness-95'">
+                        {{ reason.label }}
+                    </button>
+                }
+            </div>
+            <textarea [formField]="closureForm.reasonDetail" rows="2" placeholder="Détail pour l'équipe (facultatif)"
+                class="w-full rounded-lg border-2 border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-interactive"></textarea>
+            @for (error of closureForm.reasonDetail().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        </div>
+
+        <!-- MESSAGE AUX CLIENTS (§9.7) -->
+        <div class="flex flex-col gap-2 rounded-lg bg-interactive/10 border border-interactive/40 p-3">
+            <div class="flex flex-row items-baseline justify-between">
+                <p class="text-sm font-bold">Message aux clients concernés</p>
+                @if (isMessageEdited()) {
+                    <button type="button" (click)="resetMessage()" class="text-xs text-text-muted underline cursor-pointer">Reprendre le message proposé</button>
+                }
+            </div>
+            <textarea [value]="message()" (input)="onMessageInput($event)" rows="8"
+                class="w-full rounded-lg border-2 border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-interactive"></textarea>
+            <p class="text-xs text-text-muted">Lu par les clients dont la réservation tombe ces jours-là. Le motif n'y figure jamais.</p>
+        </div>
+
+        <div class="flex flex-row flex-wrap gap-2">
+            <app-button text="Enregistrer" [disabled]="isSaving() || (!isNew() && !hasChanges())"
+                (click)="!isSaving() && (isNew() || hasChanges()) && save()" />
+            <app-button text="Annuler" type="Secondary" (click)="cancel()" />
+            @if (!isNew()) {
+                <app-button text="Rouvrir ces jours" type="Tertiary" (click)="remove()" />
+            }
+        </div>
+    </div>
+}
