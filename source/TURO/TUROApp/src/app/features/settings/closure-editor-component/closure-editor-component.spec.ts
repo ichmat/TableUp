@@ -73,6 +73,22 @@ describe('ClosureEditorComponent', () => {
     expect(done).toHaveBeenCalled();
   });
 
+  it('should announce the impacted reservations while editing, before saving', async () => {
+    const impact = spyOn(closureService, 'impact').and.resolveTo({ value: [IMPACTED], error: null });
+    const create = spyOn(closureService, 'create');
+
+    // l'aperçu attend que la saisie se pose
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
+    expect(impact).toHaveBeenCalledOnceWith(jasmine.objectContaining({ from: '2026-12-24', to: '2026-12-24', type: 'Closed' }));
+    expect(text).toContain('1 réservation · 2 couverts');
+    expect(text).toContain('Perrin · 2p · T3');
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('should propose a customer message naming the day and the restaurant', () => {
     const message: string = (fixture.nativeElement as HTMLElement).querySelectorAll('textarea')[1].value;
     expect(message).toContain('le jeudi 24 décembre');

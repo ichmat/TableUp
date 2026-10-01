@@ -1,10 +1,11 @@
-import { Component, computed, inject, input, linkedSignal, output, signal, untracked } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, resource, signal, untracked } from '@angular/core';
 import { applyEach, form, FormField, maxLength, required, validate } from '@angular/forms/signals';
 import { ClosureReason, ClosureRequest, ExceptionalClosure, ExceptionalClosureType, ImpactedReservation, RestaurantService as ServiceModel } from '../../../models';
 import { ClosureService } from '../../../core/services/closure/closure.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
 import { DateInput } from '../../../shared/components/inputs/date-input/date-input';
+import { ImpactedReservationsComponent } from '../impacted-reservations-component/impacted-reservations-component';
 import { TimeInput } from '../../../shared/components/inputs/time-input/time-input';
 import { dayCount, dayOfWeek, formatLongDate } from '../../../shared/utils/calendar-date';
 import { formatMinutes, toMinutes } from '../../../shared/utils/time-of-day';
@@ -28,6 +29,8 @@ interface ClosureDraft {
 /** Mêmes bornes que l'API */
 const MAX_REASON_DETAIL_LENGTH = 500;
 const MAX_CLOSURE_DAYS = 366;
+/** Attente après la dernière modification avant de demander l'aperçu des réservations touchées */
+const IMPACT_PREVIEW_DELAY_MS = 300;
 
 export const CLOSURE_REASONS: readonly { value: ClosureReason, label: string }[] = [
   { value: 'PublicHoliday', label: 'Férié' },
@@ -45,7 +48,7 @@ const toHoursDraft = (opening: string, closing: string): HoursDraft =>
  * aux réservations déjà prises avant d'enregistrer (§9.5)
  */
 @Component({
-  imports: [FormField, Button, DateInput, TimeInput],
+  imports: [FormField, Button, DateInput, TimeInput, ImpactedReservationsComponent],
   selector: 'app-closure-editor-component',
   templateUrl: './closure-editor-component.html',
 })
@@ -67,9 +70,6 @@ export class ClosureEditorComponent {
   done = output<void>();
 
   protected readonly reasons = CLOSURE_REASONS;
-  protected readonly formatLongDate = formatLongDate;
-  protected readonly formatMinutes = formatMinutes;
-  protected readonly toMinutes = toMinutes;
 
   // Repart des valeurs enregistrées seulement si l'on change de fermeture :
   // un rechargement déclenché par SignalR ne doit pas effacer une saisie en cours
@@ -120,6 +120,35 @@ export class ClosureEditorComponent {
   protected message = computed(() => this._messageOverride() ?? this.defaultMessage());
   protected isMessageEdited = computed(() => this._messageOverride() !== null);
 
+  /**
+   * Ce que la saisie toucherait, demandé à l'API dès qu'elle est complète : on voit les réservations
+   * concernées avant d'enregistrer. Le message n'en fait pas partie, le taper ne relance rien
+   */
+  private _impactParams = computed<ClosureRequest | undefined>(() => {
+    const draft = this._draft();
+    const datesValid = this.closureForm.from().valid() && this.closureForm.to().valid();
+    const hoursValid = draft.type === 'Closed' || this.closureForm.hours().valid();
+    return datesValid && hoursValid
+      ? { ...this.toRequest(draft), customerMessage: null }
+      : undefined;
+  }, { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) });
+
+  protected impactPreview = resource({
+    params: () => this._impactParams(),
+    loader: async ({ params, abortSignal }) => {
+      // Pas une requête par frappe : on attend que la saisie se pose
+      await new Promise((resolve) => setTimeout(resolve, IMPACT_PREVIEW_DELAY_MS));
+      abortSignal.throwIfAborted();
+      const result = await this._closureService.impact(params);
+      if (result.error !== null) {
+        throw new Error(result.error);
+      }
+      return result.value;
+    },
+  });
+  protected previewCovers = computed(() =>
+    this.impactPreview.hasValue() ? this.impactPreview.value().reduce((sum, r) => sum + r.covers, 0) : 0);
+
   /** Réservations à confronter avant d'enregistrer, `null` tant qu'on édite le formulaire */
   protected conflict = signal<ImpactedReservation[] | null>(null);
   protected isSaving = signal(false);
@@ -127,7 +156,6 @@ export class ClosureEditorComponent {
   protected isNew = computed(() => this.closure() === null);
   protected period = computed(() => this.describePeriod(this.draft().from, this.draft().to));
   protected conflictCovers = computed(() => (this.conflict() ?? []).reduce((sum, r) => sum + r.covers, 0));
-  protected conflictSpansDays = computed(() => new Set((this.conflict() ?? []).map((r) => r.serviceDay)).size > 1);
 
   hasChanges = computed(() => {
     const initial = this.initialDraft();

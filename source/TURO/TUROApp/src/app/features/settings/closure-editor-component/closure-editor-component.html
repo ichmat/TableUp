@@ -11,21 +11,7 @@
             Enregistrer ne les annule pas tout seul.
         </p>
 
-        <div class="flex flex-col rounded-lg border border-border bg-app">
-            @for (reservation of impacted; track reservation.id) {
-                <div class="flex flex-row items-baseline gap-3 px-3 py-2 border-b border-border last:border-b-0 text-sm">
-                    <span class="font-bold tabular-nums shrink-0">
-                        @if (conflictSpansDays()) { {{ formatLongDate(reservation.serviceDay) }} · }
-                        {{ formatMinutes(toMinutes(reservation.localStart)) }}
-                    </span>
-                    <span class="grow min-w-0 truncate">
-                        {{ reservation.clientName ?? 'Client de passage' }} · {{ reservation.covers }}p
-                        @if (reservation.tables.length > 0) { · {{ reservation.tables.join(', ') }} }
-                    </span>
-                    <span class="shrink-0 text-text-muted tabular-nums">{{ reservation.clientPhone ?? 'pas de téléphone' }}</span>
-                </div>
-            }
-        </div>
+        <app-impacted-reservations-component [reservations]="impacted" />
 
         <div class="flex flex-col gap-2">
             <app-button text="Annuler la fermeture" type="Secondary" buttonClass="w-full" (click)="backToForm()" />
@@ -93,6 +79,33 @@
                 <p class="text-sm text-text-muted">Ces plages remplacent les services habituels. Une réservation qui commence en dehors est en conflit.</p>
             </div>
         }
+
+        <!-- RÉSERVATIONS CONCERNÉES, AVANT D'ENREGISTRER (§9.1, §9.5) -->
+        <div class="flex flex-col gap-2">
+            <p class="text-sm font-bold">Réservations concernées</p>
+            @if (impactPreview.status() === 'idle') {
+                <p class="text-sm text-text-muted">Complétez la période pour voir les réservations concernées.</p>
+            } @else if (impactPreview.error()) {
+                <p class="text-sm text-coral-ink">Les réservations concernées n'ont pas pu être vérifiées.</p>
+            } @else if (impactPreview.hasValue()) {
+                @let previewed = impactPreview.value();
+                @if (previewed.length === 0) {
+                    <p class="text-sm text-text-muted" [class.opacity-50]="impactPreview.isLoading()">
+                        Aucune réservation n'est prise {{ draft().type === 'Closed' ? 'ces jours-là' : 'hors des nouvelles plages' }}.
+                    </p>
+                } @else {
+                    <p class="text-sm" [class.opacity-50]="impactPreview.isLoading()">
+                        <b class="text-coral">{{ previewed.length }} réservation{{ previewed.length > 1 ? 's' : '' }} · {{ previewCovers() }} couverts</b>
+                        {{ previewed.length > 1 ? 'seront' : 'sera' }} à annuler si vous enregistrez.
+                    </p>
+                    <div [class.opacity-50]="impactPreview.isLoading()">
+                        <app-impacted-reservations-component [reservations]="previewed" />
+                    </div>
+                }
+            } @else {
+                <p class="text-sm text-text-muted">Recherche des réservations…</p>
+            }
+        </div>
 
         <!-- MOTIF : JAMAIS ENVOYÉ (§9.7) -->
         <div class="flex flex-col gap-2 rounded-lg bg-app p-3">
