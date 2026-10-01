@@ -1,10 +1,33 @@
-﻿using TUROAPI.Models.Responses;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using TUROAPI.Models.Requests;
+using TUROAPI.Models.Responses;
 using TUROAPI.Services;
 
 namespace TUROAPI.Models.Wrapper
 {
     public static class ModelWrapper
     {
+        // Les enums partent en chaînes, comme dans le reste de l'API
+        public static readonly JsonSerializerOptions DraftJsonOptions =
+            new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
+        public static FloorPlanDraftContent ReadContent(this FloorPlanDraft draft)
+        {
+            return JsonSerializer.Deserialize<FloorPlanDraftContent>(draft.Content, DraftJsonOptions) ?? new FloorPlanDraftContent();
+        }
+
+        public static FloorPlanDraftResponse ToResponse(this FloorPlanDraft draft)
+        {
+            FloorPlanDraftContent content = draft.ReadContent();
+            return new FloorPlanDraftResponse
+            {
+                Tables = content.Tables,
+                Decors = content.Decors,
+                UpdatedAt = draft.UpdatedAt,
+            };
+        }
+
         public static UserStaffResponse ToResponse(this UserStaff user)
         {
             return new UserStaffResponse
@@ -124,7 +147,7 @@ namespace TUROAPI.Models.Wrapper
                 ZoneId = combination.ZoneId,
                 Name = combination.Name,
                 Capacity = combination.Capacity,
-                Tables = combination.Tables.Select(t => t.ToResponse()).ToList(),
+                TableIds = combination.Tables.Select(t => t.Id).ToList(),
                 IsActive = combination.IsActive,
                 ActivateAt = combination.ActivateAt,
                 DeactivateAt = combination.DeactivateAt

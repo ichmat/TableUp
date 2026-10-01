@@ -1,0 +1,91 @@
+<!-- EN-TÊTE : l'état du brouillon est toujours visible (EDIT-16) -->
+<header class="flex flex-row flex-wrap items-center gap-3 bg-surface px-3 py-2 shadow">
+    <button type="button" (click)="leave()" class="font-bold cursor-pointer hover:underline">‹ Paramètres</button>
+    <p class="font-black text-lg">Éditeur de plan</p>
+
+    @if (loadState() === 'ready') {
+        <p class="rounded-full bg-app px-3 py-1 text-sm font-bold">{{ draftLabel() }}</p>
+        @switch (store.saveState()) {
+            @case ('failed') {
+                <button type="button" (click)="retrySave()" class="text-sm text-coral-ink underline cursor-pointer">Brouillon non enregistré — Réessayer</button>
+            }
+            @case ('saving') { <p class="text-xs text-text-muted">Enregistrement…</p> }
+        }
+
+        <div class="ml-auto flex flex-row items-center gap-2">
+            <button type="button" (click)="store.undo()" [disabled]="!store.canUndo()" aria-label="Annuler" title="Annuler (Ctrl+Z)"
+                class="size-10 rounded-lg text-xl cursor-pointer hover:bg-app disabled:opacity-30 disabled:cursor-default">↶</button>
+            <button type="button" (click)="store.redo()" [disabled]="!store.canRedo()" aria-label="Rétablir" title="Rétablir (Ctrl+Y)"
+                class="size-10 rounded-lg text-xl cursor-pointer hover:bg-app disabled:opacity-30 disabled:cursor-default">↷</button>
+            <app-button text="Abandonner" type="Secondary" buttonClass="h-10" [disabled]="changeCount() === 0 || publishing()"
+                (click)="changeCount() > 0 && !publishing() && discard()" />
+            <app-button [text]="publishing() ? 'Publication…' : 'Publier le plan'" buttonClass="h-10" [disabled]="changeCount() === 0 || invalidIds().length > 0 || publishing()"
+                (click)="publish()" />
+        </div>
+    }
+</header>
+
+@switch (loadState()) {
+    @case ('loading') {
+        <p class="m-6 text-text-muted">Chargement du plan…</p>
+    }
+    @case ('forbidden') {
+        <p class="m-6">L'éditeur de plan est réservé à l'administrateur.</p>
+    }
+    @case ('failed') {
+        <p class="m-6 text-coral-ink">Le plan n'a pas pu être chargé : {{ loadError() }}</p>
+    }
+    @case ('ready') {
+        @if (currentZone(); as zone) {
+            <!-- ONGLETS DE SALLE -->
+            <nav class="flex flex-row gap-1 px-3 pt-2">
+                @for (tab of zones(); track tab.id) {
+                    <button type="button" (click)="selectZone(tab.id)"
+                        class="rounded-t-lg px-4 py-2 font-bold cursor-pointer"
+                        [class]="tab.id === zone.id ? 'bg-surface' : 'text-text-muted hover:bg-surface/60'">{{ tab.name }}</button>
+                }
+            </nav>
+
+            <div class="flex flex-1 min-h-0 flex-row gap-2 px-3 pb-3">
+                <!-- PALETTE -->
+                <aside class="w-40 shrink-0 overflow-y-auto rounded-b-xl rounded-tr-xl bg-surface p-2">
+                    <app-table-palette-component [entries]="palette()" (pick)="onPalettePick($event)"
+                        [decorEntries]="decorPalette" (pickDecor)="onDecorPalettePick($event)" />
+                </aside>
+
+                <!-- CANEVAS -->
+                <section class="flex flex-1 min-w-0 flex-col rounded-xl bg-surface p-2">
+                    <app-floor-plan-canvas class="flex-1 min-h-0" [zone]="zone" [tables]="zoneTables()" [decors]="zoneDecors()"
+                        [selectedIds]="selectedIds()" [flaggedIds]="invalidIds()"
+                        (tablePointerDown)="onTablePointerDown($event)" (decorPointerDown)="onDecorPointerDown($event)"
+                        (backgroundClick)="onBackgroundClick()" (pinchStart)="cancelGesture()" />
+                    <p class="pt-1 text-xs text-text-muted">Salle : {{ formatMetres(zone.width) }} × {{ formatMetres(zone.height) }} · grille 25 cm</p>
+                </section>
+
+                <!-- PANNEAU -->
+                <aside class="w-72 shrink-0 overflow-y-auto rounded-xl bg-surface p-3">
+                    @if (selectedTable(); as table) {
+                        <app-table-panel-component [table]="table" [zones]="zones()" [errors]="selectedTableErrors()"
+                            [isPublished]="isPublishedTable()"
+                            (changed)="onPanelChange($event)" (duplicate)="duplicateSelected()" (remove)="removeSelected()" />
+                    } @else if (selectedDecor(); as decor) {
+                        <app-decor-panel-component [decor]="decor" [zones]="zones()" [errors]="selectedDecorErrors()"
+                            (changed)="onDecorPanelChange($event)" (duplicate)="duplicateSelectedDecor()" (remove)="removeSelectedDecor()" />
+                    } @else {
+                        <p class="text-sm text-text-muted">Sélectionnez une table ou un décor pour le décrire, ou glissez-en un depuis la palette.</p>
+                    }
+                </aside>
+            </div>
+        } @else {
+            <p class="m-6">Aucune salle. Créez-en une dans Paramètres › Salles et tables avant de poser des tables.</p>
+        }
+    }
+}
+
+<!-- LA TABLE QUI SUIT LE DOIGT, DEPUIS LA PALETTE -->
+@if (paletteGhost(); as ghost) {
+    <div class="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-1/2 rounded-lg bg-slate px-3 py-1 text-sm font-bold text-app opacity-80"
+        [style.left.px]="ghost.clientX" [style.top.px]="ghost.clientY">
+        + table
+    </div>
+}

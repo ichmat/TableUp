@@ -11,7 +11,7 @@
         <div [class]="isActive('Services & time slots')" (click)="changeSettingPage('Services & time slots')">
             <p>Services et créneaux</p></div>
         <div [class]="isActive('Room & tables')" (click)="changeSettingPage('Room & tables')">
-            <p>Salle et tables</p></div>
+            <p>Salles et tables ›</p></div>
         <div [class]="isActive('Placement')" (click)="changeSettingPage('Placement')">
             <p>Placement</p></div>
     </div>
@@ -24,6 +24,9 @@
             }
             @case ('Services & time slots') {
                 <app-services-and-time-slots-components />
+            }
+            @case ('Room & tables') {
+                <app-rooms-and-tables-component />
             }
         }
     </div>

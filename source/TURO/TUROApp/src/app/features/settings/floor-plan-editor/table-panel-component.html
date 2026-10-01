@@ -1,0 +1,79 @@
+<div class="flex flex-col gap-3">
+    <p class="font-black text-text-muted text-xs">TABLE {{ table().name }}</p>
+
+    <!-- Les champs s'appliquent quand on les quitte -->
+    <div class="flex flex-col gap-3" (focusout)="commitFields()">
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold">Nom</label>
+            <div data-field="name"><app-input [formField]="fields.name" inputClass="w-full" /></div>
+            @for (error of errorsOf('name'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold">Places</label>
+            <div data-field="capacity"><app-number-input [formField]="fields.capacity" inputClass="w-full" /></div>
+            @for (error of errorsOf('capacity'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+
+        <div class="flex flex-col gap-1">
+            @if (isRound()) {
+                <label class="text-sm font-bold">Diamètre (cm)</label>
+                <div data-field="width"><app-number-input [formField]="fields.widthCm" [step]="5" inputClass="w-full" /></div>
+            } @else {
+                <div class="flex flex-row gap-2">
+                    <div class="flex flex-1 flex-col gap-1">
+                        <label class="text-sm font-bold">Largeur (cm)</label>
+                        <div data-field="width"><app-number-input [formField]="fields.widthCm" [step]="5" inputClass="w-full" /></div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-1">
+                        <label class="text-sm font-bold">Profondeur (cm)</label>
+                        <div data-field="height"><app-number-input [formField]="fields.heightCm" [step]="5" inputClass="w-full" /></div>
+                    </div>
+                </div>
+            }
+            @for (error of errorsOf('size'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+        <label class="text-sm font-bold">Forme</label>
+        <div class="flex flex-row gap-1 *:flex-1">
+            @for (shape of shapes; track shape) {
+                <button type="button" [attr.data-shape]="shape" (click)="setShape(shape)"
+                    class="h-9 rounded-lg text-sm font-bold cursor-pointer border-2"
+                    [class]="table().shape === shape ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                    {{ shapeLabels[shape] }}
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+        <label class="text-sm font-bold">Rotation</label>
+        <div class="flex flex-row items-center gap-2">
+            <button type="button" (click)="rotate(-1)" aria-label="Tourner à gauche"
+                class="size-9 rounded-lg bg-app text-lg cursor-pointer hover:brightness-95">↺</button>
+            <span class="w-12 text-center font-bold">{{ table().rotation }}°</span>
+            <button type="button" (click)="rotate(1)" aria-label="Tourner à droite"
+                class="size-9 rounded-lg bg-app text-lg cursor-pointer hover:brightness-95">↻</button>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+        <label class="text-sm font-bold">Salle</label>
+        <select (change)="moveToZone($event)"
+            class="h-10 rounded-lg border-4 border-border-soft bg-app px-2 outline-none focus:border-interactive">
+            @for (zone of zones(); track zone.id) {
+                <option [value]="zone.id" [selected]="zone.id === table().zoneId">{{ zone.name }}</option>
+            }
+        </select>
+        @for (error of errorsOf('position'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+    </div>
+
+    <div class="flex flex-col gap-2 pt-2">
+        <app-button text="Dupliquer" type="Secondary" buttonClass="w-full h-10" (click)="duplicate.emit()" />
+        @if (!isPublished()) {
+            <app-button text="Retirer" type="Tertiary" buttonClass="w-full h-10" (click)="remove.emit()" />
+        }
+    </div>
+</div>

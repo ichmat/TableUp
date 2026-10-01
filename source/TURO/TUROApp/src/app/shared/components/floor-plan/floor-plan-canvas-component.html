@@ -1,0 +1,90 @@
+<svg #svg class="size-full touch-none select-none" [attr.viewBox]="viewBox()" preserveAspectRatio="xMidYMid meet"
+    (pointerdown)="onSvgPointerDown($event)" (wheel)="onWheel($event)">
+    <defs>
+        <pattern [attr.id]="gridId" [attr.width]="gridStep" [attr.height]="gridStep" patternUnits="userSpaceOnUse">
+            <path [attr.d]="'M ' + gridStep + ' 0 L 0 0 0 ' + gridStep" fill="none" class="stroke-border"
+                stroke-width="1" vector-effect="non-scaling-stroke" />
+        </pattern>
+    </defs>
+
+    <!-- LA SALLE -->
+    <rect x="0" y="0" [attr.width]="zone().width" [attr.height]="zone().height"
+        class="fill-surface stroke-chalk" stroke-width="2" vector-effect="non-scaling-stroke" />
+    @if (showGrid()) {
+        <rect data-grid x="0" y="0" [attr.width]="zone().width" [attr.height]="zone().height"
+            [attr.fill]="'url(#' + gridId + ')'" class="pointer-events-none" />
+    }
+
+    <!-- LE DÉCOR : des repères, sous les tables, dans les tons de l'ardoise (EDIT-08) -->
+    @for (decor of decors(); track decor.id) {
+        <g [attr.data-decor-id]="decor.id" class="cursor-grab"
+            [attr.transform]="'translate(' + decor.x + ' ' + decor.y + ') rotate(' + decor.rotation + ' ' + decor.width / 2 + ' ' + decor.height / 2 + ')'"
+            (pointerdown)="onDecorPointerDown(decor, $event)">
+            @switch (decor.type) {
+                @case ('Wall') {
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-slate ' + decorStroke(decor)"
+                        stroke-width="1" vector-effect="non-scaling-stroke" />
+                }
+                @case ('Pillar') {
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-slate ' + decorStroke(decor)"
+                        stroke-width="1" vector-effect="non-scaling-stroke" />
+                }
+                @case ('Door') {
+                    <!-- trait fin et arc d'ouverture -->
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-surface ' + decorStroke(decor)"
+                        stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                    <path [attr.d]="'M 0 ' + decor.height + ' A ' + decor.width + ' ' + decor.width + ' 0 0 0 ' + decor.width + ' ' + (decor.height + decor.width)"
+                        fill="none" class="stroke-chalk" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
+                }
+                @case ('Stairs') {
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-surface ' + decorStroke(decor)"
+                        stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                    @for (step of [1, 2, 3, 4, 5, 6, 7]; track step) {
+                        <line x1="0" [attr.x2]="decor.width" [attr.y1]="decor.height * step / 8" [attr.y2]="decor.height * step / 8"
+                            class="stroke-chalk" stroke-width="1" vector-effect="non-scaling-stroke" />
+                    }
+                }
+                @default {
+                    <!-- bar, passe, autre : un aplat craie qui porte son libellé -->
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" rx="0.04" [attr.class]="'fill-chalk ' + decorStroke(decor)"
+                        stroke-width="1.5" vector-effect="non-scaling-stroke" />
+                    <text [attr.x]="decor.width / 2" [attr.y]="decor.height / 2" text-anchor="middle" dominant-baseline="central"
+                        font-size="0.2" class="fill-slate font-bold pointer-events-none">{{ decorLabel(decor) }}</text>
+                }
+            }
+        </g>
+    }
+
+    <!-- LES TABLES : la forme tourne, les libellés restent droits -->
+    @for (table of tables(); track table.id) {
+        <g [attr.data-table-id]="table.id" class="cursor-grab"
+            [attr.transform]="'translate(' + table.x + ' ' + table.y + ')'"
+            (pointerdown)="onTablePointerDown(table, $event)">
+            <g [attr.transform]="'rotate(' + table.rotation + ' ' + table.width / 2 + ' ' + table.height / 2 + ')'">
+                @if (table.shape === 'Round') {
+                    <ellipse [attr.cx]="table.width / 2" [attr.cy]="table.height / 2"
+                        [attr.rx]="table.width / 2" [attr.ry]="table.height / 2"
+                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" vector-effect="non-scaling-stroke" />
+                } @else {
+                    <rect [attr.width]="table.width" [attr.height]="table.height" rx="0.06"
+                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" vector-effect="non-scaling-stroke" />
+                }
+            </g>
+            <text [attr.x]="table.width / 2" [attr.y]="table.height / 2 - 0.06" text-anchor="middle" dominant-baseline="central"
+                font-size="0.22" class="fill-text font-bold pointer-events-none">{{ table.name }}</text>
+            <text [attr.x]="table.width / 2" [attr.y]="table.height / 2 + 0.17" text-anchor="middle" dominant-baseline="central"
+                font-size="0.15" class="fill-text-muted pointer-events-none">{{ table.capacity }}p</text>
+        </g>
+    }
+</svg>
+
+<!-- ZOOM : dans le coin, au-dessus du plan -->
+<div class="absolute bottom-2 right-2 flex flex-row items-center gap-1 rounded-lg bg-surface/90 p-1 shadow">
+    <button type="button" (click)="zoomBy(1 / zoomStep)" aria-label="Dézoomer"
+        class="size-8 rounded-md font-bold cursor-pointer hover:bg-app">−</button>
+    <span class="w-14 text-center text-sm">{{ zoomPercent() }} %</span>
+    <button type="button" (click)="zoomBy(zoomStep)" aria-label="Zoomer"
+        class="size-8 rounded-md font-bold cursor-pointer hover:bg-app">+</button>
+    <button type="button" (click)="fit()" aria-label="Ajuster à la salle"
+        class="h-8 px-2 rounded-md text-sm font-bold cursor-pointer hover:bg-app">Ajuster</button>
+</div>

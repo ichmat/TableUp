@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApplicationRef } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ClosureRequest } from '../../../models';
+import { ApiError, ClosureRequest } from '../../../models';
 import { ClosureService } from './closure.service';
 
 const REQUEST: ClosureRequest = {
@@ -35,7 +35,11 @@ describe('ClosureService', () => {
       { status: 409, statusText: 'Conflict' },
     );
 
-    expect(await result).toEqual({ value: null, error: '2 active reservation(s) (6 covers) fall on the closed days' });
+    expect(await result).toEqual({
+      value: null,
+      error: '2 active reservation(s) (6 covers) fall on the closed days',
+      code: ApiError.ClosureImpactsReservations,
+    });
   });
 
   it('should post the draft closure to the impact route', async () => {

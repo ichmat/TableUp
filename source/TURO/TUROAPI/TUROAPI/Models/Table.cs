@@ -18,6 +18,8 @@ namespace TUROAPI.Models
         public int Capacity { get; set; }
         public TableShape Shape { get; set; }
 
+        // En mètres : coin haut-gauche du rectangle non tourné, depuis le coin haut-gauche de la salle.
+        // La rotation (degrés, pas de 15) se fait autour du centre
         public double X { get; set; }
         public double Y { get; set; }
         public double Width { get; set; }

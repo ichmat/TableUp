@@ -1,0 +1,60 @@
+<div class="flex flex-col gap-3">
+    <p class="font-black text-text-muted text-xs">DÉCOR</p>
+
+    <div class="flex flex-col gap-1" data-field="type">
+        <label class="text-sm font-bold">Type</label>
+        <select (change)="setType($event)"
+            class="h-10 rounded-lg border-4 border-border-soft bg-app px-2 outline-none focus:border-interactive">
+            @for (type of types; track type) {
+                <option [value]="type" [selected]="type === decor().type">{{ typeLabels[type] }}</option>
+            }
+        </select>
+    </div>
+
+    <div class="flex flex-col gap-3" (focusout)="commitFields()">
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold">Libellé <span class="font-normal text-text-muted">(facultatif)</span></label>
+            <div data-field="label"><app-input [formField]="fields.label" [placeholder]="typeLabels[decor().type]" inputClass="w-full" /></div>
+            @for (error of errorsOf('name'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+        <div class="flex flex-row gap-2">
+            <div class="flex flex-1 flex-col gap-1">
+                <label class="text-sm font-bold">Largeur (cm)</label>
+                <app-number-input [formField]="fields.widthCm" [step]="5" inputClass="w-full" />
+            </div>
+            <div class="flex flex-1 flex-col gap-1">
+                <label class="text-sm font-bold">Profondeur (cm)</label>
+                <app-number-input [formField]="fields.heightCm" [step]="5" inputClass="w-full" />
+            </div>
+        </div>
+        @for (error of errorsOf('size'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+    </div>
+
+    <div class="flex flex-col gap-1">
+        <label class="text-sm font-bold">Rotation</label>
+        <div class="flex flex-row items-center gap-2">
+            <button type="button" (click)="rotate(-1)" aria-label="Tourner à gauche"
+                class="size-9 rounded-lg bg-app text-lg cursor-pointer hover:brightness-95">↺</button>
+            <span class="w-12 text-center font-bold">{{ decor().rotation }}°</span>
+            <button type="button" (click)="rotate(1)" aria-label="Tourner à droite"
+                class="size-9 rounded-lg bg-app text-lg cursor-pointer hover:brightness-95">↻</button>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+        <label class="text-sm font-bold">Salle</label>
+        <select (change)="moveToZone($event)"
+            class="h-10 rounded-lg border-4 border-border-soft bg-app px-2 outline-none focus:border-interactive">
+            @for (zone of zones(); track zone.id) {
+                <option [value]="zone.id" [selected]="zone.id === decor().zoneId">{{ zone.name }}</option>
+            }
+        </select>
+        @for (error of errorsOf('position'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+    </div>
+
+    <div class="flex flex-col gap-2 pt-2">
+        <app-button text="Dupliquer" type="Secondary" buttonClass="w-full h-10" (click)="duplicate.emit()" />
+        <!-- Sans confirmation : ↶ suffit, le décor ne porte aucune réservation -->
+        <app-button text="Supprimer" type="Tertiary" buttonClass="w-full h-10" (click)="remove.emit()" />
+    </div>
+</div>
