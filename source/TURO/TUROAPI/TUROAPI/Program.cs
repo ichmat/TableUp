@@ -33,7 +33,19 @@ namespace TUROAPI
             // Les enums partent en chaînes ("Pending"), jamais en nombres : le front les type ainsi
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
-                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+                // Un corps illisible (JSON invalide, enum inconnu…) sort au format ApiErrorResponse, et son motif
+                // part dans les logs : sinon la 400 automatique de [ApiController] n'y laisse aucune trace
+                .ConfigureApiBehaviorOptions(options =>
+                    options.InvalidModelStateResponseFactory = context =>
+                    {
+                        string details = string.Join(" ; ", context.ModelState
+                            .Where(entry => entry.Value?.Errors.Count > 0)
+                            .Select(entry => $"{entry.Key}: {string.Join(", ", entry.Value!.Errors.Select(e => e.ErrorMessage))}"));
+                        var response = new ApiErrorResponse(new ApiErrorException(ApiError.InvalidRequest, details));
+                        context.HttpContext.Items[RequestLoggingMiddleware.ErrorKey] = response.Message;
+                        return new Microsoft.AspNetCore.Mvc.ObjectResult(response) { StatusCode = response.StatusCode };
+                    });
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
@@ -157,7 +169,8 @@ namespace TUROAPI
             app.MapHub<TuroHub>(TuroHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
             // Une URL /api inconnue reste une 404, jamais la page Angular
-            app.Map("/api/{**rest}", () => Results.NotFound());
+            app.Map("/api/{**rest}", (HttpContext http) =>
+                WriteApiError(http, ApiError.NotFound, $"unknown API route {http.Request.Method} {http.Request.Path}."));
 
             // Toute autre route qui n'est pas un fichier est une route Angular : on renvoie index.html
             app.MapFallbackToFile("index.html");
@@ -165,9 +178,9 @@ namespace TUROAPI
             app.Run();
         }
 
-        private static Task WriteApiError(HttpContext http, ApiError error)
+        private static Task WriteApiError(HttpContext http, ApiError error, params string[] args)
         {
-            var response = new ApiErrorResponse(new ApiErrorException(error));
+            var response = new ApiErrorResponse(new ApiErrorException(error, args));
             http.Items[RequestLoggingMiddleware.ErrorKey] = response.Message; // même trace que le filtre
             http.Response.StatusCode = response.StatusCode;
 

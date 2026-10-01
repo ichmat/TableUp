@@ -130,16 +130,24 @@
         </div>
 
         <!-- MESSAGE AUX CLIENTS (§9.7) -->
-        <div class="flex flex-col gap-2 rounded-lg bg-interactive/10 border border-interactive/40 p-3">
+        <!-- Sans réservation concernée, le message n'a pas de destinataire : grisé, mais gardé tel quel -->
+        <div class="flex flex-col gap-2 rounded-lg p-3 border"
+            [class]="hasNoRecipient() ? 'bg-app border-border opacity-60' : 'bg-interactive/10 border-interactive/40'">
             <div class="flex flex-row items-baseline justify-between">
                 <p class="text-sm font-bold">Message aux clients concernés</p>
-                @if (isMessageEdited()) {
+                @if (isMessageEdited() && !hasNoRecipient()) {
                     <button type="button" (click)="resetMessage()" class="text-xs text-text-muted underline cursor-pointer">Reprendre le message proposé</button>
                 }
             </div>
-            <textarea [value]="message()" (input)="onMessageInput($event)" rows="8"
-                class="w-full rounded-lg border-2 border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-interactive"></textarea>
-            <p class="text-xs text-text-muted">Lu par les clients dont la réservation tombe ces jours-là. Le motif n'y figure jamais.</p>
+            <textarea [value]="message()" (input)="onMessageInput($event)" rows="8" [disabled]="hasNoRecipient()"
+                class="w-full rounded-lg border-2 border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-interactive disabled:cursor-not-allowed"></textarea>
+            <p class="text-xs text-text-muted">
+                @if (hasNoRecipient()) {
+                    Aucune réservation n'est concernée : ce message ne partira chez personne.
+                } @else {
+                    Lu par les clients dont la réservation tombe ces jours-là. Le motif n'y figure jamais.
+                }
+            </p>
         </div>
 
         <div class="flex flex-row flex-wrap gap-2">

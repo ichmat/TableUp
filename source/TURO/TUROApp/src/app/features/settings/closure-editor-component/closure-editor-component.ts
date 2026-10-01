@@ -146,6 +146,8 @@ export class ClosureEditorComponent {
       return result.value;
     },
   });
+  /** L'aperçu ne trouve aucune réservation : le message aux clients n'aurait aucun destinataire */
+  protected hasNoRecipient = computed(() => this.impactPreview.hasValue() && this.impactPreview.value().length === 0);
   protected previewCovers = computed(() =>
     this.impactPreview.hasValue() ? this.impactPreview.value().reduce((sum, r) => sum + r.covers, 0) : 0);
 

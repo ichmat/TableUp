@@ -89,6 +89,18 @@ describe('ClosureEditorComponent', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('should grey out the customer message when no reservation is impacted', async () => {
+    spyOn(closureService, 'impact').and.resolveTo({ value: [], error: null });
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const message = (fixture.nativeElement as HTMLElement).querySelectorAll('textarea')[1];
+    expect(message.disabled).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('ce message ne partira chez personne');
+  });
+
   it('should propose a customer message naming the day and the restaurant', () => {
     const message: string = (fixture.nativeElement as HTMLElement).querySelectorAll('textarea')[1].value;
     expect(message).toContain('le jeudi 24 décembre');

@@ -11,6 +11,7 @@ export enum ApiError{
     NotFound = 'NotFound',
     ReservationsImpacted = 'ReservationsImpacted',
     ClosureImpactsReservations = 'ClosureImpactsReservations',
+    InvalidRequest = 'InvalidRequest',
 }
 
 export interface ApiErrorResponse{
