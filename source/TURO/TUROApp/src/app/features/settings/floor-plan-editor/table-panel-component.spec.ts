@@ -34,6 +34,13 @@ describe('TablePanelComponent', () => {
     fixture.detectChanges();
   };
 
+  it('should commit a field on Enter, without leaving it', () => {
+    input('width').value = '110';
+    input('width').dispatchEvent(new Event('input'));
+    input('width').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(changes).toEqual([{ id: 'a', patch: { width: 1.1 } }]);
+  });
+
   it('should show the size in centimetres', () => {
     expect(input('width').value).toBe('90');
   });

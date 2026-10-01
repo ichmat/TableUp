@@ -125,7 +125,7 @@ describe('FloorPlanEditorComponent', () => {
     component.onPanelChange({ id: 't1', patch: { zoneId: 'terrasse' } });
 
     expect(component.currentZone()!.id).toBe('terrasse');
-    expect(component.store.content().tables[0]).toEqual(jasmine.objectContaining({ zoneId: 'terrasse', x: 1.25 }));
+    expect(component.store.content().tables[0]).toEqual(jasmine.objectContaining({ zoneId: 'terrasse', x: 1.3 }));
   });
 
   it('should drop a decor, select it, and count it as a change', () => {

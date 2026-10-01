@@ -10,7 +10,7 @@ import { DecorPanelComponent } from './decor-panel-component';
 import { TablePanelComponent } from './table-panel-component';
 import { countChanges, draftFromPublished } from './logic/draft-diff';
 import { DraftStore } from './logic/draft-store';
-import { clampToZone, findFreeSpot, placeCentredAt, Point } from './logic/geometry';
+import { boundsOf, clampToZone, findFreeSpot, placeCentredAt, Point, Rect } from './logic/geometry';
 import { buildTablePalette, DECOR_PALETTE, DecorPaletteEntry, TablePaletteEntry } from './logic/palette';
 import { decorErrors, tableErrors } from './logic/plan-rules';
 import { nextTableName } from './logic/table-naming';
@@ -151,7 +151,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
       width: entry.width,
       height: entry.height,
       rotation: 0,
-      ...placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone),
+      ...placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id, null)),
     };
     const content = this.store.content();
     this.store.apply({ ...content, decors: [...content.decors, decor] });
@@ -177,7 +177,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
         moved = true;
         const pointer = canvas.toMetres(e.clientX, e.clientY);
-        this.decorPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone) });
+        this.decorPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id)) });
       },
       end: (e) => {
         this._cancelGesture = null;
@@ -198,7 +198,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
       }
       const merged = { ...decor, ...patch };
       const zone = this.zones().find((z) => z.id === merged.zoneId);
-      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone) };
+      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, merged.id)) };
     });
     this.store.apply({ ...content, decors });
   }
@@ -311,6 +311,14 @@ export class FloorPlanEditorComponent implements OnDestroy {
     ];
   }
 
+  /** Ce qui peut attirer un objet qu'on place : les autres tables et décors de la salle, tels qu'ils sont tournés */
+  private neighboursOf(zoneId: string, exceptId: string | null): Rect[] {
+    const { tables, decors } = this.store.content();
+    return [...tables, ...decors]
+      .filter((other) => other.zoneId === zoneId && other.id !== exceptId)
+      .map(boundsOf);
+  }
+
   private zoneOf(table: PlanTable): FloorPlanZone | undefined {
     return this.zones().find((zone) => zone.id === table.zoneId);
   }
@@ -341,7 +349,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
     if (canvas === undefined || zone === null || !canvas.containsClient(clientX, clientY)) {
       return false;
     }
-    const position = placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone);
+    const position = placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id, null));
     const table: DraftTable = {
       id: crypto.randomUUID(),
       zoneId: zone.id,
@@ -379,7 +387,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
         moved = true;
         const pointer = canvas.toMetres(e.clientX, e.clientY);
-        this.dragPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone) });
+        this.dragPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id)) });
       },
       end: (e) => {
         this._cancelGesture = null;
@@ -415,7 +423,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
       }
       const merged = { ...table, ...patch };
       const zone = this.zoneOf(merged);
-      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone) };
+      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, merged.id)) };
     });
     this.store.apply({ ...content, tables });
   }

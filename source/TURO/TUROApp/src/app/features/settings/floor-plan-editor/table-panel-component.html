@@ -1,8 +1,8 @@
 <div class="flex flex-col gap-3">
     <p class="font-black text-text-muted text-xs">TABLE {{ table().name }}</p>
 
-    <!-- Les champs s'appliquent quand on les quitte -->
-    <div class="flex flex-col gap-3" (focusout)="commitFields()">
+    <!-- Les champs s'appliquent quand on les quitte, ou sur Entrée -->
+    <div class="flex flex-col gap-3" (focusout)="commitFields()" (keydown.enter)="commitFields()">
         <div class="flex flex-col gap-1">
             <label class="text-sm font-bold">Nom</label>
             <div data-field="name"><app-input [formField]="fields.name" inputClass="w-full" /></div>

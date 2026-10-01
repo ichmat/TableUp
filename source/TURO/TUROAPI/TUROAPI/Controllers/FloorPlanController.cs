@@ -196,22 +196,22 @@ namespace TUROAPI.Controllers
         private async Task CheckZoneContentFits(Zone zone, double width, double height)
         {
             FloorPlanDraftContent? draft = await ReadDraftAsync();
-            IEnumerable<(string Label, double X, double Y, double W, double H)> items = zone.Tables
+            IEnumerable<(string Label, double X, double Y, double W, double H, double R)> items = zone.Tables
                 .Where(t => t.IsActive)
-                .Select(t => ($"table {t.Name}", t.X, t.Y, t.Width, t.Height))
-                .Concat(zone.Decors.Select(d => ($"decor {d.Label ?? d.Type.ToString()}", d.X, d.Y, d.Width, d.Height)));
+                .Select(t => ($"table {t.Name}", t.X, t.Y, t.Width, t.Height, t.Rotation))
+                .Concat(zone.Decors.Select(d => ($"decor {d.Label ?? d.Type.ToString()}", d.X, d.Y, d.Width, d.Height, d.Rotation)));
             if (draft != null)
             {
                 items = items.Concat(draft.Tables
                     .Where(t => t.ZoneId == zone.Id)
-                    .Select(t => ($"table {t.Name} (draft)", t.X, t.Y, t.Width, t.Height)));
+                    .Select(t => ($"table {t.Name} (draft)", t.X, t.Y, t.Width, t.Height, t.Rotation)));
                 items = items.Concat(draft.Decors
                     .Where(d => d.ZoneId == zone.Id)
-                    .Select(d => ($"decor {d.Label ?? d.Type.ToString()} (draft)", d.X, d.Y, d.Width, d.Height)));
+                    .Select(d => ($"decor {d.Label ?? d.Type.ToString()} (draft)", d.X, d.Y, d.Width, d.Height, d.Rotation)));
             }
 
             List<string> outside = items
-                .Where(i => !FloorPlanRules.FitsIn(i.X, i.Y, i.W, i.H, width, height))
+                .Where(i => !FloorPlanRules.FitsIn(i.X, i.Y, i.W, i.H, i.R, width, height))
                 .Select(i => i.Label)
                 .Distinct()
                 .ToList();
@@ -474,12 +474,8 @@ namespace TUROAPI.Controllers
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: rotation must be a multiple of {FloorPlanRules.RotationStep} degrees in [0, 360).");
                 }
-                if (!FloorPlanRules.IsOnGrid(table.X) || !FloorPlanRules.IsOnGrid(table.Y))
-                {
-                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: position must be on the {FloorPlanRules.GridStep} m grid.");
-                }
                 Zone zone = zones[table.ZoneId];
-                if (!FloorPlanRules.FitsIn(table.X, table.Y, table.Width, table.Height, zone.Width, zone.Height))
+                if (!FloorPlanRules.FitsIn(table.X, table.Y, table.Width, table.Height, table.Rotation, zone.Width, zone.Height))
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: the table goes beyond room {zone.Name}.");
                 }
@@ -514,11 +510,7 @@ namespace TUROAPI.Controllers
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: rotation must be a multiple of {FloorPlanRules.RotationStep} degrees in [0, 360).");
                 }
-                if (!FloorPlanRules.IsOnGrid(decor.X) || !FloorPlanRules.IsOnGrid(decor.Y))
-                {
-                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: position must be on the {FloorPlanRules.GridStep} m grid.");
-                }
-                if (!FloorPlanRules.FitsIn(decor.X, decor.Y, decor.Width, decor.Height, zone.Width, zone.Height))
+                if (!FloorPlanRules.FitsIn(decor.X, decor.Y, decor.Width, decor.Height, decor.Rotation, zone.Width, zone.Height))
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: the decor goes beyond room {zone.Name}.");
                 }

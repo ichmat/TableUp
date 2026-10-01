@@ -11,7 +11,7 @@
         </select>
     </div>
 
-    <div class="flex flex-col gap-3" (focusout)="commitFields()">
+    <div class="flex flex-col gap-3" (focusout)="commitFields()" (keydown.enter)="commitFields()">
         <div class="flex flex-col gap-1">
             <label class="text-sm font-bold">Libellé <span class="font-normal text-text-muted">(facultatif)</span></label>
             <div data-field="label"><app-input [formField]="fields.label" [placeholder]="typeLabels[decor().type]" inputClass="w-full" /></div>

@@ -29,6 +29,14 @@ describe('DecorPanelComponent', () => {
     expect(changes).toEqual([{ id: 'd', patch: { label: 'Comptoir' } }]);
   });
 
+  it('should commit a field on Enter, without leaving it', () => {
+    const label = host.querySelector<HTMLInputElement>('[data-field="label"] input')!;
+    label.value = 'Comptoir';
+    label.dispatchEvent(new Event('input'));
+    label.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(changes).toEqual([{ id: 'd', patch: { label: 'Comptoir' } }]);
+  });
+
   it('should change the type from the list', () => {
     const select = host.querySelector<HTMLSelectElement>('[data-field="type"] select')!;
     select.value = 'Pass';

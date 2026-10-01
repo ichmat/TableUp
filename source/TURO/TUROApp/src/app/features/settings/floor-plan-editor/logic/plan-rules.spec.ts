@@ -34,6 +34,10 @@ describe('tableErrors', () => {
   it('should flag a table that goes beyond its room', () => {
     expect(messages(table({ x: 7.5 }))).toEqual(['La table dépasse de la salle']);
   });
+
+  it('should flag a turned table that pokes out of its room', () => {
+    expect(messages(table({ shape: 'Rectangular', width: 1.8, height: 0.8, x: 0, y: 0, rotation: 90 }))).toEqual(['La table dépasse de la salle']);
+  });
 });
 
 describe('decorErrors', () => {
