@@ -1,5 +1,5 @@
-import { PlanDecor, PlanTable } from '../../../../models';
-import { decorErrors, tableErrors } from './plan-rules';
+import { PlanCombination, PlanDecor, PlanTable } from '../../../../models';
+import { combinationErrors, decorErrors, tableErrors } from './plan-rules';
 
 const ROOM = { width: 8, height: 5.5 };
 const table = (patch: Partial<PlanTable>): PlanTable => ({
@@ -13,7 +13,7 @@ describe('tableErrors', () => {
   });
 
   it('should refuse a name taken by another table, whatever the case or spaces', () => {
-    expect(messages(table({ name: 't1 ' }), [table({ id: 'b', name: 'T1' })])).toEqual(['Une autre table porte déjà ce nom']);
+    expect(messages(table({ name: 't1 ' }), [table({ id: 'b', name: 'T1' })])).toEqual(['Une table ou une combinaison porte déjà ce nom']);
   });
 
   it('should refuse an empty or too long name', () => {
@@ -53,5 +53,43 @@ describe('decorErrors', () => {
     expect(decorErrors(decor({ height: 0.05 }), ROOM).map((e) => e.message)).toEqual(['Les dimensions vont de 10 cm à la taille de la salle']);
     expect(decorErrors(decor({ label: 'x'.repeat(31) }), ROOM).map((e) => e.message)).toEqual(['Le libellé est limité à 30 caractères']);
     expect(decorErrors(decor({ x: 7 }), ROOM).map((e) => e.message)).toEqual(['Le décor dépasse de la salle']);
+  });
+});
+
+describe('combinationErrors', () => {
+  const t1 = table({ id: 't1', name: 'T1' });
+  const t2 = table({ id: 't2', name: 'T2', x: 0.9 });
+  const combination = (patch: Partial<PlanCombination>): PlanCombination =>
+    ({ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['t1', 't2'], ...patch });
+  const messages = (c: PlanCombination, others: PlanCombination[] = []) =>
+    combinationErrors(c, [t1, t2], [c, ...others]).map((e) => e.message);
+
+  it('should accept a valid combination', () => {
+    expect(messages(combination({}))).toEqual([]);
+  });
+
+  it('should refuse an empty, long, or already used name, including a table name', () => {
+    expect(messages(combination({ name: ' ' }))).toEqual(['Indiquez un nom']);
+    expect(messages(combination({ name: 'x'.repeat(21) }))).toEqual(['Le nom est limité à 20 caractères']);
+    expect(messages(combination({ name: 't1 ' }))).toEqual(['Une table ou une combinaison porte déjà ce nom']);
+    expect(messages(combination({}), [combination({ id: 'd', tableIds: ['t2', 't1'], name: 'Autre' })]))
+      .toEqual(['Ces deux tables forment déjà une combinaison']);
+  });
+
+  it('should refuse seats outside 1 to 100', () => {
+    expect(messages(combination({ capacity: 0 }))).toEqual(['Entre 1 et 100 places']);
+    expect(messages(combination({ capacity: 101 }))).toEqual(['Entre 1 et 100 places']);
+  });
+
+  it('should refuse a combination whose table is missing', () => {
+    expect(messages(combination({ tableIds: ['t1', 'gone'] }))).toEqual(['Une combinaison réunit deux tables du plan']);
+  });
+});
+
+describe('tableErrors and combination names', () => {
+  it('should refuse a table named like a combination', () => {
+    const t = table({ name: 'T1-T2' });
+    const combinations = [{ id: 'c', name: 't1-t2', capacity: 8, tableIds: ['x', 'y'] }];
+    expect(tableErrors(t, ROOM, [t], combinations).map((e) => e.message)).toEqual(['Une table ou une combinaison porte déjà ce nom']);
   });
 });

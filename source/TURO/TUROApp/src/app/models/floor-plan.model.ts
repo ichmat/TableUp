@@ -46,10 +46,21 @@ export interface PlanDecor {
 
 export type DraftDecor = PlanDecor;
 
+/** La table virtuelle (MOD-02) : un couple de tables, une capacité saisie (MOD-03), aucune géométrie */
+export interface PlanCombination {
+    id: string,
+    name: string,
+    capacity: number,
+    tableIds: string[],
+}
+
+export type DraftCombination = PlanCombination;
+
 /** L'état complet du plan à publier, toutes salles confondues */
 export interface FloorPlanDraftContent {
     tables: DraftTable[],
     decors: DraftDecor[],
+    combinations: DraftCombination[],
 }
 
 export interface FloorPlanDraft extends FloorPlanDraftContent {

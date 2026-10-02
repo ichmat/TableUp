@@ -51,8 +51,8 @@ export class FloorPlanService {
     /** `null` s'il n'y a pas de brouillon (204) */
     getDraft(): Promise<ApiResult<FloorPlanDraft | null>> {
         return toApiResult(this._http.get<FloorPlanDraft | null>(`${FLOOR_PLAN_URL}/draft`).pipe(
-            // un brouillon enregistré avant le décor n'a pas de `decors`
-            map((draft) => draft === null ? null : { ...draft, decors: draft.decors ?? [] }),
+            // un brouillon enregistré avant le décor ou les combinaisons n'a pas ces listes
+            map((draft) => draft === null ? null : { ...draft, decors: draft.decors ?? [], combinations: draft.combinations ?? [] }),
         ));
     }
 

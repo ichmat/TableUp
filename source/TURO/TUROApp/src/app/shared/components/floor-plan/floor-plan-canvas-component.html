@@ -76,6 +76,26 @@
                 font-size="0.15" class="fill-text-muted pointer-events-none">{{ table.capacity }}p</text>
         </g>
     }
+
+    <!-- LE CADRE ORANGE : deux tables qui se touchent pendant un glisser (un geste, pas un statut) -->
+    @if (contactBox(); as box) {
+        <rect data-contact [attr.x]="box.x" [attr.y]="box.y" [attr.width]="box.width" [attr.height]="box.height" rx="0.08"
+            class="fill-interactive/10 stroke-interactive pointer-events-none" stroke-width="2" stroke-dasharray="6 4"
+            vector-effect="non-scaling-stroke" />
+    }
+
+    <!-- LES COMBINAISONS : une pastille violette entre les deux tables (EDIT-03) -->
+    @for (pill of pills(); track pill.combination.id) {
+        <g [attr.data-combination-id]="pill.combination.id" class="cursor-pointer"
+            [attr.transform]="'translate(' + pill.x + ' ' + pill.y + ')'"
+            (pointerdown)="onCombinationPointerDown(pill.combination, $event)">
+            <rect [attr.x]="-pill.width / 2" [attr.y]="-pillHeight / 2" [attr.width]="pill.width" [attr.height]="pillHeight"
+                [attr.rx]="pillHeight / 2" [attr.class]="'fill-violet ' + pillStroke(pill.combination)" stroke-width="2"
+                vector-effect="non-scaling-stroke" />
+            <text text-anchor="middle" dominant-baseline="central" font-size="0.17"
+                class="fill-surface font-bold pointer-events-none">{{ pill.label }}</text>
+        </g>
+    }
 </svg>
 
 <!-- ZOOM : dans le coin, au-dessus du plan -->

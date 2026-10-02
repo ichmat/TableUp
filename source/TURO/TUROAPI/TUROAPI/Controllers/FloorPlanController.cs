@@ -31,6 +31,9 @@ namespace TUROAPI.Controllers
         private const double MaxTableSize = 4.00;
         private const int MaxDecorLabelLength = 30;
         private const double MinDecorSize = 0.10;
+        private const int MaxCombinationNameLength = 20;
+        private const int MinCombinationCapacity = 1;
+        private const int MaxCombinationCapacity = 100;
 
         public FloorPlanController(TuroDBContext context) : base(context)
         {
@@ -233,6 +236,13 @@ namespace TUROAPI.Controllers
                     $"room {zone.Name}: a room that has held a table cannot be deleted.");
             }
 
+            // Une combinaison aux tables séparées garde sa salle d'origine : la cascade la supprimerait
+            if (await context.Combinations.AnyAsync(c => c.ZoneId == zone.Id))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification,
+                    $"room {zone.Name}: a combination belongs to this room, it cannot be deleted.");
+            }
+
             // La préférence d'une réservation, même ancienne, doit rester lisible
             if (await context.Reservations.AnyAsync(r => r.PreferredZoneId == zone.Id))
             {
@@ -331,6 +341,8 @@ namespace TUROAPI.Controllers
                 {
                     table = new Table { Id = item.Id, IsActive = true };
                     context.Tables.Add(table);
+                    // les combinaisons nouvelles peuvent réunir des tables nouvelles
+                    existing[item.Id] = table;
                 }
                 table.ZoneId = item.ZoneId;
                 table.Name = item.Name.Trim();
@@ -365,6 +377,34 @@ namespace TUROAPI.Controllers
                 decor.Width = item.Width;
                 decor.Height = item.Height;
                 decor.Rotation = item.Rotation;
+            }
+
+            // Combinaisons : jamais supprimées ; une nouvelle naît dormante ; des tables séparées la désactivent
+            Dictionary<Guid, Combination> combinationsById = await context.Combinations
+                .Include(c => c.Tables)
+                .Where(c => c.Zone.RestaurantId == CurrentRestaurantId)
+                .ToDictionaryAsync(c => c.Id);
+            foreach (DraftCombinationItem item in content.Combinations)
+            {
+                Table first = existing[item.TableIds[0]];
+                Table second = existing[item.TableIds[1]];
+                if (!combinationsById.TryGetValue(item.Id, out Combination? combination))
+                {
+                    combination = new Combination { Id = item.Id, ZoneId = first.ZoneId, IsActive = false, Tables = [first, second] };
+                    context.Combinations.Add(combination);
+                }
+                combination.Name = item.Name.Trim();
+                combination.Capacity = item.Capacity;
+                if (first.ZoneId == second.ZoneId)
+                {
+                    combination.ZoneId = first.ZoneId;
+                }
+                else
+                {
+                    combination.IsActive = false;
+                    combination.ActivateAt = null;
+                    combination.DeactivateAt = null;
+                }
             }
 
             context.FloorPlanDrafts.Remove(draft);
@@ -438,6 +478,46 @@ namespace TUROAPI.Controllers
                     throw new ApiErrorException(ApiError.InvalidModification, $"decor {decor.Label ?? decor.Type.ToString()}: unknown room.");
                 }
             }
+
+            var publishedCombinations = await context.Combinations
+                .Where(c => c.Zone.RestaurantId == CurrentRestaurantId)
+                .Select(c => new { c.Id, c.Name, TableIds = c.Tables.Select(t => t.Id).ToList() })
+                .ToListAsync();
+            if (content.Combinations.Select(c => c.Id).Distinct().Count() != content.Combinations.Count)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "the draft lists the same combination twice.");
+            }
+            HashSet<Guid> publishedCombinationIds = publishedCombinations.Select(c => c.Id).ToHashSet();
+            List<Guid> newCombinationIds = content.Combinations.Select(c => c.Id).Where(id => !publishedCombinationIds.Contains(id)).ToList();
+            if (newCombinationIds.Count > 0 && await context.Combinations.AnyAsync(c => newCombinationIds.Contains(c.Id)))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "the draft uses a combination id that belongs elsewhere.");
+            }
+            foreach (DraftCombinationItem combination in content.Combinations)
+            {
+                if (combination.TableIds.Count != 2 || combination.TableIds[0] == combination.TableIds[1]
+                    || !combination.TableIds.All(draftIds.Contains))
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"combination {combination.Name}: it must join two different tables of the plan.");
+                }
+                var known = publishedCombinations.FirstOrDefault(c => c.Id == combination.Id);
+                if (known != null && !known.TableIds.ToHashSet().SetEquals(combination.TableIds))
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"combination {combination.Name}: the tables of a published combination cannot change.");
+                }
+            }
+            var removedCombination = publishedCombinations.FirstOrDefault(c => !content.Combinations.Any(d => d.Id == c.Id));
+            if (removedCombination != null)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, $"combination {removedCombination.Name}: a published combination cannot be removed from the plan.");
+            }
+            var samePair = content.Combinations
+                .GroupBy(c => string.Join("|", c.TableIds.OrderBy(id => id)))
+                .FirstOrDefault(g => g.Count() > 1);
+            if (samePair != null)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, $"combination {samePair.First().Name}: another combination already joins these tables.");
+            }
         }
 
         private static void CheckPublishable(FloorPlanDraftContent content, Dictionary<Guid, Zone> zones)
@@ -481,13 +561,33 @@ namespace TUROAPI.Controllers
                 }
             }
 
-            // Toutes les tables actives sont dans le brouillon : l'unicité se vérifie sur lui seul
-            var duplicate = content.Tables
-                .GroupBy(t => t.Name.Trim().ToLowerInvariant())
+            foreach (DraftCombinationItem combination in content.Combinations)
+            {
+                string name = combination.Name?.Trim() ?? string.Empty;
+                string label = $"combination {(name.Length == 0 ? "sans nom" : name)}";
+                if (name.Length == 0)
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: a combination needs a name.");
+                }
+                if (name.Length > MaxCombinationNameLength)
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: name cannot exceed {MaxCombinationNameLength} characters.");
+                }
+                if (combination.Capacity < MinCombinationCapacity || combination.Capacity > MaxCombinationCapacity)
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: seats must be between {MinCombinationCapacity} and {MaxCombinationCapacity}.");
+                }
+            }
+
+            // Toutes les tables actives et toutes les combinaisons sont dans le brouillon : l'unicité se vérifie sur lui seul.
+            // Une réservation affiche une table ou une combinaison : un nom ne désigne qu'une seule chose
+            var duplicate = content.Tables.Select(t => t.Name)
+                .Concat(content.Combinations.Select(c => c.Name))
+                .GroupBy(n => n.Trim().ToLowerInvariant())
                 .FirstOrDefault(g => g.Count() > 1);
             if (duplicate != null)
             {
-                throw new ApiErrorException(ApiError.InvalidModification, $"table {duplicate.First().Name.Trim()}: another table already has this name.");
+                throw new ApiErrorException(ApiError.InvalidModification, $"name {duplicate.First().Trim()}: another table or combination already has this name.");
             }
 
             foreach (DraftDecorItem decor in content.Decors)

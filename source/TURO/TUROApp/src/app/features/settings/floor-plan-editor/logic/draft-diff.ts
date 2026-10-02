@@ -1,4 +1,4 @@
-import { Decor, FloorPlanDraftContent, FloorPlanZone, PlanDecor, PlanTable, Table } from '../../../../models';
+import { Combination, Decor, FloorPlanDraftContent, FloorPlanZone, PlanCombination, PlanDecor, PlanTable, Table } from '../../../../models';
 
 const EPSILON = 1e-6;
 
@@ -20,6 +20,7 @@ export function draftFromPublished(zones: readonly FloorPlanZone[]): FloorPlanDr
   return {
     tables: publishedTables(zones),
     decors: zones.flatMap((zone) => zone.decors.map(toPlanDecor)),
+    combinations: zones.flatMap((zone) => zone.combinations.map(toPlanCombination)),
   };
 }
 
@@ -39,7 +40,7 @@ export function sameDecor(a: PlanDecor, b: PlanDecor): boolean {
     && sameNumber(a.rotation, b.rotation);
 }
 
-/** « Brouillon · N modifications » : tables créées ou modifiées, décors créés, modifiés ou supprimés */
+/** « Brouillon · N modifications » : tables créées ou modifiées, décors créés, modifiés ou supprimés, combinaisons créées ou modifiées */
 export function countChanges(published: FloorPlanDraftContent, draft: FloorPlanDraftContent): number {
   const tablesById = new Map(published.tables.map((table) => [table.id, table]));
   const changedTables = draft.tables.filter((table) => {
@@ -55,5 +56,20 @@ export function countChanges(published: FloorPlanDraftContent, draft: FloorPlanD
   }).length;
   const deletedDecors = published.decors.filter((decor) => !draftDecorIds.has(decor.id)).length;
 
-  return changedTables + changedDecors + deletedDecors;
+  const combinationsById = new Map(published.combinations.map((combination) => [combination.id, combination]));
+  const changedCombinations = draft.combinations.filter((combination) => {
+    const before = combinationsById.get(combination.id);
+    return before === undefined || !sameCombination(before, combination);
+  }).length;
+
+  return changedTables + changedDecors + deletedDecors + changedCombinations;
+}
+
+export function toPlanCombination({ id, name, capacity, tableIds }: PlanCombination | Combination): PlanCombination {
+  return { id, name, capacity, tableIds: [...tableIds] };
+}
+
+/** Les tables d'une combinaison ne changent jamais : seuls son nom et ses places se modifient */
+export function sameCombination(a: PlanCombination, b: PlanCombination): boolean {
+  return a.name === b.name && a.capacity === b.capacity;
 }

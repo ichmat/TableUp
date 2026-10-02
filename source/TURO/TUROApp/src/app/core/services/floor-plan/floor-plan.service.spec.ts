@@ -27,7 +27,7 @@ describe('FloorPlanService', () => {
     const result = service.getDraft();
     http.expectOne('/api/restaurant/floor-plan/draft').flush({ tables: [], updatedAt: '2026-10-01T10:00:00Z' });
 
-    expect((await result).value).toEqual({ tables: [], decors: [], updatedAt: '2026-10-01T10:00:00Z' });
+    expect((await result).value).toEqual({ tables: [], decors: [], combinations: [], updatedAt: '2026-10-01T10:00:00Z' });
   });
 
   it('should carry the API error code, to tell a non-admin apart', async () => {

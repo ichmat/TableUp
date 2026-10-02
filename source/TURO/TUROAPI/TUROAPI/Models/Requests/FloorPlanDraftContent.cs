@@ -10,6 +10,17 @@ namespace TUROAPI.Models.Requests
         public List<DraftTableItem> Tables { get; set; } = [];
         // Un brouillon enregistré avant le décor se relit avec une liste vide
         public List<DraftDecorItem> Decors { get; set; } = [];
+        // Un brouillon enregistré avant les combinaisons se relit avec une liste vide
+        public List<DraftCombinationItem> Combinations { get; set; } = [];
+    }
+
+    /// <summary>La table virtuelle (MOD-02, MOD-03) : un couple de tables et une capacité saisie, sans géométrie</summary>
+    public class DraftCombinationItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Capacity { get; set; }
+        public List<Guid> TableIds { get; set; } = [];
     }
 
     /// <summary>Un repère non réservable (MOD-04). Contrairement à une table, un décor absent du brouillon est supprimé</summary>

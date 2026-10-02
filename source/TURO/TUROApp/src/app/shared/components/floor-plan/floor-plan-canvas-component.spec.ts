@@ -120,6 +120,39 @@ describe('FloorPlanCanvasComponent', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
   });
 
+  it('should draw a combination pill just above its two tables, without covering them', () => {
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'] }]);
+    fixture.detectChanges();
+
+    const pill = host.querySelector('[data-combination-id="c"]')!;
+    expect(pill.textContent).toContain('T1-T2 · 8p');
+    // milieu des centres en x (2,625) ; en y, juste au-dessus du haut des deux tables (la rectangulaire tournée commence à 0,5)
+    expect(pill.getAttribute('transform')).toBe('translate(2.625 0.29)');
+  });
+
+  it('should not draw a pill whose second table is not in this room', () => {
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T9', capacity: 4, tableIds: ['a', 'elsewhere'] }]);
+    fixture.detectChanges();
+    expect(host.querySelector('[data-combination-id]')).toBeNull();
+  });
+
+  it('should frame two tables in contact while dragging', () => {
+    expect(host.querySelector('[data-contact]')).toBeNull();
+    fixture.componentRef.setInput('contactIds', ['a', 'b']);
+    fixture.detectChanges();
+    expect(host.querySelector('[data-contact]')).not.toBeNull();
+  });
+
+  it('should emit the pressed combination', () => {
+    const pressed: unknown[] = [];
+    fixture.componentInstance.combinationPointerDown.subscribe((e) => pressed.push(e.item.id));
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'] }]);
+    fixture.detectChanges();
+    host.querySelector('[data-combination-id="c"]')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 9 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9 }));
+    expect(pressed).toEqual(['c']);
+  });
+
   it('should emit the pressed table with the point in metres', () => {
     const pressed: PlanPointerEvent<PlanTable>[] = [];
     fixture.componentInstance.tablePointerDown.subscribe((e) => pressed.push(e));

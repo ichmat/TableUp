@@ -52,6 +52,10 @@
   --color-coral: #B4674F;
   --color-coral-soft: #F7E7E1;
   --color-coral-ink: #8C4E3A;
+
+  /* Violet — les combinaisons (tables virtuelles), partout où elles apparaissent */
+  --color-violet: #5B4A8A;
+
   /* Ambre — horaires modifiés */
   --color-amber: #C9AC52;
   --color-amber-soft: #FDF4E6;

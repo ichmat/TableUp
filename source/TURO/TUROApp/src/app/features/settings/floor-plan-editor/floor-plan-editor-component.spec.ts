@@ -76,7 +76,7 @@ describe('FloorPlanEditorComponent', () => {
   });
 
   it('should resume the saved draft instead of the published plan', async () => {
-    floorPlan.getDraft.and.resolveTo({ value: { tables: [{ ...T1, x: 2 }], decors: [], updatedAt: '2026-10-01T10:00:00Z' }, error: null });
+    floorPlan.getDraft.and.resolveTo({ value: { tables: [{ ...T1, x: 2 }], decors: [], combinations: [], updatedAt: '2026-10-01T10:00:00Z' }, error: null });
     await create();
     expect(component.store.content().tables[0].x).toBe(2);
     expect(text()).toContain('Brouillon · 1 modification');
@@ -152,7 +152,7 @@ describe('FloorPlanEditorComponent', () => {
 
   it('should apply a field being typed to its own table when another table is clicked', async () => {
     const t2: Table = { ...T1, id: 't2', name: 'T2', x: 2 };
-    floorPlan.getDraft.and.resolveTo({ value: { tables: [T1, t2], decors: [], updatedAt: '2026-10-01T10:00:00Z' }, error: null });
+    floorPlan.getDraft.and.resolveTo({ value: { tables: [T1, t2], decors: [], combinations: [], updatedAt: '2026-10-01T10:00:00Z' }, error: null });
     await create();
     component.selection.set({ kind: 'table', id: 't1' });
     fixture.detectChanges();
@@ -239,6 +239,123 @@ describe('FloorPlanEditorComponent', () => {
     await Promise.all([component.publish(), component.publish()]);
 
     expect(floorPlan.publish).toHaveBeenCalledTimes(1);
+  });
+
+  describe('accolage', () => {
+    const T2: Table = { ...T1, id: 't2', name: 'T2', x: 2 };
+    let toMetres: jasmine.Spy;
+
+    beforeEach(async () => {
+      floorPlan.getDraft.and.resolveTo({
+        value: { tables: [T1, T2], decors: [], combinations: [], updatedAt: '2026-10-01T10:00:00Z' }, error: null,
+      });
+      await create();
+      // un seul espion par canevas : plusieurs glissers dans un même test le réutilisent
+      toMetres = spyOn(canvas(), 'toMetres');
+    });
+
+    /** Glisse `table` jusqu'au point `to` (en mètres, sur le coin haut-gauche) avec un vrai suivi de pointeur */
+    function drag(table: Table, to: { x: number, y: number }) {
+      toMetres.and.returnValue({ x: to.x, y: to.y });
+      component.onTablePointerDown({ item: table, point: { x: table.x, y: table.y }, event: new PointerEvent('pointerdown', { pointerId: 30, clientX: 0, clientY: 0 }) });
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 30, clientX: 50, clientY: 0 }));
+      fixture.detectChanges();
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 30, clientX: 50, clientY: 0 }));
+      fixture.detectChanges();
+    }
+
+    it('should propose a combination when a table is dropped against another', () => {
+      drag(T2, { x: 0.7, y: 0 });
+      expect(component.accolage()).toEqual({ firstId: 't2', secondId: 't1' });
+      expect(text()).toContain('Créer la table T1-T2 ?');
+    });
+
+    it('should not undo behind the open accolage dialog', () => {
+      drag(T2, { x: 0.7, y: 0 });
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+      fixture.detectChanges();
+
+      expect(component.store.content().tables[1].x).toBe(0.7);
+      expect(component.accolage()).toEqual({ firstId: 't2', secondId: 't1' });
+    });
+
+    it('should only move the tables on "Non, juste les déplacer", and not ask again for that pair', () => {
+      drag(T2, { x: 0.7, y: 0 });
+      component.dismissAccolage();
+      expect(component.store.content().combinations).toEqual([]);
+      expect(component.store.content().tables[1].x).toBe(0.7);
+
+      drag({ ...T2, x: 0.7 }, { x: 0.7, y: 0.25 });
+      expect(component.accolage()).toBeNull();
+    });
+
+    it('should create the combination, select it, and undo it without undoing the move', () => {
+      drag(T2, { x: 0.7, y: 0 });
+      component.createCombination({ name: 'T1-T2', capacity: 4 });
+      fixture.detectChanges();
+
+      const created = component.store.content().combinations[0];
+      expect(created).toEqual(jasmine.objectContaining({ name: 'T1-T2', capacity: 4, tableIds: ['t2', 't1'] }));
+      expect(component.selection()).toEqual({ kind: 'combination', id: created.id });
+      expect(text()).toContain('Brouillon · 2 modifications');
+
+      component.store.undo();
+      expect(component.store.content().combinations).toEqual([]);
+      expect(component.store.content().tables[1].x).toBe(0.7);
+    });
+
+    it('should not propose anything for a pair already combined', () => {
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      drag(T2, { x: 0.7, y: 0 });
+      expect(component.accolage()).toBeNull();
+    });
+
+    it('should remove the unpublished combinations of a removed unpublished table', () => {
+      const t3 = { ...T1, id: 't3', name: 'T3', x: 4 };
+      component.store.apply({
+        ...component.store.content(),
+        tables: [...component.store.content().tables, t3],
+        combinations: [{ id: 'c', name: 'T2-T3', capacity: 4, tableIds: ['t2', 't3'] }],
+      });
+      component.selection.set({ kind: 'table', id: 't3' });
+      component.removeSelected();
+      expect(component.store.content().combinations).toEqual([]);
+    });
+
+    it('should ask before sending a member to another room, and keep it on refusal', async () => {
+      const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
+      zones.set([SALLE, terrasse]);
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      const confirm = spyOn(TestBed.inject(ModalService), 'confirmModal').and.resolveTo(false);
+
+      component.onPanelChange({ id: 't2', patch: { zoneId: 'terrasse' } });
+      await fixture.whenStable();
+
+      expect(confirm).toHaveBeenCalledWith('Changer de salle', jasmine.stringContaining('La combinaison T1-T2 sera désactivée'), 'Déplacer');
+      expect(component.store.content().tables[1].zoneId).toBe('salle');
+    });
+
+    it('should show the pill again when a member comes back, without creating anything', () => {
+      const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
+      zones.set([SALLE, terrasse]);
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      component.updateTable('t2', { zoneId: 'terrasse' });
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="c"]')).toBeNull();
+
+      component.updateTable('t2', { zoneId: 'salle' });
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="c"]')).not.toBeNull();
+      expect(component.store.content().combinations.length).toBe(1);
+    });
+
+    it('should rename a combination from its panel and flag a name already used by a table', () => {
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      component.onCombinationPanelChange({ id: 'c', patch: { name: 'T1' } });
+      fixture.detectChanges();
+      expect(component.store.content().combinations[0].name).toBe('T1');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="c"] rect')!.getAttribute('class')).toContain('stroke-red-700');
+    });
   });
 
   it('should not publish while a table is invalid', async () => {

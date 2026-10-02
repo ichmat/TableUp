@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, OnDestroy, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, CanDeactivateFn, Router } from '@angular/router';
-import { ApiError, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanZone, PlanDecor, PlanTable } from '../../../models';
+import { ApiError, DraftCombination, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanZone, PlanCombination, PlanDecor, PlanTable } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
@@ -8,18 +8,21 @@ import { FloorPlanCanvasComponent, PlanPointerEvent } from '../../../shared/comp
 import { DecorPalettePick, TablePaletteComponent, PalettePick } from './table-palette-component';
 import { DecorPanelComponent } from './decor-panel-component';
 import { TablePanelComponent } from './table-panel-component';
+import { AccolageDialogComponent } from './accolage-dialog-component';
+import { CombinationPanelComponent } from './combination-panel-component';
+import { pairKey, touchingTable } from './logic/accolage';
 import { countChanges, draftFromPublished } from './logic/draft-diff';
 import { DraftStore } from './logic/draft-store';
 import { boundsOf, clampToZone, findFreeSpot, placeCentredAt, Point, Rect } from './logic/geometry';
 import { buildTablePalette, DECOR_PALETTE, DecorPaletteEntry, TablePaletteEntry } from './logic/palette';
-import { decorErrors, tableErrors } from './logic/plan-rules';
+import { combinationErrors, decorErrors, tableErrors } from './logic/plan-rules';
 import { nextTableName } from './logic/table-naming';
 import { trackPointer } from './logic/pointer-tracking';
 import { formatMetres } from './logic/units';
 
-/** Ce qui est sélectionné sur le plan : une table, ou un décor */
+/** Ce qui est sélectionné sur le plan : une table, un décor, ou une combinaison */
 export interface PlanSelection {
-  kind: 'table' | 'decor',
+  kind: 'table' | 'decor' | 'combination',
   id: string,
 }
 
@@ -31,7 +34,7 @@ const DRAG_THRESHOLD_PX = 4;
  * puis on publie : le service ne voit jamais les tables bouger (EDIT-15 à EDIT-17)
  */
 @Component({
-  imports: [Button, FloorPlanCanvasComponent, TablePaletteComponent, TablePanelComponent, DecorPanelComponent],
+  imports: [Button, FloorPlanCanvasComponent, TablePaletteComponent, TablePanelComponent, DecorPanelComponent, AccolageDialogComponent, CombinationPanelComponent],
   selector: 'app-floor-plan-editor-component',
   templateUrl: './floor-plan-editor-component.html',
   host: {
@@ -86,15 +89,121 @@ export class FloorPlanEditorComponent implements OnDestroy {
     return selection === null ? [] : [selection.id];
   });
 
-  /** Les tables et décors qui empêchent de publier, toutes salles confondues */
+  /** Les tables, décors et combinaisons qui empêchent de publier, toutes salles confondues */
   protected invalidIds = computed(() => {
     const zonesById = new Map(this.zones().map((zone) => [zone.id, zone]));
-    const { tables, decors } = this.store.content();
+    const { tables, decors, combinations } = this.store.content();
     return [
-      ...tables.filter((table) => tableErrors(table, zonesById.get(table.zoneId), tables).length > 0).map((t) => t.id),
+      ...tables.filter((table) => tableErrors(table, zonesById.get(table.zoneId), tables, combinations).length > 0).map((t) => t.id),
       ...decors.filter((decor) => decorErrors(decor, zonesById.get(decor.zoneId)).length > 0).map((d) => d.id),
+      ...combinations.filter((c) => combinationErrors(c, tables, combinations).length > 0).map((c) => c.id),
     ];
   });
+
+  // ---- COMBINAISONS (EDIT-03, EDIT-13, EDIT-14) ----
+
+  /** Les deux tables d'un glisser qui se touchent : le canevas les encadre */
+  protected contactIds = signal<readonly string[]>([]);
+  /** La fenêtre d'accolage ouverte après un lâcher contre une table */
+  readonly accolage = signal<{ firstId: string, secondId: string } | null>(null);
+  /** « Non, juste les déplacer » : ce couple n'est plus proposé pendant cette session de l'éditeur */
+  private _declinedPairs = new Set<string>();
+  private _combinationPanel = viewChild(CombinationPanelComponent);
+
+  protected accolageTables = computed(() => {
+    const proposal = this.accolage();
+    const tables = this.store.content().tables;
+    const first = tables.find((table) => table.id === proposal?.firstId);
+    const second = tables.find((table) => table.id === proposal?.secondId);
+    return first === undefined || second === undefined ? null : { first, second };
+  });
+
+  protected selectedCombination = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'combination'
+      ? this.store.content().combinations.find((combination) => combination.id === selection.id) ?? null
+      : null;
+  });
+
+  protected selectedCombinationErrors = computed(() => {
+    const combination = this.selectedCombination();
+    const { tables, combinations } = this.store.content();
+    return combination === null ? [] : combinationErrors(combination, tables, combinations);
+  });
+
+  protected selectedCombinationMembers = computed(() => {
+    const combination = this.selectedCombination();
+    const tables = this.store.content().tables;
+    return combination === null ? [] : combination.tableIds.map((id) => tables.find((table) => table.id === id)?.name ?? '?');
+  });
+
+  protected isPublishedCombination = computed(() => {
+    const combination = this.selectedCombination();
+    return combination !== null && this.published().combinations.some((published) => published.id === combination.id);
+  });
+
+  private isCombined(firstId: string, secondId: string): boolean {
+    return this.store.content().combinations.some((c) => c.tableIds.includes(firstId) && c.tableIds.includes(secondId));
+  }
+
+  /** La table que `moved` touche, si ce couple mérite d'être proposé */
+  private contactFor(moved: PlanTable): string[] {
+    const found = touchingTable(moved, this.store.content().tables);
+    if (found === null || this.isCombined(moved.id, found.table.id) || this._declinedPairs.has(pairKey(moved.id, found.table.id))) {
+      return [];
+    }
+    return [moved.id, found.table.id];
+  }
+
+  onCombinationPointerDown({ item }: PlanPointerEvent<PlanCombination>) {
+    this.commitPanels();
+    this.selection.set({ kind: 'combination', id: item.id });
+  }
+
+  createCombination({ name, capacity }: { name: string, capacity: number }) {
+    const proposal = this.accolage();
+    if (proposal === null) {
+      return;
+    }
+    const combination: DraftCombination = {
+      id: crypto.randomUUID(), name, capacity, tableIds: [proposal.firstId, proposal.secondId],
+    };
+    const content = this.store.content();
+    this.store.apply({ ...content, combinations: [...content.combinations, combination] });
+    this.accolage.set(null);
+    this.selection.set({ kind: 'combination', id: combination.id });
+  }
+
+  dismissAccolage() {
+    const proposal = this.accolage();
+    if (proposal !== null) {
+      this._declinedPairs.add(pairKey(proposal.firstId, proposal.secondId));
+    }
+    this.accolage.set(null);
+  }
+
+  updateCombination(id: string, patch: Partial<DraftCombination>) {
+    const content = this.store.content();
+    this.store.apply({
+      ...content,
+      combinations: content.combinations.map((combination) => combination.id === id ? { ...combination, ...patch } : combination),
+    });
+  }
+
+  onCombinationPanelChange({ id, patch }: { id: string, patch: Partial<DraftCombination> }) {
+    this.updateCombination(id, patch);
+  }
+
+  /** Une combinaison jamais publiée se retire ; publiée, elle reste */
+  removeSelectedCombination() {
+    const combination = this.selectedCombination();
+    if (combination === null || this.isPublishedCombination()) {
+      return;
+    }
+    const content = this.store.content();
+    this.store.apply({ ...content, combinations: content.combinations.filter((other) => other.id !== combination.id) });
+    this.selection.set(null);
+  }
 
   // ---- DÉCOR ----
 
@@ -285,6 +394,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
   private commitPanels() {
     this._tablePanel()?.commitFields();
     this._decorPanel()?.commitFields();
+    this._combinationPanel()?.commitFields();
   }
 
   private async loadDraft() {
@@ -387,14 +497,22 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
         moved = true;
         const pointer = canvas.toMetres(e.clientX, e.clientY);
-        this.dragPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id)) });
+        const position = clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id));
+        this.dragPreview.set({ id: item.id, ...position });
+        // collée contre une autre table : le cadre orange annonce la proposition (EDIT-13)
+        this.contactIds.set(this.contactFor({ ...item, ...position }));
       },
       end: (e) => {
         this._cancelGesture = null;
         const preview = this.dragPreview();
+        const contact = this.contactIds();
         this.dragPreview.set(null);
+        this.contactIds.set([]);
         if (e.type === 'pointerup' && preview !== null && (preview.x !== item.x || preview.y !== item.y)) {
           this.updateTable(item.id, { x: preview.x, y: preview.y });
+          if (contact.length === 2) {
+            this.accolage.set({ firstId: contact[0], secondId: contact[1] });
+          }
         }
       },
     });
@@ -406,6 +524,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
     this._cancelGesture = null;
     this.dragPreview.set(null);
     this.decorPreview.set(null);
+    this.contactIds.set([]);
     this.paletteGhost.set(null);
   }
 
@@ -439,7 +558,8 @@ export class FloorPlanEditorComponent implements OnDestroy {
 
   protected selectedTableErrors = computed(() => {
     const table = this.selectedTable();
-    return table === null ? [] : tableErrors(table, this.zoneOf(table), this.store.content().tables);
+    const { tables, combinations } = this.store.content();
+    return table === null ? [] : tableErrors(table, this.zoneOf(table), tables, combinations);
   });
 
   /** Une table jamais publiée se retire du brouillon ; une table publiée se désactivera (lot 5) */
@@ -449,11 +569,47 @@ export class FloorPlanEditorComponent implements OnDestroy {
   });
 
   /** Le panneau nomme sa table : la sélection a pu changer entre-temps */
-  onPanelChange({ id, patch }: { id: string, patch: Partial<DraftTable> }) {
+  onPanelChange(change: { id: string, patch: Partial<DraftTable> }) {
+    const broken = change.patch.zoneId === undefined ? [] : this.combinationsBrokenBy(change.id, change.patch.zoneId);
+    if (broken.length === 0) {
+      this.applyTableChange(change);
+      return;
+    }
+    void this.confirmZoneChange(change, broken);
+  }
+
+  private applyTableChange({ id, patch }: { id: string, patch: Partial<DraftTable> }) {
     this.updateTable(id, patch);
     // l'éditeur suit la table sur son nouvel onglet
     if (patch.zoneId !== undefined && this.selection()?.id === id) {
       this._zoneId.set(patch.zoneId);
+    }
+  }
+
+  /** Les combinaisons de cette table dont l'autre table ne sera pas dans la salle d'arrivée */
+  private combinationsBrokenBy(tableId: string, zoneId: string): PlanCombination[] {
+    const { tables, combinations } = this.store.content();
+    return combinations.filter((combination) => {
+      if (!combination.tableIds.includes(tableId)) {
+        return false;
+      }
+      const otherId = combination.tableIds.find((id) => id !== tableId);
+      return tables.find((table) => table.id === otherId)?.zoneId !== zoneId;
+    });
+  }
+
+  /** Une table qui change de salle désactive ses combinaisons : on le dit avant (décision utilisateur) */
+  private async confirmZoneChange(change: { id: string, patch: Partial<DraftTable> }, broken: PlanCombination[]) {
+    const table = this.store.content().tables.find((t) => t.id === change.id);
+    const zone = this.zones().find((z) => z.id === change.patch.zoneId);
+    const names = broken.map((combination) => combination.name).join(', ');
+    const consequence = broken.length > 1
+      ? `Les combinaisons ${names} seront désactivées : leurs deux tables ne seront plus dans la même salle.`
+      : `La combinaison ${names} sera désactivée : ses deux tables ne seront plus dans la même salle.`;
+    const confirmed = await this._modalService.confirmModal(
+      'Changer de salle', `${table?.name} part en ${zone?.name}. ${consequence}`, 'Déplacer');
+    if (confirmed) {
+      this.applyTableChange(change);
     }
   }
 
@@ -481,7 +637,12 @@ export class FloorPlanEditorComponent implements OnDestroy {
       return;
     }
     const content = this.store.content();
-    this.store.apply({ ...content, tables: content.tables.filter((other) => other.id !== table.id) });
+    this.store.apply({
+      ...content,
+      tables: content.tables.filter((other) => other.id !== table.id),
+      // une table jamais publiée n'appartient qu'à des combinaisons jamais publiées : elles partent avec elle
+      combinations: content.combinations.filter((combination) => !combination.tableIds.includes(table.id)),
+    });
     this.selection.set(null);
   }
 
@@ -490,7 +651,8 @@ export class FloorPlanEditorComponent implements OnDestroy {
   protected onKeydown(event: KeyboardEvent) {
     // la touche peut viser document lui-même, qui n'est pas un élément
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest('input, textarea, select') || !(event.ctrlKey || event.metaKey)) {
+    // la fenêtre d'accolage est modale : rien ne bouge derrière elle
+    if (target?.closest('input, textarea, select') || !(event.ctrlKey || event.metaKey) || this.accolage() !== null) {
       return;
     }
     const key = event.key.toLowerCase();

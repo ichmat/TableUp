@@ -1,6 +1,6 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FloorPlanZone, ZoneRequest } from '../../../models';
+import { Combination, FloorPlanZone, ZoneRequest } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
@@ -35,6 +35,15 @@ export class RoomsAndTablesComponent {
     const draft = this._draft.hasValue() ? this._draft.value().value : null;
     return draft === null ? null : countChanges(draftFromPublished(this.zones()), draft);
   });
+
+  /** Salle de chaque table publiée : une combinaison dont les tables sont dans deux salles est inactive */
+  private _tableZones = computed(() =>
+    new Map(this.zones().flatMap((zone) => zone.tables.map((table) => [table.id, zone.id] as const))));
+
+  protected isSplit(combination: Combination): boolean {
+    const zones = combination.tableIds.map((id) => this._tableZones().get(id));
+    return zones[0] !== zones[1];
+  }
 
   protected activeTables(zone: FloorPlanZone) {
     return zone.tables.filter((table) => table.isActive);

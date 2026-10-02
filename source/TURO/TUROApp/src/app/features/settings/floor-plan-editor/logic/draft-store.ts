@@ -12,7 +12,7 @@ export type SaveState = 'saved' | 'pending' | 'saving' | 'failed';
  * automatique. L'historique vit dans la page seulement ; le brouillon, lui, est enregistré côté API
  */
 export class DraftStore {
-  private _content = signal<FloorPlanDraftContent>({ tables: [], decors: [] });
+  private _content = signal<FloorPlanDraftContent>({ tables: [], decors: [], combinations: [] });
   readonly content = this._content.asReadonly();
 
   private _undo = signal<FloorPlanDraftContent[]>([]);

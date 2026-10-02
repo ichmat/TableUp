@@ -24,6 +24,7 @@ namespace TUROAPI.Models.Wrapper
             {
                 Tables = content.Tables,
                 Decors = content.Decors,
+                Combinations = content.Combinations,
                 UpdatedAt = draft.UpdatedAt,
             };
         }

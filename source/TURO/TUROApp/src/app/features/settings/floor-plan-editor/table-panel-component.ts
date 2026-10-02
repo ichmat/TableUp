@@ -97,10 +97,13 @@ export class TablePanelComponent {
     this.changed.emit({ id: this.table().id, patch: { rotation: normalizeRotation(this.table().rotation + direction * ROTATION_STEP) } });
   }
 
+  /** L'éditeur peut demander confirmation, et refuser : la liste revient sur la salle actuelle, elle suivra la table */
   protected moveToZone(event: Event) {
-    const zoneId = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    const zoneId = select.value;
     if (zoneId !== this.table().zoneId) {
       this.changed.emit({ id: this.table().id, patch: { zoneId } });
+      select.value = this.table().zoneId;
     }
   }
 }

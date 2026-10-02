@@ -56,6 +56,8 @@
                 <!-- CANEVAS -->
                 <section class="flex flex-1 min-w-0 flex-col rounded-xl bg-surface p-2">
                     <app-floor-plan-canvas class="flex-1 min-h-0" [zone]="zone" [tables]="zoneTables()" [decors]="zoneDecors()"
+                        [combinations]="store.content().combinations" [contactIds]="contactIds()"
+                        (combinationPointerDown)="onCombinationPointerDown($event)"
                         [selectedIds]="selectedIds()" [flaggedIds]="invalidIds()"
                         (tablePointerDown)="onTablePointerDown($event)" (decorPointerDown)="onDecorPointerDown($event)"
                         (backgroundClick)="onBackgroundClick()" (pinchStart)="cancelGesture()" />
@@ -71,8 +73,12 @@
                     } @else if (selectedDecor(); as decor) {
                         <app-decor-panel-component [decor]="decor" [zones]="zones()" [errors]="selectedDecorErrors()"
                             (changed)="onDecorPanelChange($event)" (duplicate)="duplicateSelectedDecor()" (remove)="removeSelectedDecor()" />
+                    } @else if (selectedCombination(); as combination) {
+                        <app-combination-panel-component [combination]="combination" [memberNames]="selectedCombinationMembers()"
+                            [errors]="selectedCombinationErrors()" [isPublished]="isPublishedCombination()"
+                            (changed)="onCombinationPanelChange($event)" (remove)="removeSelectedCombination()" />
                     } @else {
-                        <p class="text-sm text-text-muted">Sélectionnez une table ou un décor pour le décrire, ou glissez-en un depuis la palette.</p>
+                        <p class="text-sm text-text-muted">Sélectionnez une table, un décor ou une combinaison pour le décrire, ou glissez-en un depuis la palette.</p>
                     }
                 </aside>
             </div>
@@ -88,4 +94,11 @@
         [style.left.px]="ghost.clientX" [style.top.px]="ghost.clientY">
         + table
     </div>
+}
+
+<!-- ACCOLAGE : deux tables viennent d'être collées (EDIT-13) -->
+@if (accolageTables(); as pair) {
+    <app-accolage-dialog-component [first]="pair.first" [second]="pair.second"
+        [tables]="store.content().tables" [combinations]="store.content().combinations"
+        (create)="createCombination($event)" (dismiss)="dismissAccolage()" />
 }

@@ -5,6 +5,7 @@ import { AUTOSAVE_DELAY_MS, DraftStore } from './draft-store';
 const content = (name: string): FloorPlanDraftContent => ({
   tables: [{ id: 'a', zoneId: 'z', name, capacity: 2, shape: 'Round', x: 0, y: 0, width: 0.7, height: 0.7, rotation: 0 }],
   decors: [],
+  combinations: [],
 });
 
 describe('DraftStore', () => {

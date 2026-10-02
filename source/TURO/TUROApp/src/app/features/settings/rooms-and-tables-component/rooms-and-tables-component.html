@@ -54,6 +54,16 @@
             } @else {
                 <p class="text-sm text-text-muted">Aucune table : ouvrez le plan pour en poser.</p>
             }
+            @if (zone.combinations.length > 0) {
+                <div class="flex flex-row flex-wrap gap-1">
+                    @for (combination of zone.combinations; track combination.id) {
+                        <span class="rounded-full bg-violet px-3 py-1 text-sm text-surface" [class.opacity-60]="isSplit(combination)">
+                            {{ combination.name }} · {{ combination.capacity }}p
+                            @if (isSplit(combination)) { — tables dans deux salles : inactive }
+                        </span>
+                    }
+                </div>
+            }
         </div>
     }
 </div>

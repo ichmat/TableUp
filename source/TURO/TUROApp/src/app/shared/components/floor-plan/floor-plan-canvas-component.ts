@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, untracked, viewChild } from '@angular/core';
-import { DecorType, PlanDecor, PlanTable, Zone } from '../../../models';
+import { DecorType, PlanCombination, PlanDecor, PlanTable, Zone } from '../../../models';
 import { fitView, panBy, PlanView, toViewBox, zoomAt, ZOOM_STEP } from './floor-plan-view';
 
 const GRID_STEP = 0.25;
@@ -14,6 +14,23 @@ export interface PlanPointerEvent<T> {
 }
 
 let nextGridId = 0;
+
+/** Place réellement occupée par une table tournée autour de son centre (le canevas ne dépend pas de l'éditeur) */
+function boxOf(table: PlanTable) {
+  const radians = (table.rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(radians));
+  const sin = Math.abs(Math.sin(radians));
+  const width = table.width * cos + table.height * sin;
+  const height = table.width * sin + table.height * cos;
+  return { x: table.x + (table.width - width) / 2, y: table.y + (table.height - height) / 2, width, height };
+}
+
+/** Hauteur d'une pastille de combinaison, et son écart au-dessus des tables, en mètres */
+const PILL_HEIGHT = 0.32;
+const PILL_GAP = 0.05;
+
+/** Évite les 0.29000000000000004 dans les attributs SVG */
+const round = (value: number) => Math.round(value * 1000) / 1000;
 
 /** Le canevas est partagé et ne dépend pas de l'éditeur, d'où ses propres noms de décor */
 const DECOR_NAMES: Record<DecorType, string> = {
@@ -43,6 +60,65 @@ export class FloorPlanCanvasComponent implements OnDestroy {
 
   tablePointerDown = output<PlanPointerEvent<PlanTable>>();
   decorPointerDown = output<PlanPointerEvent<PlanDecor>>();
+
+  /** Les tables virtuelles : une pastille entre leurs deux tables, si les deux sont dans cette salle (EDIT-03) */
+  combinations = input<readonly PlanCombination[]>([]);
+  /** Tables qui se touchent pendant un glisser : un cadre orange les entoure (EDIT-13) */
+  contactIds = input<readonly string[]>([]);
+  combinationPointerDown = output<PlanPointerEvent<PlanCombination>>();
+
+  protected readonly pillHeight = PILL_HEIGHT;
+
+  protected pills = computed(() => {
+    const byId = new Map(this.tables().map((table) => [table.id, table]));
+    return this.combinations().flatMap((combination) => {
+      const [first, second] = combination.tableIds.map((id) => byId.get(id));
+      if (first === undefined || second === undefined) {
+        return [];
+      }
+      const label = `${combination.name} · ${combination.capacity}p`;
+      // au-dessus des deux tables : la pastille ne cache ni leurs noms ni l'endroit où on les attrape
+      const top = Math.min(boxOf(first).y, boxOf(second).y);
+      return [{
+        combination,
+        label,
+        // la rotation se fait autour du centre : le centre d'une table ne bouge pas quand elle tourne
+        x: round((first.x + first.width / 2 + second.x + second.width / 2) / 2),
+        y: round(top - PILL_HEIGHT / 2 - PILL_GAP),
+        width: label.length * 0.1 + 0.3,
+      }];
+    });
+  });
+
+  protected contactBox = computed(() => {
+    const boxes = this.tables().filter((table) => this.contactIds().includes(table.id)).map(boxOf);
+    if (boxes.length < 2) {
+      return null;
+    }
+    const margin = 0.06;
+    const x = Math.min(...boxes.map((b) => b.x)) - margin;
+    const y = Math.min(...boxes.map((b) => b.y)) - margin;
+    return {
+      x, y,
+      width: Math.max(...boxes.map((b) => b.x + b.width)) + margin - x,
+      height: Math.max(...boxes.map((b) => b.y + b.height)) + margin - y,
+    };
+  });
+
+  protected onCombinationPointerDown(combination: PlanCombination, event: PointerEvent) {
+    event.stopPropagation();
+    if (this.track(event, false) > 1) {
+      return;
+    }
+    this.combinationPointerDown.emit({ item: combination, point: this.toMetres(event.clientX, event.clientY), event });
+  }
+
+  protected pillStroke(combination: PlanCombination): string {
+    if (this.selectedIds().includes(combination.id)) {
+      return 'stroke-interactive';
+    }
+    return this.flaggedIds().includes(combination.id) ? 'stroke-red-700' : 'stroke-surface';
+  }
   backgroundClick = output<Point>();
 
   private _svg = viewChild.required<ElementRef<SVGSVGElement>>('svg');
