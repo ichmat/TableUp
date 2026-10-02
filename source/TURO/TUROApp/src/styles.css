@@ -48,6 +48,27 @@
   --color-slate-border: #241F1B;
   /* Craie */
   --color-chalk: #B6AC9C;
+  /* Corail — fermeture exceptionnelle, conflit avec des réservations */
+  --color-coral: #B4674F;
+  --color-coral-soft: #F7E7E1;
+  --color-coral-ink: #8C4E3A;
+
+  /* Violet — les combinaisons (tables virtuelles), partout où elles apparaissent */
+  --color-violet: #5B4A8A;
+
+  /* Ambre — horaires modifiés */
+  --color-amber: #C9AC52;
+  --color-amber-soft: #FDF4E6;
+  --color-amber-ink: #8A6D20;
+}
+
+/* Hachures (PAR-02, PAR-03) : un état se lit aussi par sa forme, jamais par la seule teinte */
+@utility hatch-closed {
+  background: repeating-linear-gradient(45deg, #D9C6BF, #D9C6BF 3px, var(--color-coral-soft) 3px, var(--color-coral-soft) 6px);
+}
+
+@utility hatch-usual-closed {
+  background: repeating-linear-gradient(45deg, var(--color-app), var(--color-app) 2px, #F8F5F1 2px, #F8F5F1 4px);
 }
 
 *{

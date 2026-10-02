@@ -1,0 +1,24 @@
+<div class="flex flex-col gap-3">
+    <p class="font-black text-violet text-xs">COMBINAISON {{ combination().name }}</p>
+    <p class="text-sm">Tables {{ members() }}</p>
+
+    <div class="flex flex-col gap-3" (focusout)="commitFields()" (keydown.enter)="commitFields()">
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold">Nom</label>
+            <div data-field="name"><app-input [formField]="fields.name" inputClass="w-full" /></div>
+            @for (error of errorsOf('name'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-bold">Places une fois rapprochées</label>
+            <div data-field="capacity"><app-number-input [formField]="fields.capacity" inputClass="w-full" /></div>
+            @for (error of errorsOf('capacity'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+        </div>
+    </div>
+    @for (error of errorsOf('members'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+
+    @if (!isPublished()) {
+        <app-button text="Retirer" type="Tertiary" buttonClass="w-full h-10" (click)="remove.emit()" />
+    } @else {
+        <p class="text-xs text-text-muted">Une combinaison publiée ne se supprime pas : elle reste disponible, au pire dormante.</p>
+    }
+</div>

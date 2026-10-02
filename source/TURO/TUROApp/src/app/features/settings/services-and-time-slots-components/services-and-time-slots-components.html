@@ -1,0 +1,41 @@
+<div class="flex flex-col gap-3 p-2 h-full min-h-0">
+    <p class="font-bold text-text text-xl">Services et créneaux</p>
+
+    @if (restaurantService.isLoading() && servicesByDay().length === 0) {
+        <p class="text-text-muted">Chargement…</p>
+    }
+    @else if (selected() === null) {
+        <p class="text-text-muted">
+            Aucun service n'est ouvert. Ajoutez d'abord les horaires habituels dans <b>Ouvertures</b>.
+        </p>
+    }
+    @else {
+        <div class="flex flex-row gap-4 min-h-0 grow">
+            <!-- LISTE DES SERVICES -->
+            <div class="flex flex-col gap-3 w-56 shrink-0 overflow-y-auto">
+                @for (group of servicesByDay(); track group.day) {
+                    <div class="flex flex-col gap-1">
+                        <p class="font-bold text-text-muted text-sm">{{ group.day | dayWeekPipe }}</p>
+                        @for (service of group.services; track service.id) {
+                            <button type="button" (click)="select(service.id)"
+                                class="flex flex-col text-left rounded-lg px-3 py-2 cursor-pointer"
+                                [class]="selected().id === service.id ? 'bg-slate text-app' : 'bg-app text-text hover:brightness-95'">
+                                <span class="text-lg">
+                                    {{ formatMinutes(toMinutes(service.opening)) }} – {{ formatMinutes(toMinutes(service.closing)) }}
+                                </span>
+                                <span class="text-xs opacity-75">
+                                    {{ service.slotStep }} min · {{ service.occupancyMode === 'Rotation' ? 'Rotation' : 'Service unique' }}
+                                </span>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- RÉGLAGES DU SERVICE CHOISI -->
+            <div class="grow min-w-0 overflow-y-auto pr-2">
+                <app-service-slots-editor-component [service]="selected()" [defaultRotation]="defaultRotation()" />
+            </div>
+        </div>
+    }
+</div>

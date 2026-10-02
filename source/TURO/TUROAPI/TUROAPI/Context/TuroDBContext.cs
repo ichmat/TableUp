@@ -16,6 +16,7 @@ namespace TUROAPI.Context
         public DbSet<Combination> Combinations { get; set; }
         public DbSet<Decor> Decors { get; set; }
         public DbSet<EventLog> EventLogs { get; set; }
+        public DbSet<FloorPlanDraft> FloorPlanDrafts { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
         public DbSet<Restaurant> Restaurants { get; set; }
@@ -31,6 +32,12 @@ namespace TUROAPI.Context
             modelBuilder.Entity<Closure>()
                 .OwnsMany(c => c.ReplacementHours)
                 .ToJson(); // Store ReplacementHours as JSON in the database
+
+            // Un brouillon au plus par restaurant : sa clé est celle du restaurant
+            modelBuilder.Entity<FloorPlanDraft>()
+                .HasOne(d => d.Restaurant)
+                .WithOne()
+                .HasForeignKey<FloorPlanDraft>(d => d.RestaurantId);
         }
     }
 }

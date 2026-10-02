@@ -1,15 +1,24 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { SettingsPages } from '../../../models/settings.model';
 import { OpeningsComponent } from '../openings-component/openings-component';
+import { ServicesAndTimeSlotsComponents } from '../services-and-time-slots-components/services-and-time-slots-components';
+import { RoomsAndTablesComponent } from '../rooms-and-tables-component/rooms-and-tables-component';
+
+/** `/parametres?page=salles` : le retour de l'éditeur de plan rouvre la bonne section */
+const PAGES_BY_QUERY: Record<string, SettingsPages> = {
+  salles: 'Room & tables',
+};
 
 @Component({
-  imports: [OpeningsComponent],
+  imports: [OpeningsComponent, ServicesAndTimeSlotsComponents, RoomsAndTablesComponent],
   selector: 'app-settings-component',
   templateUrl: './settings-component.html',
   styles:``
 })
 export class SettingsComponent {
-  currentSetting: SettingsPages = 'Openings';
+  currentSetting: SettingsPages =
+    PAGES_BY_QUERY[inject(ActivatedRoute).snapshot.queryParamMap.get('page') ?? ''] ?? 'Openings';
 
   isActive(setting: SettingsPages): string{
     if(this.currentSetting === setting){

@@ -1,10 +1,16 @@
 export type DayWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
+/** Jours dans l'ordre d'affichage, la semaine commençant le lundi */
+export const DAYS_OF_WEEK: readonly DayWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/** Pas de créneau acceptés par l'API (PAR-04) */
+export const SLOT_STEPS = [15, 30] as const;
+
 /**
  * Le mode d'occupation, détermine si la réservation occupe tout le service (`SingleService`)
- * ou un certain temps de rotation (`Rotate`)
+ * ou un certain temps de rotation (`Rotation`). Miroir de `TUROAPI/Models/Enums/OccupancyMode.cs`
  */
-export type OccupancyMode = 'Rotate' | 'SingleService';
+export type OccupancyMode = 'Rotation' | 'SingleService';
 
 /** Représente les horraires de service du restaurant */
 export interface RestaurantService {
@@ -17,7 +23,7 @@ export interface RestaurantService {
     /** Heure de fermeture du service @example '14:00' */
     closing: string,
     /**
-     * Détermine le pas pour chaque créneau, 15 ou 30 min
+     * Détermine le pas pour chaque créneau, 15 ou 30 min (voir `SLOT_STEPS`)
      * @example 30 -> représente `30 min`, donc entre 12h et 13h, il y a le créneau :
      * - 12h
      * - 12h30

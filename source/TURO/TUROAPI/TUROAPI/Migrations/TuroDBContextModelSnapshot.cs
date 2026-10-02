@@ -286,6 +286,28 @@ namespace TUROAPI.Migrations
                     b.ToTable("EventLogs");
                 });
 
+            modelBuilder.Entity("TUROAPI.Models.FloorPlanDraft", b =>
+                {
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RestaurantId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("FloorPlanDrafts");
+                });
+
             modelBuilder.Entity("TUROAPI.Models.RefreshToken", b =>
                 {
                     b.Property<string>("Token")
@@ -713,6 +735,23 @@ namespace TUROAPI.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("TUROAPI.Models.FloorPlanDraft", b =>
+                {
+                    b.HasOne("TUROAPI.Models.Restaurant", "Restaurant")
+                        .WithOne()
+                        .HasForeignKey("TUROAPI.Models.FloorPlanDraft", "RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TUROAPI.Models.UserStaff", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById");
+
+                    b.Navigation("Restaurant");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("TUROAPI.Models.RefreshToken", b =>

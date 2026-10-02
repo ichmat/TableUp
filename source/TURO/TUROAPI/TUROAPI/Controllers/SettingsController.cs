@@ -9,6 +9,7 @@ using TUROAPI.Models.Enums;
 using TUROAPI.Models.Requests;
 using TUROAPI.Models.Responses;
 using TUROAPI.Models.Wrapper;
+using TUROAPI.Services;
 
 namespace TUROAPI.Controllers
 {
@@ -96,10 +97,7 @@ namespace TUROAPI.Controllers
             //    throw new ApiErrorException(ApiError.InvalidModification, "closing time must be after opening time.");
             //}
 
-            if (request.SlotStep <= 0 || request.SlotStep > 120 || request.SlotStep % 15 != 0)
-            {
-                throw new ApiErrorException(ApiError.InvalidModification, "slot step must be between 1 and 120 and be a multiple of 15.");
-            }
+            CheckSlotSettings(request);
 
             var conflictServices = await context.Services
                 .Where(s =>
@@ -128,35 +126,55 @@ namespace TUROAPI.Controllers
         }
 
         /// <summary>
+        /// Réglages de créneaux d'un service (§9.4) : pas de la frise, durée prévue et avertissements de cuisine
+        /// </summary>
+        private static void CheckSlotSettings(AddOrUpdateServiceRequest request)
+        {
+            // PAR-04 : la frise ne connaît que ces deux densités
+            if (!AllowedSlotSteps.Contains(request.SlotStep))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "slot step must be 15 or 30 minutes.");
+            }
+
+            if (!Enum.IsDefined(request.OccupancyMode))
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "unknown occupancy mode.");
+            }
+
+            // Null hérite de Restaurant.DefaultRotation (PAR-06)
+            if (request.ExpectedDuration is <= 0 or > MaxExpectedDuration)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, $"expected duration must be between 1 and {MaxExpectedDuration} minutes.");
+            }
+
+            // Null désactive l'avertissement (PAR-07)
+            if (request.MaxCadence is <= 0 || request.CoverCap is <= 0)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, "kitchen warning thresholds must be positive.");
+            }
+        }
+
+        private static readonly int[] AllowedSlotSteps = [15, 30];
+
+        // Une journée : au-delà, la durée n'a plus de sens pour un repas
+        private const int MaxExpectedDuration = 24 * 60;
+
+        /// <summary>
         /// Refuse la modification si des réservations actives, prises dans les horaires actuels du service,
         /// tomberaient hors des nouveaux horaires 
         /// </summary>
         private async Task CheckImpactedReservations(Service existing, AddOrUpdateServiceRequest? request = null)
         {
-            string timeZoneId = await context.Restaurants
-                .Where(r => r.Id == CurrentRestaurantId)
-                .Select(r => r.TimeZone)
-                .FirstAsync();
-            TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-            DateOnly today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone));
+            TimeZoneInfo timeZone = await ReservationImpact.GetTimeZoneAsync(context, CurrentRestaurantId);
+            var activeReservations = await ReservationImpact.ActiveAsync(
+                context, CurrentRestaurantId, timeZone, ReservationImpact.Today(timeZone));
 
-            var activeReservations = await context.Reservations
-                .Where(r =>
-                    r.RestaurantId == CurrentRestaurantId
-                    && r.ServiceDay >= today
-                    && (r.Status == ReservationStatus.Pending
-                        || r.Status == ReservationStatus.Confirmed))
-                .ToListAsync();
-
-            // Le jour de la semaine et l'heure locale se calculent en mémoire : Start est en UTC,
-            // et le fuseau du restaurant ne s'applique pas côté base.
-            // ServiceDay rattache déjà un repas commencé après minuit au jour du service (RES-02).
-            // TimeOnly.IsBetween gère les services qui passent minuit (fin exclue).
+            // TimeOnly.IsBetween gère les services qui passent minuit (fin exclue)
             var impacted = activeReservations
-                .Where(r => r.ServiceDay.DayOfWeek == existing.Day)
-                .Select(r => new { Reservation = r, LocalStart = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.Start, timeZone)) })
+                .Where(x => x.Reservation.ServiceDay.DayOfWeek == existing.Day)
+                // Sans nouveaux horaires (suppression), toute réservation du service est impactée
                 .Where(x => x.LocalStart.IsBetween(existing.Opening, existing.Closing)
-                    && (request != null & !x.LocalStart.IsBetween(request!.Opening, request.Closing)))
+                    && (request == null || !x.LocalStart.IsBetween(request.Opening, request.Closing)))
                 .Select(x => x.Reservation)
                 .ToList();
 

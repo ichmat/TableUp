@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { AuthService } from '../services/auth/auth.service';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, switchMap, tap, throwError } from 'rxjs';
 import { ApiError, isApiErrorResponse } from '../../models';
 import { Router } from '@angular/router';
 
@@ -19,6 +19,7 @@ export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
         && isApiErrorResponse(httpError.error)
         && httpError.error.error === ApiError.UnreadableToken) {
         authService.clearToken();
+        logApiError(req, httpError);
         return throwError(() => {
           router.navigate(["/login"]);
           return httpError;
@@ -33,17 +34,21 @@ export const loggingInterceptor: HttpInterceptorFn = (req, next) => {
         && !NO_REFRESH_URLS.includes(req.url);
 
       if (!canRefresh) {
+        logApiError(req, httpError);
         return throwError(() => httpError);
       }
 
       return authService.refreshToken().pipe(
         // refresh refusé : l'appelant reçoit l'erreur d'origine, pas celle du refresh
         catchError(() => {
+          logApiError(req, httpError);
           router.navigate(["/login"]);
           return throwError(() => httpError)
         }),
         // `next` ne repasse pas par cet intercepteur : une seule relance au maximum
-        switchMap((jwt) => next(withToken(req, jwt))),
+        switchMap((jwt) => next(withToken(req, jwt)).pipe(
+          tap({ error: (retryError: unknown) => logApiError(req, retryError) }),
+        )),
       );
     }),
   );
@@ -53,4 +58,27 @@ function withToken(req: HttpRequest<unknown>, token: string | null): HttpRequest
   return token === null
     ? req
     : req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
+}
+
+/**
+ * Trace dans la console chaque refus ou échec de l'API, avec son message : un 4xx en avertissement,
+ * un 5xx ou une API injoignable en erreur. Un JWT expiré puis rafraîchi n'est pas tracé, ce n'en est pas un
+ */
+function logApiError(req: HttpRequest<unknown>, error: unknown) {
+  const route = `[API] ${req.method} ${req.urlWithParams}`;
+  if (!(error instanceof HttpErrorResponse)) {
+    console.error(`${route} :`, error);
+    return;
+  }
+  if (error.status === 0) {
+    console.error(`${route} : API injoignable (${error.message})`);
+    return;
+  }
+  const message = isApiErrorResponse(error.error) ? error.error.message : error.message;
+  const line = `${route} ${error.status} : ${message}`;
+  if (error.status >= 500) {
+    console.error(line);
+  } else {
+    console.warn(line);
+  }
 }

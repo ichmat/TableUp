@@ -1,0 +1,183 @@
+<div class="flex flex-col gap-6 text-text">
+    <div class="flex flex-row items-baseline gap-3">
+        <p class="font-bold text-lg">{{ service().day | dayWeekPipe }}</p>
+        <p class="text-lg">{{ formatMinutes(opening()) }} <span class="text-text-muted">–</span> {{ formatMinutes(closing()) }}</p>
+        <p class="text-sm text-text-muted">Les horaires se règlent dans Ouvertures</p>
+    </div>
+
+    <!-- PAS DE CRÉNEAU (PAR-04) -->
+    <section class="flex flex-col gap-2">
+        <p class="font-bold">Pas de créneau</p>
+        <div class="flex flex-row gap-2">
+            @for (step of slotSteps; track step) {
+                <button type="button" (click)="setSlotStep(step)"
+                    class="px-4 h-10 rounded-lg font-bold cursor-pointer border-2"
+                    [class]="draft().slotStep === step ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                    {{ step }} min
+                </button>
+            }
+        </div>
+
+        <!-- Aperçu de la frise : un trait par créneau, l'heure pleine en légende -->
+        <div class="flex flex-col gap-1 bg-app rounded-lg p-3">
+            <div class="flex flex-row items-end gap-0.5 h-8">
+                @for (slot of draftSlots(); track slot) {
+                    <div class="flex-1 rounded-sm" [class]="slot % 60 === 0 ? 'h-8 bg-slate' : 'h-5 bg-chalk'"></div>
+                }
+            </div>
+            <div class="flex flex-row gap-0.5 text-xs text-text-muted">
+                @for (slot of draftSlots(); track slot) {
+                    <div class="flex-1 min-w-0 overflow-visible whitespace-nowrap">
+                        @if (slot % 60 === 0) { {{ formatMinutes(slot) }} }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <p class="text-sm">
+            La frise du service compte <b>{{ draftSlots().length }} créneaux</b> de {{ draft().slotStep }} min,
+            de {{ formatMinutes(draftSlots()[0]) }} à {{ formatMinutes(draftSlots()[draftSlots().length - 1]) }}.
+            La bande d'heures du formulaire de réservation a la même longueur.
+        </p>
+        @if (draftSlots().length !== savedSlots().length) {
+            <p class="text-sm text-text-muted">
+                Aujourd'hui {{ savedSlots().length }} créneaux, après enregistrement {{ draftSlots().length }} :
+                la frise et la bande d'heures deviennent {{ draftSlots().length > savedSlots().length ? 'plus denses' : 'plus courtes' }}.
+            </p>
+        }
+    </section>
+
+    <!-- MODE D'OCCUPATION (PAR-05) -->
+    <section class="flex flex-col gap-2">
+        <p class="font-bold">Mode d'occupation</p>
+        <div class="flex flex-row gap-2 *:flex-1">
+            <button type="button" (click)="setOccupancyMode('Rotation')"
+                class="flex flex-col gap-1 text-left rounded-lg p-3 cursor-pointer border-2"
+                [class]="draft().occupancyMode === 'Rotation' ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                <span class="font-bold">Rotation</span>
+                <span class="text-sm">La table se libère après la durée prévue. Un second service est proposé.</span>
+            </button>
+            <button type="button" (click)="setOccupancyMode('SingleService')"
+                class="flex flex-col gap-1 text-left rounded-lg p-3 cursor-pointer border-2"
+                [class]="draft().occupancyMode === 'SingleService' ? 'bg-slate text-app border-slate' : 'bg-app border-border hover:brightness-95'">
+                <span class="font-bold">Service unique</span>
+                <span class="text-sm">Une table prise l'est jusqu'à la fin du service.</span>
+            </button>
+        </div>
+
+        <!-- Aperçu : la vie d'une table réservée à l'ouverture -->
+        <div class="flex flex-col gap-1 bg-app rounded-lg p-3">
+            <div class="flex flex-row h-6 rounded-sm overflow-hidden border border-border bg-surface">
+                @if (draft().occupancyMode === 'Rotation') {
+                    <div class="h-full bg-slate" [style.width.%]="mealShare()"></div>
+                    @if (!noSecondSeating()) {
+                        <div class="h-full grow border-2 border-dashed border-chalk"></div>
+                    }
+                } @else {
+                    <div class="h-full w-full bg-slate"></div>
+                }
+            </div>
+            <div class="flex flex-row justify-between text-xs text-text-muted">
+                <span>{{ formatMinutes(opening()) }}</span>
+                <span>{{ formatMinutes(closing()) }}</span>
+            </div>
+        </div>
+
+        <p class="text-sm">
+            @if (draft().occupancyMode === 'Rotation') {
+                @if (noSecondSeating()) {
+                    Une table réservée à {{ formatMinutes(opening()) }} est prévue jusqu'à {{ formatMinutes(mealEnd()) }},
+                    après la fermeture : aucun second service ne tient sur ce service.
+                } @else {
+                    Une table réservée à {{ formatMinutes(opening()) }} se libère à {{ formatMinutes(mealEnd()) }}.
+                    Elle est proposée en « serré » pour un second service tant que le départ n'a pas eu lieu.
+                }
+            } @else {
+                Une table réservée à {{ formatMinutes(opening()) }} reste prise jusqu'à {{ formatMinutes(closing()) }},
+                la fin du service. Aucun second service n'est proposé.
+            }
+        </p>
+    </section>
+
+    <!-- DURÉE PRÉVUE (PAR-06) -->
+    <section class="flex flex-col gap-2">
+        <p class="font-bold">Durée prévue d'un repas</p>
+        <label class="flex flex-row items-center gap-2 cursor-pointer">
+            <input type="checkbox" class="size-4 accent-interactive cursor-pointer" [formField]="settingsForm.inheritDuration" />
+            Reprendre la rotation par défaut du restaurant ({{ formatDuration(defaultRotation()) }})
+        </label>
+        <div class="flex flex-row items-center gap-2">
+            <app-number-input inputClass="w-28" [formField]="settingsForm.expectedDuration" />
+            <span class="text-text-muted">min</span>
+        </div>
+        @for (error of settingsForm.expectedDuration().errors(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+
+        <p class="text-sm">
+            Un repas commencé à {{ formatMinutes(opening()) }} est prévu jusqu'à {{ formatMinutes(mealEnd()) }}
+            ({{ formatDuration(effectiveDuration()) }}).
+            @if (draft().occupancyMode === 'SingleService') {
+                En service unique, cette durée ne libère pas la table avant la fin du service.
+            }
+            Les réservations déjà prises gardent leur durée.
+        </p>
+    </section>
+
+    <!-- AVERTISSEMENTS DE CUISINE (PAR-07) -->
+    <section class="flex flex-col gap-2">
+        <p class="font-bold">Avertissements de cuisine</p>
+        <p class="text-sm text-text-muted">
+            Désactivés par défaut. Ils préviennent, ils ne bloquent jamais une réservation :
+            seule la disponibilité des tables décide.
+        </p>
+
+        <div class="flex flex-col gap-1">
+            <label class="flex flex-row items-center gap-2 cursor-pointer">
+                <input type="checkbox" class="size-4 accent-interactive cursor-pointer" [formField]="settingsForm.cadenceEnabled" />
+                Cadence d'arrivée
+            </label>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [formField]="settingsForm.maxCadence" />
+                <span class="text-text-muted">couverts par créneau de {{ draft().slotStep }} min</span>
+            </div>
+            @for (error of settingsForm.maxCadence().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+            <p class="text-sm">
+                @if (draft().cadenceEnabled && draft().maxCadence) {
+                    Le plan avertit quand plus de {{ draft().maxCadence }} couverts arrivent sur un même créneau.
+                    Huit tables à 20:00 pile restent plaçables, mais la cuisine est prévenue.
+                } @else {
+                    Aucun avertissement sur l'étalement des arrivées.
+                }
+            </p>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="flex flex-row items-center gap-2 cursor-pointer">
+                <input type="checkbox" class="size-4 accent-interactive cursor-pointer" [formField]="settingsForm.coverCapEnabled" />
+                Plafond de couverts
+            </label>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [formField]="settingsForm.coverCap" />
+                <span class="text-text-muted">couverts sur le service</span>
+            </div>
+            @for (error of settingsForm.coverCap().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+            <p class="text-sm">
+                @if (draft().coverCapEnabled && draft().coverCap) {
+                    Le plan avertit au-delà de {{ draft().coverCap }} couverts sur le service, quel que soit le nombre de tables libres.
+                } @else {
+                    Aucun avertissement sur le volume du service.
+                }
+            </p>
+        </div>
+    </section>
+
+    <div class="flex flex-row gap-2">
+        <app-button text="Enregistrer" (click)="hasChanges() && !isSaving() && save()" [disabled]="!hasChanges() || isSaving()" />
+        <app-button text="Annuler" type="Secondary" (click)="hasChanges() && cancel()" [disabled]="!hasChanges()" />
+    </div>
+</div>

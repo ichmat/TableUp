@@ -1,9 +1,10 @@
-import { computed, inject, Service, signal, } from '@angular/core';
+import { computed, inject, Service, } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { DataScope, Restaurant } from '../../../models';
 import { RealtimeService } from '../realtime/realtime.service';
 import { RestaurantService as ServiceModel } from '../../../models';
+import { toApiResult } from '../api-result';
 
 @Service()
 export class RestaurantService {
@@ -14,7 +15,8 @@ export class RestaurantService {
         this._authService.isConnected() ? '/api/restaurant' : undefined
     );
 
-    model = computed(() => this._restaurant.value() ?? null);
+    // `value()` lève une exception quand la ressource est en erreur : elle figerait tout écran qui la lit
+    model = computed(() => this._restaurant.hasValue() ? this._restaurant.value() : null);
     isLoading = this._restaurant.isLoading;
     error = this._restaurant.error;
 
@@ -23,30 +25,18 @@ export class RestaurantService {
         inject(RealtimeService).onDataChanged(DataScope.Restaurant, () => this._restaurant.reload());
     }
 
-    createService(service: ServiceModel): Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.post("/api/restaurant/settings/service", service).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    async createService(service: ServiceModel): Promise<string | null> {
+        return (await toApiResult(this._http.post("/api/restaurant/settings/service", service))).error;
     }
 
-    updateService(id: string, service: ServiceModel) : Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.put(`/api/restaurant/settings/service/${id}`, service).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    async updateService(id: string, service: ServiceModel): Promise<string | null> {
+        return (await toApiResult(this._http.put(`/api/restaurant/settings/service/${id}`, service))).error;
     }
 
-    deleteService(id: string) : Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            this._http.delete(`/api/restaurant/settings/service/${id}`).subscribe({
-                next: () => {resolve(true)},
-                error: () => {resolve(false)}
-            })
-        })
+    /** Résout `null` en cas de succès, le message d'erreur sinon */
+    async deleteService(id: string): Promise<string | null> {
+        return (await toApiResult(this._http.delete(`/api/restaurant/settings/service/${id}`))).error;
     }
 }
