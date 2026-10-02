@@ -21,12 +21,9 @@ namespace TUROAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            IConfiguration conf = new ConfigurationBuilder()
-                .SetBasePath(builder.Environment.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables()
-                .Build();
+            // La configuration de l'hôte lit déjà appsettings.json, appsettings.{env}.json et les variables d'environnement ;
+            // une configuration construite à part ignorerait ce que les tests d'intégration y substituent (base, clé JWT)
+            IConfiguration conf = builder.Configuration;
 
             // Add services to the container.
 
