@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, OnDestroy, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, CanDeactivateFn, Router } from '@angular/router';
-import { ApiError, DraftCombination, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanZone, PlanCombination, PlanDecor, PlanTable } from '../../../models';
+import { ApiError, DraftCombination, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanDraftContent, FloorPlanZone, PlanCombination, PlanDecor, PlanTable } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
@@ -10,10 +10,12 @@ import { DecorPanelComponent } from './decor-panel-component';
 import { TablePanelComponent } from './table-panel-component';
 import { AccolageDialogComponent } from './accolage-dialog-component';
 import { CombinationPanelComponent } from './combination-panel-component';
-import { pairKey, touchingTable } from './logic/accolage';
+import { SeparationDialogComponent } from './separation-dialog-component';
+import { AccolageProposal, proposeAccolage, proposeSeparation, SeparationProposal } from './logic/accolage';
+import { tableSetKey } from './logic/table-set';
 import { countChanges, draftFromPublished } from './logic/draft-diff';
 import { DraftStore } from './logic/draft-store';
-import { boundsOf, clampToZone, findFreeSpot, placeCentredAt, Point, Rect } from './logic/geometry';
+import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, placeCentredAt, Point, Rect, roundMetres } from './logic/geometry';
 import { buildTablePalette, DECOR_PALETTE, DecorPaletteEntry, TablePaletteEntry } from './logic/palette';
 import { combinationErrors, decorErrors, tableErrors } from './logic/plan-rules';
 import { nextTableName } from './logic/table-naming';
@@ -34,7 +36,7 @@ const DRAG_THRESHOLD_PX = 4;
  * puis on publie : le service ne voit jamais les tables bouger (EDIT-15 à EDIT-17)
  */
 @Component({
-  imports: [Button, FloorPlanCanvasComponent, TablePaletteComponent, TablePanelComponent, DecorPanelComponent, AccolageDialogComponent, CombinationPanelComponent],
+  imports: [Button, FloorPlanCanvasComponent, TablePaletteComponent, TablePanelComponent, DecorPanelComponent, AccolageDialogComponent, SeparationDialogComponent, CombinationPanelComponent],
   selector: 'app-floor-plan-editor-component',
   templateUrl: './floor-plan-editor-component.html',
   host: {
@@ -61,8 +63,8 @@ export class FloorPlanEditorComponent implements OnDestroy {
     this.zones().find((zone) => zone.id === this._zoneId()) ?? this.zones()[0] ?? null);
 
   readonly selection = signal<PlanSelection | null>(null);
-  /** Position d'une table pendant qu'on la glisse : rien n'entre dans l'historique avant le lâcher */
-  protected dragPreview = signal<{ id: string, x: number, y: number } | null>(null);
+  /** Position des tables pendant qu'on les glisse : rien n'entre dans l'historique avant le lâcher */
+  protected dragPreview = signal<ReadonlyMap<string, Point> | null>(null);
   protected paletteGhost = signal<{ entry: TablePaletteEntry, clientX: number, clientY: number } | null>(null);
   private _cancelGesture: (() => void) | null = null;
 
@@ -81,7 +83,10 @@ export class FloorPlanEditorComponent implements OnDestroy {
     const preview = this.dragPreview();
     return this.store.content().tables
       .filter((table) => table.zoneId === zone?.id)
-      .map((table) => preview?.id === table.id ? { ...table, x: preview.x, y: preview.y } : table);
+      .map((table) => {
+        const position = preview?.get(table.id);
+        return position === undefined ? table : { ...table, ...position };
+      });
   });
 
   protected selectedIds = computed(() => {
@@ -102,20 +107,28 @@ export class FloorPlanEditorComponent implements OnDestroy {
 
   // ---- COMBINAISONS (EDIT-03, EDIT-13, EDIT-14) ----
 
-  /** Les deux tables d'un glisser qui se touchent : le canevas les encadre */
+  /** Les tables d'un glisser qui en rejoignent d'autres : le canevas les encadre */
   protected contactIds = signal<readonly string[]>([]);
   /** La fenêtre d'accolage ouverte après un lâcher contre une table */
-  readonly accolage = signal<{ firstId: string, secondId: string } | null>(null);
-  /** « Non, juste les déplacer » : ce couple n'est plus proposé pendant cette session de l'éditeur */
-  private _declinedPairs = new Set<string>();
+  readonly accolage = signal<AccolageProposal | null>(null);
+  /** « Non, juste les déplacer » : cet ensemble de tables n'est plus proposé pendant cette session de l'éditeur */
+  private _declinedSets = new Set<string>();
   private _combinationPanel = viewChild(CombinationPanelComponent);
 
-  protected accolageTables = computed(() => {
+  protected accolageView = computed(() => {
     const proposal = this.accolage();
-    const tables = this.store.content().tables;
-    const first = tables.find((table) => table.id === proposal?.firstId);
-    const second = tables.find((table) => table.id === proposal?.secondId);
-    return first === undefined || second === undefined ? null : { first, second };
+    if (proposal === null) {
+      return null;
+    }
+    const { tables, combinations } = this.store.content();
+    const members = proposal.tableIds
+      .map((id) => tables.find((table) => table.id === id))
+      .filter((table): table is DraftTable => table !== undefined);
+    return members.length !== proposal.tableIds.length ? null : {
+      members,
+      existing: combinations.find((combination) => combination.id === proposal.existingId) ?? null,
+      deactivated: combinations.filter((combination) => proposal.deactivatedIds.includes(combination.id)),
+    };
   });
 
   protected selectedCombination = computed(() => {
@@ -142,22 +155,101 @@ export class FloorPlanEditorComponent implements OnDestroy {
     return combination !== null && this.published().combinations.some((published) => published.id === combination.id);
   });
 
-  private isCombined(firstId: string, secondId: string): boolean {
-    return this.store.content().combinations.some((c) => c.tableIds.includes(firstId) && c.tableIds.includes(secondId));
+  /** Ce que proposerait le lâcher de ces tables à ces positions (EDIT-13) */
+  private accolageFor(movedIds: readonly string[], positions: ReadonlyMap<string, Point>): AccolageProposal | null {
+    const { tables, combinations } = this.store.content();
+    const placed = tables.map((table) => {
+      const position = positions.get(table.id);
+      return position === undefined ? table : { ...table, ...position };
+    });
+    return proposeAccolage(movedIds, placed, combinations, this._declinedSets);
   }
 
-  /** La table que `moved` touche, si ce couple mérite d'être proposé */
-  private contactFor(moved: PlanTable): string[] {
-    const found = touchingTable(moved, this.store.content().tables);
-    if (found === null || this.isCombined(moved.id, found.table.id) || this._declinedPairs.has(pairKey(moved.id, found.table.id))) {
-      return [];
-    }
-    return [moved.id, found.table.id];
+  /** Une table n'est que dans une combinaison active (§3.4) : en activer une désactive celles qui partagent ses tables */
+  private withActivity(combinations: readonly DraftCombination[], activatedId: string | null, deactivatedIds: readonly string[]): DraftCombination[] {
+    return combinations.map((combination) => {
+      if (combination.id === activatedId) {
+        return { ...combination, isActive: true };
+      }
+      return deactivatedIds.includes(combination.id) ? { ...combination, isActive: false } : combination;
+    });
   }
 
-  onCombinationPointerDown({ item }: PlanPointerEvent<PlanCombination>) {
+  /** Une seconde étape d'historique, après le déplacement : ↶ défait l'activation sans défaire le geste */
+  private activate(combination: DraftCombination, deactivatedIds: readonly string[]) {
+    const content = this.store.content();
+    const isNew = !content.combinations.some((other) => other.id === combination.id);
+    const combinations = this.withActivity(isNew ? [...content.combinations, combination] : content.combinations, combination.id, deactivatedIds);
+    this.store.apply({ ...content, combinations });
+    this.accolage.set(null);
+    // l'activation désactive déjà l'ancienne combinaison de la table : plus rien à séparer
+    this._separationAfterAccolage = null;
+    this.selection.set({ kind: 'combination', id: combination.id });
+  }
+
+  /** La pastille est la poignée de la combinaison : un appui la sélectionne, un glisser emporte toutes ses tables */
+  onCombinationPointerDown({ item, point, event }: PlanPointerEvent<PlanCombination>) {
     this.commitPanels();
     this.selection.set({ kind: 'combination', id: item.id });
+    const canvas = this._canvas();
+    const zone = this.currentZone();
+    const members = this.store.content().tables.filter((table) => item.tableIds.includes(table.id));
+    if (canvas === undefined || zone === null || members.length !== item.tableIds.length || members.some((table) => table.zoneId !== zone.id)) {
+      return;
+    }
+    const group = boundsOfAll(members);
+    const neighbours = this.neighboursOf(zone.id, item.tableIds);
+    let moved = false;
+    let proposal: AccolageProposal | null = null;
+    this._cancelGesture?.();
+    this._cancelGesture = trackPointer(event, {
+      move: (e) => {
+        if (!moved && Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY) < DRAG_THRESHOLD_PX) {
+          return;
+        }
+        moved = true;
+        const pointer = canvas.toMetres(e.clientX, e.clientY);
+        // un seul rectangle : il reste dans la salle et s'aimante à ce qui n'est pas du groupe ; les tables gardent leurs écarts
+        const placed = clampToZone({ x: group.x + pointer.x - point.x, y: group.y + pointer.y - point.y }, group, zone, neighbours);
+        const positions = new Map(members.map((table) => [table.id, {
+          x: roundMetres(table.x + placed.x - group.x),
+          y: roundMetres(table.y + placed.y - group.y),
+        }]));
+        this.dragPreview.set(positions);
+        proposal = this.accolageFor(item.tableIds, positions);
+        this.contactIds.set(proposal?.tableIds ?? []);
+      },
+      end: (e) => {
+        this._cancelGesture = null;
+        const positions = this.dragPreview();
+        this.dragPreview.set(null);
+        this.contactIds.set([]);
+        const changed = positions !== null && members.some((table) => {
+          const position = positions.get(table.id);
+          return position !== undefined && (position.x !== table.x || position.y !== table.y);
+        });
+        if (e.type === 'pointerup' && positions !== null && changed) {
+          this.moveTables(positions);
+          if (proposal !== null) {
+            this.accolage.set(proposal);
+            // le groupe bouge entier : aucune de ses tables ne quitte sa combinaison
+            this._separationAfterAccolage = null;
+          }
+        }
+      },
+    });
+  }
+
+  /** Des tables déplacées d'un bloc : une seule étape d'historique, sans les réaimanter une à une */
+  private moveTables(positions: ReadonlyMap<string, Point>) {
+    const content = this.store.content();
+    this.store.apply({
+      ...content,
+      tables: content.tables.map((table) => {
+        const position = positions.get(table.id);
+        return position === undefined ? table : { ...table, ...position };
+      }),
+    });
   }
 
   createCombination({ name, capacity }: { name: string, capacity: number }) {
@@ -165,21 +257,75 @@ export class FloorPlanEditorComponent implements OnDestroy {
     if (proposal === null) {
       return;
     }
-    const combination: DraftCombination = {
-      id: crypto.randomUUID(), name, capacity, tableIds: [proposal.firstId, proposal.secondId],
-    };
-    const content = this.store.content();
-    this.store.apply({ ...content, combinations: [...content.combinations, combination] });
-    this.accolage.set(null);
-    this.selection.set({ kind: 'combination', id: combination.id });
+    this.activate({ id: crypto.randomUUID(), name, capacity, tableIds: [...proposal.tableIds], isActive: true }, proposal.deactivatedIds);
+  }
+
+  /** L'ensemble existait déjà, en sommeil : on le réveille plutôt que d'en créer un second */
+  reactivateCombination() {
+    const proposal = this.accolage();
+    const existing = this.store.content().combinations.find((combination) => combination.id === proposal?.existingId);
+    if (proposal === null || existing === undefined) {
+      return;
+    }
+    this.activate(existing, proposal.deactivatedIds);
   }
 
   dismissAccolage() {
     const proposal = this.accolage();
     if (proposal !== null) {
-      this._declinedPairs.add(pairKey(proposal.firstId, proposal.secondId));
+      this._declinedSets.add(tableSetKey(proposal.tableIds));
     }
     this.accolage.set(null);
+    // la table a quand même quitté sa combinaison : refuser la nouvelle ne doit pas laisser l'ancienne réservable
+    this.separation.set(this._separationAfterAccolage);
+    this._separationAfterAccolage = null;
+  }
+
+  /** La fenêtre de séparation, ouverte quand on écarte une table de sa combinaison active */
+  readonly separation = signal<SeparationProposal | null>(null);
+  /** « Non, juste la déplacer » : ces combinaisons ne sont plus proposées à la séparation pendant cette session */
+  private _keptCombinations = new Set<string>();
+  /** La séparation qu'un lâcher aurait proposée : elle s'ouvre si l'on refuse la fenêtre d'accolage qui passe avant */
+  private _separationAfterAccolage: SeparationProposal | null = null;
+
+  protected separationView = computed(() => {
+    const proposal = this.separation();
+    const combinations = this.store.content().combinations;
+    const combination = combinations.find((other) => other.id === proposal?.combinationId);
+    return combination === undefined ? null : {
+      combination,
+      reactivated: combinations.find((other) => other.id === proposal?.reactivatedId) ?? null,
+    };
+  });
+
+  /** La combinaison passe en sommeil ; les tables restées collées retrouvent la leur, si elle existe */
+  separateCombination() {
+    const proposal = this.separation();
+    if (proposal === null) {
+      return;
+    }
+    const content = this.store.content();
+    this.store.apply({ ...content, combinations: this.withActivity(content.combinations, proposal.reactivatedId, [proposal.combinationId]) });
+    this.separation.set(null);
+  }
+
+  dismissSeparation() {
+    const proposal = this.separation();
+    if (proposal !== null) {
+      this._keptCombinations.add(proposal.combinationId);
+    }
+    this.separation.set(null);
+  }
+
+  /** « Séparer » dans le panneau : les tables ne bougent pas, la combinaison passe en sommeil */
+  separateSelectedCombination() {
+    const combination = this.selectedCombination();
+    if (combination === null || !combination.isActive) {
+      return;
+    }
+    const content = this.store.content();
+    this.store.apply({ ...content, combinations: this.withActivity(content.combinations, null, [combination.id]) });
+    // la sélection reste : le panneau montre « En sommeil », et « Retirer » si elle n'a jamais été publiée
   }
 
   updateCombination(id: string, patch: Partial<DraftCombination>) {
@@ -260,7 +406,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
       width: entry.width,
       height: entry.height,
       rotation: 0,
-      ...placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id, null)),
+      ...placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id)),
     };
     const content = this.store.content();
     this.store.apply({ ...content, decors: [...content.decors, decor] });
@@ -286,7 +432,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
         moved = true;
         const pointer = canvas.toMetres(e.clientX, e.clientY);
-        this.decorPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id)) });
+        this.decorPreview.set({ id: item.id, ...clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, [item.id])) });
       },
       end: (e) => {
         this._cancelGesture = null;
@@ -307,7 +453,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
       }
       const merged = { ...decor, ...patch };
       const zone = this.zones().find((z) => z.id === merged.zoneId);
-      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, merged.id)) };
+      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, [merged.id])) };
     });
     this.store.apply({ ...content, decors });
   }
@@ -422,10 +568,10 @@ export class FloorPlanEditorComponent implements OnDestroy {
   }
 
   /** Ce qui peut attirer un objet qu'on place : les autres tables et décors de la salle, tels qu'ils sont tournés */
-  private neighboursOf(zoneId: string, exceptId: string | null): Rect[] {
+  private neighboursOf(zoneId: string, except: readonly string[] = []): Rect[] {
     const { tables, decors } = this.store.content();
     return [...tables, ...decors]
-      .filter((other) => other.zoneId === zoneId && other.id !== exceptId)
+      .filter((other) => other.zoneId === zoneId && !except.includes(other.id))
       .map(boundsOf);
   }
 
@@ -459,7 +605,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
     if (canvas === undefined || zone === null || !canvas.containsClient(clientX, clientY)) {
       return false;
     }
-    const position = placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id, null));
+    const position = placeCentredAt(canvas.toMetres(clientX, clientY), entry, zone, this.neighboursOf(zone.id));
     const table: DraftTable = {
       id: crypto.randomUUID(),
       zoneId: zone.id,
@@ -489,6 +635,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
     }
     const offset: Point = { x: point.x - item.x, y: point.y - item.y };
     let moved = false;
+    let proposal: AccolageProposal | null = null;
     this._cancelGesture?.();
     this._cancelGesture = trackPointer(event, {
       move: (e) => {
@@ -497,21 +644,28 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
         moved = true;
         const pointer = canvas.toMetres(e.clientX, e.clientY);
-        const position = clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, item.id));
-        this.dragPreview.set({ id: item.id, ...position });
-        // collée contre une autre table : le cadre orange annonce la proposition (EDIT-13)
-        this.contactIds.set(this.contactFor({ ...item, ...position }));
+        const position = clampToZone({ x: pointer.x - offset.x, y: pointer.y - offset.y }, item, zone, this.neighboursOf(zone.id, [item.id]));
+        this.dragPreview.set(new Map([[item.id, position]]));
+        // collée contre d'autres tables : le cadre orange annonce la proposition (EDIT-13)
+        proposal = this.accolageFor([item.id], new Map([[item.id, position]]));
+        this.contactIds.set(proposal?.tableIds ?? []);
       },
       end: (e) => {
         this._cancelGesture = null;
-        const preview = this.dragPreview();
-        const contact = this.contactIds();
+        const preview = this.dragPreview()?.get(item.id) ?? null;
         this.dragPreview.set(null);
         this.contactIds.set([]);
         if (e.type === 'pointerup' && preview !== null && (preview.x !== item.x || preview.y !== item.y)) {
           this.updateTable(item.id, { x: preview.x, y: preview.y });
-          if (contact.length === 2) {
-            this.accolage.set({ firstId: contact[0], secondId: contact[1] });
+          // écartée de sa combinaison active : on demande avant de séparer ; une fenêtre d'accolage passe avant
+          const { tables, combinations } = this.store.content();
+          const after = tables.find((table) => table.id === item.id) ?? item;
+          const separation = proposeSeparation(item, after, tables, combinations, this._keptCombinations);
+          if (proposal !== null) {
+            this.accolage.set(proposal);
+            this._separationAfterAccolage = separation;
+          } else {
+            this.separation.set(separation);
           }
         }
       },
@@ -535,6 +689,10 @@ export class FloorPlanEditorComponent implements OnDestroy {
 
   /** Toute modification d'une table la garde aimantée et dans sa salle, quand c'est possible */
   updateTable(id: string, patch: Partial<DraftTable>) {
+    this.store.apply(this.withTablePatch(id, patch));
+  }
+
+  private withTablePatch(id: string, patch: Partial<DraftTable>): FloorPlanDraftContent {
     const content = this.store.content();
     const tables = content.tables.map((table) => {
       if (table.id !== id) {
@@ -542,9 +700,9 @@ export class FloorPlanEditorComponent implements OnDestroy {
       }
       const merged = { ...table, ...patch };
       const zone = this.zoneOf(merged);
-      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, merged.id)) };
+      return zone === undefined ? merged : { ...merged, ...clampToZone(merged, merged, zone, this.neighboursOf(zone.id, [merged.id])) };
     });
-    this.store.apply({ ...content, tables });
+    return { ...content, tables };
   }
 
   // ---- PANNEAU ----
@@ -578,24 +736,21 @@ export class FloorPlanEditorComponent implements OnDestroy {
     void this.confirmZoneChange(change, broken);
   }
 
-  private applyTableChange({ id, patch }: { id: string, patch: Partial<DraftTable> }) {
-    this.updateTable(id, patch);
+  /** Le déplacement et la désactivation de ses combinaisons font une seule étape d'historique */
+  private applyTableChange({ id, patch }: { id: string, patch: Partial<DraftTable> }, deactivatedIds: readonly string[] = []) {
+    const content = this.withTablePatch(id, patch);
+    this.store.apply({ ...content, combinations: this.withActivity(content.combinations, null, deactivatedIds) });
     // l'éditeur suit la table sur son nouvel onglet
     if (patch.zoneId !== undefined && this.selection()?.id === id) {
       this._zoneId.set(patch.zoneId);
     }
   }
 
-  /** Les combinaisons de cette table dont l'autre table ne sera pas dans la salle d'arrivée */
+  /** Les combinaisons actives de cette table dont une autre table ne sera pas dans la salle d'arrivée */
   private combinationsBrokenBy(tableId: string, zoneId: string): PlanCombination[] {
     const { tables, combinations } = this.store.content();
-    return combinations.filter((combination) => {
-      if (!combination.tableIds.includes(tableId)) {
-        return false;
-      }
-      const otherId = combination.tableIds.find((id) => id !== tableId);
-      return tables.find((table) => table.id === otherId)?.zoneId !== zoneId;
-    });
+    return combinations.filter((combination) => combination.isActive && combination.tableIds.includes(tableId)
+      && combination.tableIds.some((id) => id !== tableId && tables.find((table) => table.id === id)?.zoneId !== zoneId));
   }
 
   /** Une table qui change de salle désactive ses combinaisons : on le dit avant (décision utilisateur) */
@@ -604,12 +759,12 @@ export class FloorPlanEditorComponent implements OnDestroy {
     const zone = this.zones().find((z) => z.id === change.patch.zoneId);
     const names = broken.map((combination) => combination.name).join(', ');
     const consequence = broken.length > 1
-      ? `Les combinaisons ${names} seront désactivées : leurs deux tables ne seront plus dans la même salle.`
-      : `La combinaison ${names} sera désactivée : ses deux tables ne seront plus dans la même salle.`;
+      ? `Les combinaisons ${names} seront désactivées : leurs tables ne seront plus dans la même salle.`
+      : `La combinaison ${names} sera désactivée : ses tables ne seront plus dans la même salle.`;
     const confirmed = await this._modalService.confirmModal(
       'Changer de salle', `${table?.name} part en ${zone?.name}. ${consequence}`, 'Déplacer');
     if (confirmed) {
-      this.applyTableChange(change);
+      this.applyTableChange(change, broken.map((combination) => combination.id));
     }
   }
 
@@ -651,8 +806,8 @@ export class FloorPlanEditorComponent implements OnDestroy {
   protected onKeydown(event: KeyboardEvent) {
     // la touche peut viser document lui-même, qui n'est pas un élément
     const target = event.target instanceof Element ? event.target : null;
-    // la fenêtre d'accolage est modale : rien ne bouge derrière elle
-    if (target?.closest('input, textarea, select') || !(event.ctrlKey || event.metaKey) || this.accolage() !== null) {
+    // les fenêtres d'accolage et de séparation sont modales : rien ne bouge derrière elles
+    if (target?.closest('input, textarea, select') || !(event.ctrlKey || event.metaKey) || this.accolage() !== null || this.separation() !== null) {
       return;
     }
     const key = event.key.toLowerCase();

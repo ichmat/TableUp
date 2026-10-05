@@ -13,6 +13,7 @@ export type Placed = Rect & { rotation?: number };
 
 /** Évite les 0.30000000000000004 qui fausseraient l'aimantation et la comparaison des brouillons */
 const round = (value: number) => Math.round(value * 10000) / 10000;
+export const roundMetres = round;
 
 export function snapToGrid(value: number): number {
   return round(Math.max(0, Math.round(round(value / GRID_STEP)) * GRID_STEP));
@@ -41,6 +42,19 @@ export function boundsOf(item: Placed): Rect {
     x: item.x + (item.width - turned.width) / 2,
     y: item.y + (item.height - turned.height) / 2,
     ...turned,
+  };
+}
+
+/** La boîte qui englobe plusieurs objets, tels qu'ils sont tournés : un groupe se déplace comme un seul rectangle */
+export function boundsOfAll(items: readonly Placed[]): Rect {
+  const boxes = items.map(boundsOf);
+  const x = Math.min(...boxes.map((box) => box.x));
+  const y = Math.min(...boxes.map((box) => box.y));
+  return {
+    x: round(x),
+    y: round(y),
+    width: round(Math.max(...boxes.map((box) => box.x + box.width)) - x),
+    height: round(Math.max(...boxes.map((box) => box.y + box.height)) - y),
   };
 }
 

@@ -21,6 +21,8 @@ namespace TUROAPI.Models.Requests
         public string Name { get; set; } = string.Empty;
         public int Capacity { get; set; }
         public List<Guid> TableIds { get; set; } = [];
+        /// <summary>Tables collées en ce moment : l'éditeur active en collant, désactive en séparant. Absent d'un ancien brouillon : false</summary>
+        public bool IsActive { get; set; }
     }
 
     /// <summary>Un repère non réservable (MOD-04). Contrairement à une table, un décor absent du brouillon est supprimé</summary>

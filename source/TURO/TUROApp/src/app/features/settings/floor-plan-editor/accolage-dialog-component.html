@@ -1,35 +1,44 @@
 <div class="fixed inset-0 z-40 flex items-center justify-center bg-slate/40" (pointerdown)="$event.stopPropagation()">
     <div role="dialog" aria-modal="true" class="flex w-96 flex-col gap-3 rounded-xl bg-surface p-4 text-text shadow-xl">
         <div class="flex flex-col">
-            <p class="font-bold text-lg">Créer la table {{ title() }} ?</p>
-            <p class="text-sm text-text-muted">Deux tables rapprochées deviennent une table réservable.</p>
+            <p class="font-bold text-lg">{{ existing() === null ? 'Créer' : 'Réactiver' }} la table {{ title() }} ?</p>
+            <p class="text-sm text-text-muted">Des tables rapprochées deviennent une table réservable.</p>
         </div>
 
         <div class="flex flex-row flex-wrap items-center gap-2 rounded-lg bg-app p-2 text-sm">
-            @for (table of members(); track table.id; let last = $last) {
+            @for (table of sortedMembers(); track table.id; let last = $last) {
                 <span class="font-bold">Table {{ table.name }}</span><span class="text-text-muted">· {{ table.capacity }} places</span>
                 @if (!last) { <span class="text-violet font-black">+</span> }
             }
         </div>
 
-        <div class="flex flex-col gap-1">
-            <label class="text-sm font-bold">Nom de la table virtuelle</label>
-            <div data-field="name"><app-input [formField]="fields.name" inputClass="w-full" /></div>
-            @for (error of errorsOf('name'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
-        </div>
+        @if (existing(); as known) {
+            <p class="text-sm">Déjà connue : {{ known.name }} · {{ known.capacity }} places.</p>
+        } @else {
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold">Nom de la table virtuelle</label>
+                <div data-field="name"><app-input [formField]="fields.name" inputClass="w-full" /></div>
+                @for (error of errorsOf('name'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+            </div>
 
-        <div class="flex flex-col gap-1">
-            <label class="text-sm font-bold">Places une fois rapprochées</label>
-            <div data-field="capacity"><app-number-input [formField]="fields.capacity" inputClass="w-full" /></div>
-            <p class="text-xs text-text-muted">Pas toujours la somme : deux rondes accolées perdent souvent une place au raccord.</p>
-            @for (error of errorsOf('capacity'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
-            @for (error of errorsOf('members'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
-        </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold">Places une fois rapprochées</label>
+                <div data-field="capacity"><app-number-input [formField]="fields.capacity" inputClass="w-full" /></div>
+                <p class="text-xs text-text-muted">Pas toujours la somme : deux rondes accolées perdent souvent une place au raccord.</p>
+                @for (error of errorsOf('capacity'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+                @for (error of errorsOf('members'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
+            </div>
+        }
+
+        @if (deactivationNote(); as note) {
+            <p data-deactivated class="text-sm">{{ note }}</p>
+        }
 
         <!-- Deux boutons d'importance égale (EDIT-14) -->
         <div class="flex flex-row gap-2 *:flex-1">
             <app-button text="Non, juste les déplacer" type="Secondary" buttonClass="w-full h-11" (click)="dismiss.emit()" />
-            <app-button text="Créer" type="Secondary" buttonClass="w-full h-11" [disabled]="errors().length > 0" (click)="submit()" />
+            <app-button [text]="existing() === null ? 'Créer' : 'Réactiver'" type="Secondary" buttonClass="w-full h-11"
+                [disabled]="errors().length > 0" (click)="submit()" />
         </div>
     </div>
 </div>

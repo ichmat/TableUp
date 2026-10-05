@@ -46,12 +46,14 @@ export interface PlanDecor {
 
 export type DraftDecor = PlanDecor;
 
-/** La table virtuelle (MOD-02) : un couple de tables, une capacité saisie (MOD-03), aucune géométrie */
+/** La table virtuelle (MOD-02) : deux tables ou plus, une capacité saisie (MOD-03), aucune géométrie */
 export interface PlanCombination {
     id: string,
     name: string,
     capacity: number,
     tableIds: string[],
+    /** Tables collées en ce moment : l'éditeur active en collant, désactive en séparant */
+    isActive: boolean,
 }
 
 export type DraftCombination = PlanCombination;

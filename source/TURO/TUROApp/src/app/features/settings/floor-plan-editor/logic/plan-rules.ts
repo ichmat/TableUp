@@ -1,5 +1,6 @@
 import { PlanCombination, PlanDecor, PlanTable } from '../../../../models';
 import { fitsInZone, Size } from './geometry';
+import { sameTableSet } from './table-set';
 
 /** Mêmes bornes que l'API (FloorPlanController) : la publication reste l'autorité */
 export const TABLE_LIMITS = {
@@ -105,13 +106,24 @@ export function combinationErrors(
     errors.push({ field: 'capacity', message: `Entre ${COMBINATION_LIMITS.minCapacity} et ${COMBINATION_LIMITS.maxCapacity} places` });
   }
 
-  const [first, second] = combination.tableIds;
   const ids = new Set(tables.map((table) => table.id));
-  if (combination.tableIds.length !== 2 || first === second || !ids.has(first) || !ids.has(second)) {
-    errors.push({ field: 'members', message: 'Une combinaison réunit deux tables du plan' });
-  } else if (combinations.some((other) => other.id !== combination.id
-    && other.tableIds.includes(first) && other.tableIds.includes(second))) {
-    errors.push({ field: 'members', message: 'Ces deux tables forment déjà une combinaison' });
+  const members = combination.tableIds;
+  if (members.length < 2 || new Set(members).size !== members.length || members.some((id) => !ids.has(id))) {
+    errors.push({ field: 'members', message: 'Une combinaison réunit au moins deux tables du plan' });
+    return errors;
+  }
+  if (combinations.some((other) => other.id !== combination.id && sameTableSet(other.tableIds, members))) {
+    errors.push({ field: 'members', message: 'Ces tables forment déjà une combinaison' });
+  }
+  // active = collée en ce moment : dans une seule salle, et ses tables dans aucune autre combinaison active (§3.4)
+  if (combination.isActive) {
+    const zones = new Set(tables.filter((table) => members.includes(table.id)).map((table) => table.zoneId));
+    if (zones.size > 1) {
+      errors.push({ field: 'members', message: 'Une combinaison active a toutes ses tables dans la même salle' });
+    }
+    if (combinations.some((other) => other.id !== combination.id && other.isActive && other.tableIds.some((id) => members.includes(id)))) {
+      errors.push({ field: 'members', message: 'Une de ces tables est déjà dans une autre combinaison active' });
+    }
   }
   return errors;
 }

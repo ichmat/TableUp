@@ -36,13 +36,20 @@ export class RoomsAndTablesComponent {
     return draft === null ? null : countChanges(draftFromPublished(this.zones()), draft);
   });
 
-  /** Salle de chaque table publiée : une combinaison dont les tables sont dans deux salles est inactive */
+  /** Salle de chaque table publiée : une combinaison dont les tables sont dans plusieurs salles ne peut pas être active */
   private _tableZones = computed(() =>
     new Map(this.zones().flatMap((zone) => zone.tables.map((table) => [table.id, zone.id] as const))));
 
-  protected isSplit(combination: Combination): boolean {
-    const zones = combination.tableIds.map((id) => this._tableZones().get(id));
-    return zones[0] !== zones[1];
+  /** Ce qui empêche de la réserver telle quelle : en sommeil, ou des tables dans plusieurs salles */
+  protected combinationState(combination: Combination): string {
+    const notes: string[] = [];
+    if (!combination.isActive) {
+      notes.push('en sommeil');
+    }
+    if (new Set(combination.tableIds.map((id) => this._tableZones().get(id))).size > 1) {
+      notes.push('tables dans plusieurs salles');
+    }
+    return notes.length === 0 ? '' : ` — ${notes.join(', ')}`;
   }
 
   protected activeTables(zone: FloorPlanZone) {

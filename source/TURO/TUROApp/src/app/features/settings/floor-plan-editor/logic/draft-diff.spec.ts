@@ -42,12 +42,19 @@ describe('draft-diff', () => {
   it('should start from the published combinations and count created or renamed ones', () => {
     const combination = { id: 'c', zoneId: 'z', name: 'T1-T9', capacity: 4, tableIds: ['t1', 'old'], isActive: false, activateAt: null, deactivateAt: null };
     const published = draftFromPublished([{ ...ZONES[0], combinations: [combination] }]);
-    expect(published.combinations).toEqual([{ id: 'c', name: 'T1-T9', capacity: 4, tableIds: ['t1', 'old'] }]);
+    expect(published.combinations).toEqual([{ id: 'c', name: 'T1-T9', capacity: 4, tableIds: ['t1', 'old'], isActive: false }]);
 
     expect(countChanges(published, published)).toBe(0);
     const renamed = { ...published.combinations[0], name: 'Fenêtre' };
-    const created = { id: 'n', name: 'Nouvelle', capacity: 6, tableIds: ['t1', 'x'] };
+    const created = { id: 'n', name: 'Nouvelle', capacity: 6, tableIds: ['t1', 'x'], isActive: true };
     expect(countChanges(published, { ...published, combinations: [renamed, created] })).toBe(2);
+  });
+
+  it('should count an activation or a separation as a change', () => {
+    const combination = { id: 'c', zoneId: 'z', name: 'T1-T9', capacity: 4, tableIds: ['t1', 'old'], isActive: false, activateAt: null, deactivateAt: null };
+    const published = draftFromPublished([{ ...ZONES[0], combinations: [combination] }]);
+    const activated = { ...published.combinations[0], isActive: true };
+    expect(countChanges(published, { ...published, combinations: [activated] })).toBe(1);
   });
 
   it('should count a table moved back to its place as unchanged', () => {

@@ -2,7 +2,7 @@ import { ComponentFixture, fakeAsync, flushMicrotasks, TestBed, tick } from '@an
 import { signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { ApiError, FloorPlanZone, Table } from '../../../models';
+import { ApiError, DraftCombination, FloorPlanZone, Table } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
 import { FloorPlanCanvasComponent } from '../../../shared/components/floor-plan/floor-plan-canvas-component';
 import { FloorPlanEditorComponent } from './floor-plan-editor-component';
@@ -243,7 +243,18 @@ describe('FloorPlanEditorComponent', () => {
 
   describe('accolage', () => {
     const T2: Table = { ...T1, id: 't2', name: 'T2', x: 2 };
+    const T3: Table = { ...T1, id: 't3', name: 'T3', x: 3 };
     let toMetres: jasmine.Spy;
+
+    function combination(patch: Partial<DraftCombination>): DraftCombination {
+      return { id: 'p', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'], isActive: true, ...patch };
+    }
+
+    /** T1 et T2 collées, T3 à part, plus ces combinaisons */
+    function arrange(...combinations: DraftCombination[]) {
+      component.store.apply({ tables: [T1, { ...T2, x: 0.7 }, T3], decors: [], combinations });
+      fixture.detectChanges();
+    }
 
     beforeEach(async () => {
       floorPlan.getDraft.and.resolveTo({
@@ -266,7 +277,7 @@ describe('FloorPlanEditorComponent', () => {
 
     it('should propose a combination when a table is dropped against another', () => {
       drag(T2, { x: 0.7, y: 0 });
-      expect(component.accolage()).toEqual({ firstId: 't2', secondId: 't1' });
+      expect(component.accolage()).toEqual({ tableIds: ['t2', 't1'], existingId: null, deactivatedIds: [] });
       expect(text()).toContain('Créer la table T1-T2 ?');
     });
 
@@ -276,7 +287,7 @@ describe('FloorPlanEditorComponent', () => {
       fixture.detectChanges();
 
       expect(component.store.content().tables[1].x).toBe(0.7);
-      expect(component.accolage()).toEqual({ firstId: 't2', secondId: 't1' });
+      expect(component.accolage()).toEqual({ tableIds: ['t2', 't1'], existingId: null, deactivatedIds: [] });
     });
 
     it('should only move the tables on "Non, juste les déplacer", and not ask again for that pair', () => {
@@ -295,7 +306,7 @@ describe('FloorPlanEditorComponent', () => {
       fixture.detectChanges();
 
       const created = component.store.content().combinations[0];
-      expect(created).toEqual(jasmine.objectContaining({ name: 'T1-T2', capacity: 4, tableIds: ['t2', 't1'] }));
+      expect(created).toEqual(jasmine.objectContaining({ name: 'T1-T2', capacity: 4, tableIds: ['t2', 't1'], isActive: true }));
       expect(component.selection()).toEqual({ kind: 'combination', id: created.id });
       expect(text()).toContain('Brouillon · 2 modifications');
 
@@ -304,8 +315,198 @@ describe('FloorPlanEditorComponent', () => {
       expect(component.store.content().tables[1].x).toBe(0.7);
     });
 
-    it('should not propose anything for a pair already combined', () => {
-      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+    it('should propose the chain against an active combination, and deactivate it on creation', () => {
+      arrange(combination({}));
+      drag(T3, { x: 1.4, y: 0 });
+      expect(component.accolage()).toEqual({ tableIds: ['t3', 't1', 't2'], existingId: null, deactivatedIds: ['p'] });
+      expect(text()).toContain('Créer la table T1-T2-T3 ?');
+      expect(text()).toContain('T1-T2 sera désactivée.');
+
+      component.createCombination({ name: 'T1-T2-T3', capacity: 6 });
+      fixture.detectChanges();
+      const [pair, chain] = component.store.content().combinations;
+      expect(pair.isActive).toBeFalse();
+      expect(chain).toEqual(jasmine.objectContaining({ name: 'T1-T2-T3', tableIds: ['t3', 't1', 't2'], isActive: true }));
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="p"]')).toBeNull();
+
+      component.store.undo();
+      expect(component.store.content().combinations).toEqual([combination({})]);
+    });
+
+    it('should offer to reactivate a known set instead of creating it', () => {
+      arrange(combination({ isActive: false }));
+      drag({ ...T2, x: 0.7 }, { x: 0.7, y: 0.25 });
+      expect(component.accolage()).toEqual({ tableIds: ['t2', 't1'], existingId: 'p', deactivatedIds: [] });
+      expect(text()).toContain('Réactiver la table T1-T2 ?');
+
+      component.reactivateCombination();
+      expect(component.store.content().combinations).toEqual([combination({})]);
+      expect(component.selection()).toEqual({ kind: 'combination', id: 'p' });
+    });
+
+    /** Glisse la pastille de `item` de `from` à `to` (en mètres) avec un vrai suivi de pointeur */
+    function dragPill(item: DraftCombination, from: { x: number, y: number }, to: { x: number, y: number }) {
+      toMetres.and.returnValue(to);
+      component.onCombinationPointerDown({ item, point: from, event: new PointerEvent('pointerdown', { pointerId: 31, clientX: 0, clientY: 0 }) });
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 31, clientX: 50, clientY: 0 }));
+      fixture.detectChanges();
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 31, clientX: 50, clientY: 0 }));
+      fixture.detectChanges();
+    }
+
+    const position = (id: string) => {
+      const table = component.store.content().tables.find((t) => t.id === id)!;
+      return { x: table.x, y: table.y };
+    };
+
+    it('should move all the tables of a combination dragged by its pill, in one undo step', () => {
+      arrange(combination({}));
+      dragPill(combination({}), { x: 0.7, y: 0.35 }, { x: 2.7, y: 1.35 });
+
+      expect(position('t1')).toEqual({ x: 2, y: 1 });
+      expect(position('t2')).toEqual({ x: 2.7, y: 1 });
+      expect(component.selection()).toEqual({ kind: 'combination', id: 'p' });
+
+      component.store.undo();
+      expect(position('t1')).toEqual({ x: 0, y: 0 });
+      expect(position('t2')).toEqual({ x: 0.7, y: 0 });
+    });
+
+    it('should keep the whole group inside the room, with the gaps between its tables', () => {
+      arrange(combination({}));
+      dragPill(combination({}), { x: 0.7, y: 0.35 }, { x: 9, y: 0.35 });
+      // la salle fait 8 m : le groupe de 1,4 m s'arrête contre le mur
+      expect(position('t1')).toEqual({ x: 6.6, y: 0 });
+      expect(position('t2')).toEqual({ x: 7.3, y: 0 });
+    });
+
+    it('should propose the chain when a combination is dragged against a table', () => {
+      arrange(combination({}));
+      // le bord droit du groupe vient contre T3 (x = 3)
+      dragPill(combination({}), { x: 0.7, y: 0.35 }, { x: 2.3, y: 0.35 });
+      expect(component.accolage()).toEqual({ tableIds: ['t1', 't2', 't3'], existingId: null, deactivatedIds: ['p'] });
+    });
+
+    it('should only select the combination on a press without movement', () => {
+      arrange(combination({}));
+      component.onCombinationPointerDown({ item: combination({}), point: { x: 0.7, y: 0.35 }, event: new PointerEvent('pointerdown', { pointerId: 32 }) });
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 32 }));
+      expect(component.selection()).toEqual({ kind: 'combination', id: 'p' });
+      expect(position('t1')).toEqual({ x: 0, y: 0 });
+      expect(component.accolage()).toBeNull();
+    });
+
+    /** T1, T2, T3 en ligne et collées, la chaîne active, la paire T1-T2 en sommeil */
+    function arrangeChain() {
+      const chain = combination({ id: 'chain', name: 'T1-T2-T3', capacity: 6, tableIds: ['t1', 't2', 't3'] });
+      component.store.apply({
+        tables: [T1, { ...T2, x: 0.7 }, { ...T3, x: 1.4 }], decors: [],
+        combinations: [combination({ isActive: false }), chain],
+      });
+      fixture.detectChanges();
+    }
+    const activity = () => Object.fromEntries(component.store.content().combinations.map((c) => [c.id, c.isActive]));
+
+    it('should propose to separate a table pulled away from its active combination, and reactivate the rest it knows', () => {
+      arrangeChain();
+      drag({ ...T3, x: 1.4 }, { x: 3, y: 2 });
+      expect(component.separation()).toEqual({ combinationId: 'chain', reactivatedId: 'p' });
+      expect(text()).toContain('Séparer la table T1-T2-T3 ?');
+      expect(text()).toContain('T1-T2 redevient active');
+
+      component.separateCombination();
+      expect(activity()).toEqual({ p: true, chain: false });
+
+      component.store.undo();
+      expect(activity()).toEqual({ p: false, chain: true });
+      expect(position('t3')).toEqual({ x: 3, y: 2 });
+    });
+
+    it('should keep the combination on "Non, juste la déplacer" and not ask again', () => {
+      arrangeChain();
+      drag({ ...T3, x: 1.4 }, { x: 3, y: 2 });
+      component.dismissSeparation();
+      expect(activity()).toEqual({ p: false, chain: true });
+
+      drag({ ...T3, x: 3, y: 2 }, { x: 1.4, y: 0 });
+      drag({ ...T3, x: 1.4, y: 0 }, { x: 3, y: 2 });
+      expect(component.separation()).toBeNull();
+    });
+
+    it('should only open the accolage when the pulled table is glued elsewhere', () => {
+      arrangeChain();
+      const t4 = { ...T1, id: 't4', name: 'T4', x: 4, y: 2 };
+      component.store.apply({ ...component.store.content(), tables: [...component.store.content().tables, t4] });
+      drag({ ...T3, x: 1.4 }, { x: 3.3, y: 2 });
+      expect(component.separation()).toBeNull();
+      expect(component.accolage()).toEqual({ tableIds: ['t3', 't4'], existingId: null, deactivatedIds: ['chain'] });
+    });
+
+    /** T3 sortie de la chaîne et collée contre T4 : la fenêtre d'accolage s'ouvre */
+    function pullT3AgainstT4() {
+      arrangeChain();
+      const t4 = { ...T1, id: 't4', name: 'T4', x: 4, y: 2 };
+      component.store.apply({ ...component.store.content(), tables: [...component.store.content().tables, t4] });
+      drag({ ...T3, x: 1.4 }, { x: 3.3, y: 2 });
+    }
+
+    it('should offer to separate once the accolage of a pulled table is declined', () => {
+      pullT3AgainstT4();
+      component.dismissAccolage();
+      expect(component.separation()).toEqual({ combinationId: 'chain', reactivatedId: 'p' });
+    });
+
+    it('should not offer to separate once the accolage of a pulled table is accepted', () => {
+      pullT3AgainstT4();
+      component.createCombination({ name: 'T3-T4', capacity: 4 });
+      component.dismissAccolage();
+      expect(component.separation()).toBeNull();
+      expect(activity()).toEqual(jasmine.objectContaining({ chain: false }));
+    });
+
+    it('should separate from the panel without moving the tables, and keep the combination selected', () => {
+      arrangeChain();
+      component.selection.set({ kind: 'combination', id: 'chain' });
+      component.separateSelectedCombination();
+      fixture.detectChanges();
+      expect(activity()).toEqual({ p: false, chain: false });
+      expect(position('t3')).toEqual({ x: 1.4, y: 0 });
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="chain"]')).toBeNull();
+      // en sommeil, elle reste à portée : on peut encore la retirer si elle n'a jamais été publiée
+      expect(component.selection()).toEqual({ kind: 'combination', id: 'chain' });
+      expect(text()).toContain('En sommeil');
+      expect(text()).toContain('Retirer');
+    });
+
+    it('should deactivate the combination of a member sent to another room, in one undo step', async () => {
+      const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
+      zones.set([SALLE, terrasse]);
+      arrange(combination({}));
+      spyOn(TestBed.inject(ModalService), 'confirmModal').and.resolveTo(true);
+
+      component.onPanelChange({ id: 't2', patch: { zoneId: 'terrasse' } });
+      await fixture.whenStable();
+      expect(component.store.content().tables[1].zoneId).toBe('terrasse');
+      expect(component.store.content().combinations[0].isActive).toBeFalse();
+
+      component.store.undo();
+      expect(component.store.content().tables[1].zoneId).toBe('salle');
+      expect(component.store.content().combinations[0].isActive).toBeTrue();
+    });
+
+    it('should not ask for an inactive combination when a member changes room', () => {
+      const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
+      zones.set([SALLE, terrasse]);
+      arrange(combination({ isActive: false }));
+      const confirm = spyOn(TestBed.inject(ModalService), 'confirmModal');
+
+      component.onPanelChange({ id: 't2', patch: { zoneId: 'terrasse' } });
+      expect(confirm).not.toHaveBeenCalled();
+      expect(component.store.content().tables[1].zoneId).toBe('terrasse');
+    });
+
+    it('should not propose anything for a set already active', () => {
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'], isActive: true }] });
       drag(T2, { x: 0.7, y: 0 });
       expect(component.accolage()).toBeNull();
     });
@@ -315,7 +516,7 @@ describe('FloorPlanEditorComponent', () => {
       component.store.apply({
         ...component.store.content(),
         tables: [...component.store.content().tables, t3],
-        combinations: [{ id: 'c', name: 'T2-T3', capacity: 4, tableIds: ['t2', 't3'] }],
+        combinations: [{ id: 'c', name: 'T2-T3', capacity: 4, tableIds: ['t2', 't3'], isActive: true }],
       });
       component.selection.set({ kind: 'table', id: 't3' });
       component.removeSelected();
@@ -325,20 +526,20 @@ describe('FloorPlanEditorComponent', () => {
     it('should ask before sending a member to another room, and keep it on refusal', async () => {
       const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
       zones.set([SALLE, terrasse]);
-      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'], isActive: true }] });
       const confirm = spyOn(TestBed.inject(ModalService), 'confirmModal').and.resolveTo(false);
 
       component.onPanelChange({ id: 't2', patch: { zoneId: 'terrasse' } });
       await fixture.whenStable();
 
-      expect(confirm).toHaveBeenCalledWith('Changer de salle', jasmine.stringContaining('La combinaison T1-T2 sera désactivée'), 'Déplacer');
+      expect(confirm).toHaveBeenCalledWith('Changer de salle', jasmine.stringContaining('La combinaison T1-T2 sera désactivée : ses tables ne seront plus dans la même salle.'), 'Déplacer');
       expect(component.store.content().tables[1].zoneId).toBe('salle');
     });
 
     it('should show the pill again when a member comes back, without creating anything', () => {
       const terrasse: FloorPlanZone = { ...SALLE, id: 'terrasse', name: 'Terrasse', order: 1, tables: [] };
       zones.set([SALLE, terrasse]);
-      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'], isActive: true }] });
       component.updateTable('t2', { zoneId: 'terrasse' });
       fixture.detectChanges();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-combination-id="c"]')).toBeNull();
@@ -350,7 +551,7 @@ describe('FloorPlanEditorComponent', () => {
     });
 
     it('should rename a combination from its panel and flag a name already used by a table', () => {
-      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'] }] });
+      component.store.apply({ ...component.store.content(), combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['t1', 't2'], isActive: true }] });
       component.onCombinationPanelChange({ id: 'c', patch: { name: 'T1' } });
       fixture.detectChanges();
       expect(component.store.content().combinations[0].name).toBe('T1');

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, signal, untracked, viewChild } from '@angular/core';
 import { DecorType, PlanCombination, PlanDecor, PlanTable, Zone } from '../../../models';
 import { fitView, panBy, PlanView, toViewBox, zoomAt, ZOOM_STEP } from './floor-plan-view';
 
@@ -25,9 +25,8 @@ function boxOf(table: PlanTable) {
   return { x: table.x + (table.width - width) / 2, y: table.y + (table.height - height) / 2, width, height };
 }
 
-/** Hauteur d'une pastille de combinaison, et son écart au-dessus des tables, en mètres */
+/** Hauteur d'une pastille de combinaison, en mètres */
 const PILL_HEIGHT = 0.32;
-const PILL_GAP = 0.05;
 
 /** Évite les 0.29000000000000004 dans les attributs SVG */
 const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -61,7 +60,7 @@ export class FloorPlanCanvasComponent implements OnDestroy {
   tablePointerDown = output<PlanPointerEvent<PlanTable>>();
   decorPointerDown = output<PlanPointerEvent<PlanDecor>>();
 
-  /** Les tables virtuelles : une pastille entre leurs deux tables, si les deux sont dans cette salle (EDIT-03) */
+  /** Les tables virtuelles : une pastille au centre de leurs tables, si elles sont actives et toutes dans cette salle (EDIT-03) */
   combinations = input<readonly PlanCombination[]>([]);
   /** Tables qui se touchent pendant un glisser : un cadre orange les entoure (EDIT-13) */
   contactIds = input<readonly string[]>([]);
@@ -69,26 +68,39 @@ export class FloorPlanCanvasComponent implements OnDestroy {
 
   protected readonly pillHeight = PILL_HEIGHT;
 
+  /** La pastille se prend comme une poignée : au centre du groupe, pour déplacer toutes ses tables ensemble */
   protected pills = computed(() => {
     const byId = new Map(this.tables().map((table) => [table.id, table]));
     return this.combinations().flatMap((combination) => {
-      const [first, second] = combination.tableIds.map((id) => byId.get(id));
-      if (first === undefined || second === undefined) {
+      const members = combination.tableIds.map((id) => byId.get(id)).filter((table): table is PlanTable => table !== undefined);
+      // inactive, ou une table dans une autre salle : rien n'est collé ici
+      if (!combination.isActive || members.length !== combination.tableIds.length) {
         return [];
       }
+      const boxes = members.map(boxOf);
+      const left = Math.min(...boxes.map((box) => box.x));
+      const right = Math.max(...boxes.map((box) => box.x + box.width));
+      const top = Math.min(...boxes.map((box) => box.y));
+      const bottom = Math.max(...boxes.map((box) => box.y + box.height));
       const label = `${combination.name} · ${combination.capacity}p`;
-      // au-dessus des deux tables : la pastille ne cache ni leurs noms ni l'endroit où on les attrape
-      const top = Math.min(boxOf(first).y, boxOf(second).y);
-      return [{
-        combination,
-        label,
-        // la rotation se fait autour du centre : le centre d'une table ne bouge pas quand elle tourne
-        x: round((first.x + first.width / 2 + second.x + second.width / 2) / 2),
-        y: round(top - PILL_HEIGHT / 2 - PILL_GAP),
-        width: label.length * 0.1 + 0.3,
-      }];
+      return [{ combination, label, x: round((left + right) / 2), y: round((top + bottom) / 2), width: label.length * 0.1 + 0.3 }];
     });
   });
+
+  /** La table ou la pastille sous la souris */
+  private _hovered = signal<string | null>(null);
+
+  protected hover(id: string | null) {
+    this._hovered.set(id);
+  }
+
+  /** Au repos, la pastille laisse lire le nom des tables qu'elle recouvre */
+  protected pillOpacity(combination: PlanCombination): string {
+    const hovered = this._hovered();
+    const lit = this.selectedIds().includes(combination.id) || hovered === combination.id
+      || (hovered !== null && combination.tableIds.includes(hovered));
+    return lit ? 'opacity-100' : 'opacity-50';
+  }
 
   protected contactBox = computed(() => {
     const boxes = this.tables().filter((table) => this.contactIds().includes(table.id)).map(boxOf);

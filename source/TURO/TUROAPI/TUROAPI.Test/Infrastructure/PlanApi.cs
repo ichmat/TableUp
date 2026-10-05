@@ -54,6 +54,15 @@ namespace TUROAPI.Test.Infrastructure
             TableIds = [first, second],
         };
 
+        public static DraftCombinationItem Combination(string name, int capacity, bool isActive, params Guid[] tableIds) => new()
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Capacity = capacity,
+            TableIds = [.. tableIds],
+            IsActive = isActive,
+        };
+
         public static Task<HttpResponseMessage> SaveDraftAsync(HttpClient admin, FloorPlanDraftContent content) =>
             admin.PutAsJsonAsync("api/restaurant/floor-plan/draft", content, TestJson.Options);
 

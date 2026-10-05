@@ -1,8 +1,8 @@
 namespace TUROAPI.Test
 {
     /// <summary>
-    /// Table virtuelle de deux tables (MOD-02, MOD-03) : jamais supprimée une fois publiée, née dormante,
-    /// désactivée quand ses tables ne sont plus dans la même salle
+    /// Table virtuelle de deux tables ou plus (MOD-02, MOD-03) : jamais supprimée une fois publiée. L'éditeur décide
+    /// de ce qui est collé en ce moment (IsActive) ; une table n'est que dans une combinaison active (§3.4)
     /// </summary>
     [TestClass]
     public sealed class CombinationTests
@@ -39,10 +39,10 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public async Task Combination_joins_exactly_two_different_tables_of_the_plan()
+        public async Task Combination_joins_at_least_two_different_tables_of_the_plan()
         {
             (HttpClient admin, _, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
-            List<Guid>[] wrongMembers = [[t1.Id], [t1.Id, t1.Id], [t1.Id, Guid.NewGuid()], [t1.Id, t2.Id, Guid.NewGuid()]];
+            List<Guid>[] wrongMembers = [[t1.Id], [t1.Id, t1.Id], [t1.Id, Guid.NewGuid()], [t1.Id, t2.Id, t1.Id]];
 
             foreach (List<Guid> members in wrongMembers)
             {
@@ -50,7 +50,7 @@ namespace TUROAPI.Test
                 combination.TableIds = members;
                 await ApiAssert.ErrorAsync(await PlanApi.SaveDraftAsync(admin,
                     new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [combination] }),
-                    HttpStatusCode.Forbidden, "InvalidModification", "combination C: it must join two different tables of the plan.");
+                    HttpStatusCode.Forbidden, "InvalidModification", "combination C: it must join at least two different tables of the plan.");
             }
         }
 
@@ -103,15 +103,97 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public async Task Same_pair_cannot_be_combined_twice()
+        public async Task Same_set_of_tables_cannot_be_combined_twice()
         {
-            (HttpClient admin, _, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            (HttpClient admin, ZoneResponse salle, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            DraftTableItem t3 = PlanApi.Table(salle.Id, "T3", x: 2.6, y: 1);
 
             await ApiAssert.ErrorAsync(await PlanApi.SaveDraftAsync(admin, new FloorPlanDraftContent
             {
-                Tables = [t1, t2],
-                Combinations = [PlanApi.Combination("C1", 7, t1.Id, t2.Id), PlanApi.Combination("C2", 8, t2.Id, t1.Id)],
+                Tables = [t1, t2, t3],
+                Combinations = [PlanApi.Combination("C1", 12, false, t1.Id, t2.Id, t3.Id), PlanApi.Combination("C2", 12, false, t3.Id, t1.Id, t2.Id)],
             }), HttpStatusCode.Forbidden, "InvalidModification", "another combination already joins these tables.");
+
+            // Une chaîne et la paire qu'elle contient sont deux combinaisons différentes
+            await ApiAssert.OkAsync<FloorPlanDraftResponse>(await PlanApi.SaveDraftAsync(admin, new FloorPlanDraftContent
+            {
+                Tables = [t1, t2, t3],
+                Combinations = [PlanApi.Combination("C1", 12, false, t1.Id, t2.Id, t3.Id), PlanApi.Combination("C2", 8, false, t1.Id, t2.Id)],
+            }));
+        }
+
+        [TestMethod]
+        public async Task Chain_of_three_tables_is_published_with_all_its_tables()
+        {
+            (HttpClient admin, ZoneResponse salle, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            DraftTableItem t3 = PlanApi.Table(salle.Id, "T3", x: 2.6, y: 1);
+            DraftCombinationItem chain = PlanApi.Combination("T1-T2-T3", 12, true, t1.Id, t2.Id, t3.Id);
+
+            List<ZoneResponse> plan = await PlanApi.SaveAndPublishAsync(admin,
+                new FloorPlanDraftContent { Tables = [t1, t2, t3], Combinations = [chain] });
+
+            CombinationResponse published = plan.Single().Combinations.Single();
+            Assert.IsTrue(published.IsActive);
+            Assert.AreEqual(salle.Id, published.ZoneId);
+            CollectionAssert.AreEquivalent(new[] { t1.Id, t2.Id, t3.Id }, published.TableIds);
+        }
+
+        [TestMethod]
+        public async Task Table_belongs_to_one_active_combination_at_most()
+        {
+            (HttpClient admin, ZoneResponse salle, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            DraftTableItem t3 = PlanApi.Table(salle.Id, "T3", x: 2.6, y: 1);
+            DraftCombinationItem pair = PlanApi.Combination("T1-T2", 8, true, t1.Id, t2.Id);
+            DraftCombinationItem chain = PlanApi.Combination("T1-T2-T3", 12, true, t1.Id, t2.Id, t3.Id);
+
+            await ApiAssert.OkAsync<FloorPlanDraftResponse>(await PlanApi.SaveDraftAsync(admin,
+                new FloorPlanDraftContent { Tables = [t1, t2, t3], Combinations = [pair, chain] }));
+            await ApiAssert.ErrorAsync(await PlanApi.PublishAsync(admin), HttpStatusCode.Forbidden, "InvalidModification",
+                "table T1: it belongs to two active combinations.");
+
+            // T3 collée contre T1-T2 : la chaîne s'active, la paire se désactive et reste en mémoire
+            pair.IsActive = false;
+            List<ZoneResponse> plan = await PlanApi.SaveAndPublishAsync(admin,
+                new FloorPlanDraftContent { Tables = [t1, t2, t3], Combinations = [pair, chain] });
+            Assert.IsFalse(plan.Single().Combinations.Single(c => c.Id == pair.Id).IsActive);
+            Assert.IsTrue(plan.Single().Combinations.Single(c => c.Id == chain.Id).IsActive);
+        }
+
+        [TestMethod]
+        public async Task Changing_the_activity_clears_the_planned_dates_and_keeping_it_keeps_them()
+        {
+            (HttpClient admin, _, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            DraftCombinationItem banquette = PlanApi.Combination("Banquette", 7, false, t1.Id, t2.Id);
+            await PlanApi.SaveAndPublishAsync(admin, new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] });
+            DateTime planned = DateTime.UtcNow.AddHours(2);
+            // Les rappels n'ont pas encore d'écran (service) : on pose les dates en base
+            Task PlanDatesAsync() => TestApi.WithDbAsync(db => db.Combinations
+                .Where(c => c.Id == banquette.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.ActivateAt, planned).SetProperty(c => c.DeactivateAt, planned)));
+            async Task<CombinationResponse> PublishAsync() => (await PlanApi.SaveAndPublishAsync(admin,
+                new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] })).Single().Combinations.Single();
+
+            // Même activité, autre nom : ce que le service avait prévu reste
+            await PlanDatesAsync();
+            banquette.Name = "Grande";
+            CombinationResponse renamed = await PublishAsync();
+            Assert.IsNotNull(renamed.ActivateAt);
+            Assert.IsNotNull(renamed.DeactivateAt);
+
+            // Collées dans l'éditeur : active, plus rien de prévu
+            banquette.IsActive = true;
+            CombinationResponse glued = await PublishAsync();
+            Assert.IsTrue(glued.IsActive);
+            Assert.IsNull(glued.ActivateAt);
+            Assert.IsNull(glued.DeactivateAt);
+
+            // Séparées dans l'éditeur : inactive, plus rien de prévu
+            await PlanDatesAsync();
+            banquette.IsActive = false;
+            CombinationResponse separated = await PublishAsync();
+            Assert.IsFalse(separated.IsActive);
+            Assert.IsNull(separated.ActivateAt);
+            Assert.IsNull(separated.DeactivateAt);
         }
 
         [TestMethod]
@@ -146,34 +228,31 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public async Task Moving_a_member_away_deactivates_the_combination_and_bringing_it_back_reuses_it()
+        public async Task Moving_a_member_away_requires_deactivating_and_bringing_it_back_reuses_it()
         {
             (HttpClient admin, ZoneResponse salle, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
             ZoneResponse terrasse = await PlanApi.AddZoneAsync(admin, "Terrasse", 6, 4);
-            DraftCombinationItem banquette = PlanApi.Combination("Banquette", 7, t1.Id, t2.Id);
+            DraftCombinationItem banquette = PlanApi.Combination("Banquette", 7, true, t1.Id, t2.Id);
             await PlanApi.SaveAndPublishAsync(admin, new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] });
-            // L'activation n'a pas encore d'écran (service) : on la pose en base
-            await TestApi.WithDbAsync(db => db.Combinations
-                .Where(c => c.Id == banquette.Id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.IsActive, true)
-                    .SetProperty(c => c.ActivateAt, DateTime.UtcNow)
-                    .SetProperty(c => c.DeactivateAt, DateTime.UtcNow.AddHours(3))));
 
+            // Encore active, ses tables dans deux salles : refusé à la publication
             t2.ZoneId = terrasse.Id;
+            await ApiAssert.OkAsync<FloorPlanDraftResponse>(await PlanApi.SaveDraftAsync(admin,
+                new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] }));
+            await ApiAssert.ErrorAsync(await PlanApi.PublishAsync(admin), HttpStatusCode.Forbidden, "InvalidModification",
+                "combination Banquette: an active combination needs all its tables in the same room.");
+
+            // L'éditeur la désactive en même temps : accepté, elle garde sa salle d'origine
+            banquette.IsActive = false;
             List<ZoneResponse> split = await PlanApi.SaveAndPublishAsync(admin,
                 new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] });
-
             CombinationResponse inert = split.SelectMany(z => z.Combinations).Single();
             Assert.AreEqual(salle.Id, inert.ZoneId);
             Assert.IsFalse(inert.IsActive);
-            Assert.IsNull(inert.ActivateAt);
-            Assert.IsNull(inert.DeactivateAt);
 
             t2.ZoneId = salle.Id;
             List<ZoneResponse> reunited = await PlanApi.SaveAndPublishAsync(admin,
                 new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] });
-
             CombinationResponse back = reunited.SelectMany(z => z.Combinations).Single();
             Assert.AreEqual(banquette.Id, back.Id);
             Assert.AreEqual(salle.Id, back.ZoneId);

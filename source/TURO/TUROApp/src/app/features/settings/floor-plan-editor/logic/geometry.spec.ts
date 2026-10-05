@@ -1,4 +1,4 @@
-import { boundsOf, clampToZone, findFreeSpot, fitsInZone, normalizeRotation, placeCentredAt, snapToGrid } from './geometry';
+import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, fitsInZone, normalizeRotation, placeCentredAt, snapToGrid } from './geometry';
 
 const ROOM = { width: 8, height: 5.5 };
 const WALL = { width: 2, height: 0.15, rotation: 90 };
@@ -22,6 +22,13 @@ describe('geometry', () => {
 
   it('should pin a table larger than its room to the corner instead of failing', () => {
     expect(clampToZone({ x: 3, y: 3 }, { width: 9, height: 1 }, ROOM)).toEqual({ x: 0, y: 3 });
+  });
+
+  it('should bound several objects as they are turned', () => {
+    const square = { x: 0, y: 0, width: 0.9, height: 0.9 };
+    // 1,8 × 0,8 tournée de 90° autour de son centre (1,9 ; 0,4) : elle occupe x 1,5 → 2,3 et y −0,5 → 1,3
+    const turned = { x: 1, y: 0, width: 1.8, height: 0.8, rotation: 90 };
+    expect(boundsOfAll([square, turned])).toEqual({ x: 0, y: -0.5, width: 2.3, height: 1.8 });
   });
 
   it('should centre a dropped table under the pointer', () => {

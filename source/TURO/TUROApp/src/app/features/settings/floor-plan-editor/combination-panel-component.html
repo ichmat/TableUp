@@ -16,9 +16,15 @@
     </div>
     @for (error of errorsOf('members'); track $index) { <p class="text-sm text-red-700">{{ error.message }}</p> }
 
+    @if (combination().isActive) {
+        <app-button text="Séparer" type="Secondary" buttonClass="w-full h-10" (click)="separate.emit()" />
+    } @else {
+        <p class="text-xs text-text-muted">En sommeil : recollez ses tables sur le plan pour la réactiver.</p>
+    }
+
     @if (!isPublished()) {
         <app-button text="Retirer" type="Tertiary" buttonClass="w-full h-10" (click)="remove.emit()" />
     } @else {
-        <p class="text-xs text-text-muted">Une combinaison publiée ne se supprime pas : elle reste disponible, au pire dormante.</p>
+        <p class="text-xs text-text-muted">Une combinaison publiée ne se supprime pas : séparée, elle reste en mémoire.</p>
     }
 </div>

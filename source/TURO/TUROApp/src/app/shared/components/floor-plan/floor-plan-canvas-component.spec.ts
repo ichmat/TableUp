@@ -120,18 +120,48 @@ describe('FloorPlanCanvasComponent', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
   });
 
-  it('should draw a combination pill just above its two tables, without covering them', () => {
-    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'] }]);
+  it('should draw a combination pill at the centre of its tables', () => {
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'], isActive: true }]);
     fixture.detectChanges();
 
     const pill = host.querySelector('[data-combination-id="c"]')!;
     expect(pill.textContent).toContain('T1-T2 · 8p');
-    // milieu des centres en x (2,625) ; en y, juste au-dessus du haut des deux tables (la rectangulaire tournée commence à 0,5)
-    expect(pill.getAttribute('transform')).toBe('translate(2.625 0.29)');
+    // boîte du groupe : x de 1 à 4,3 (la rectangulaire tournée occupe 3,5 → 4,3), y de 0,5 à 2,3
+    expect(pill.getAttribute('transform')).toBe('translate(2.65 1.4)');
+  });
+
+  it('should not draw the pill of an inactive combination', () => {
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'], isActive: false }]);
+    fixture.detectChanges();
+    expect(host.querySelector('[data-combination-id]')).toBeNull();
+  });
+
+  it('should make the pill opaque while one of its tables or the pill is hovered, or while it is selected', () => {
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'], isActive: true }]);
+    fixture.detectChanges();
+    const pill = () => host.querySelector('[data-combination-id="c"]')!.getAttribute('class')!;
+    expect(pill()).toContain('opacity-50');
+
+    host.querySelector('[data-table-id="a"]')!.dispatchEvent(new PointerEvent('pointerenter'));
+    fixture.detectChanges();
+    expect(pill()).toContain('opacity-100');
+
+    host.querySelector('[data-table-id="a"]')!.dispatchEvent(new PointerEvent('pointerleave'));
+    fixture.detectChanges();
+    expect(pill()).toContain('opacity-50');
+
+    host.querySelector('[data-combination-id="c"]')!.dispatchEvent(new PointerEvent('pointerenter'));
+    fixture.detectChanges();
+    expect(pill()).toContain('opacity-100');
+    host.querySelector('[data-combination-id="c"]')!.dispatchEvent(new PointerEvent('pointerleave'));
+
+    fixture.componentRef.setInput('selectedIds', ['c']);
+    fixture.detectChanges();
+    expect(pill()).toContain('opacity-100');
   });
 
   it('should not draw a pill whose second table is not in this room', () => {
-    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T9', capacity: 4, tableIds: ['a', 'elsewhere'] }]);
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T9', capacity: 4, tableIds: ['a', 'elsewhere'], isActive: true }]);
     fixture.detectChanges();
     expect(host.querySelector('[data-combination-id]')).toBeNull();
   });
@@ -146,7 +176,7 @@ describe('FloorPlanCanvasComponent', () => {
   it('should emit the pressed combination', () => {
     const pressed: unknown[] = [];
     fixture.componentInstance.combinationPointerDown.subscribe((e) => pressed.push(e.item.id));
-    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'] }]);
+    fixture.componentRef.setInput('combinations', [{ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['a', 'b'], isActive: true }]);
     fixture.detectChanges();
     host.querySelector('[data-combination-id="c"]')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 9 }));
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9 }));

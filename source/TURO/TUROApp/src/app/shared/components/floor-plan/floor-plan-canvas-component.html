@@ -59,7 +59,7 @@
     @for (table of tables(); track table.id) {
         <g [attr.data-table-id]="table.id" class="cursor-grab"
             [attr.transform]="'translate(' + table.x + ' ' + table.y + ')'"
-            (pointerdown)="onTablePointerDown(table, $event)">
+            (pointerdown)="onTablePointerDown(table, $event)" (pointerenter)="hover(table.id)" (pointerleave)="hover(null)">
             <g [attr.transform]="'rotate(' + table.rotation + ' ' + table.width / 2 + ' ' + table.height / 2 + ')'">
                 @if (table.shape === 'Round') {
                     <ellipse [attr.cx]="table.width / 2" [attr.cy]="table.height / 2"
@@ -84,11 +84,12 @@
             vector-effect="non-scaling-stroke" />
     }
 
-    <!-- LES COMBINAISONS : une pastille violette entre les deux tables (EDIT-03) -->
+    <!-- LES COMBINAISONS : une pastille violette au centre de leurs tables, qu'on attrape pour les déplacer (EDIT-03) -->
     @for (pill of pills(); track pill.combination.id) {
-        <g [attr.data-combination-id]="pill.combination.id" class="cursor-pointer"
+        <g [attr.data-combination-id]="pill.combination.id" [attr.class]="'cursor-grab transition-opacity ' + pillOpacity(pill.combination)"
             [attr.transform]="'translate(' + pill.x + ' ' + pill.y + ')'"
-            (pointerdown)="onCombinationPointerDown(pill.combination, $event)">
+            (pointerdown)="onCombinationPointerDown(pill.combination, $event)"
+            (pointerenter)="hover(pill.combination.id)" (pointerleave)="hover(null)">
             <rect [attr.x]="-pill.width / 2" [attr.y]="-pillHeight / 2" [attr.width]="pill.width" [attr.height]="pillHeight"
                 [attr.rx]="pillHeight / 2" [attr.class]="'fill-violet ' + pillStroke(pill.combination)" stroke-width="2"
                 vector-effect="non-scaling-stroke" />

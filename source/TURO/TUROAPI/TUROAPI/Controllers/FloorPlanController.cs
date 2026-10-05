@@ -379,31 +379,32 @@ namespace TUROAPI.Controllers
                 decor.Rotation = item.Rotation;
             }
 
-            // Combinaisons : jamais supprimées ; une nouvelle naît dormante ; des tables séparées la désactivent
+            // Combinaisons : jamais supprimées ; l'éditeur décide de ce qui est collé en ce moment
             Dictionary<Guid, Combination> combinationsById = await context.Combinations
                 .Include(c => c.Tables)
                 .Where(c => c.Zone.RestaurantId == CurrentRestaurantId)
                 .ToDictionaryAsync(c => c.Id);
             foreach (DraftCombinationItem item in content.Combinations)
             {
-                Table first = existing[item.TableIds[0]];
-                Table second = existing[item.TableIds[1]];
+                List<Table> members = item.TableIds.Select(id => existing[id]).ToList();
                 if (!combinationsById.TryGetValue(item.Id, out Combination? combination))
                 {
-                    combination = new Combination { Id = item.Id, ZoneId = first.ZoneId, IsActive = false, Tables = [first, second] };
+                    combination = new Combination { Id = item.Id, ZoneId = members[0].ZoneId, IsActive = item.IsActive, Tables = members };
                     context.Combinations.Add(combination);
+                }
+                else if (combination.IsActive != item.IsActive)
+                {
+                    // Coller ou séparer dans l'éditeur annule le rapprochement ou la séparation que le service avait prévus
+                    combination.IsActive = item.IsActive;
+                    combination.ActivateAt = null;
+                    combination.DeactivateAt = null;
                 }
                 combination.Name = item.Name.Trim();
                 combination.Capacity = item.Capacity;
-                if (first.ZoneId == second.ZoneId)
+                // Tables dans plusieurs salles (forcément inactive) : elle garde sa salle d'origine
+                if (members.All(t => t.ZoneId == members[0].ZoneId))
                 {
-                    combination.ZoneId = first.ZoneId;
-                }
-                else
-                {
-                    combination.IsActive = false;
-                    combination.ActivateAt = null;
-                    combination.DeactivateAt = null;
+                    combination.ZoneId = members[0].ZoneId;
                 }
             }
 
@@ -495,10 +496,10 @@ namespace TUROAPI.Controllers
             }
             foreach (DraftCombinationItem combination in content.Combinations)
             {
-                if (combination.TableIds.Count != 2 || combination.TableIds[0] == combination.TableIds[1]
+                if (combination.TableIds.Count < 2 || combination.TableIds.Distinct().Count() != combination.TableIds.Count
                     || !combination.TableIds.All(draftIds.Contains))
                 {
-                    throw new ApiErrorException(ApiError.InvalidModification, $"combination {combination.Name}: it must join two different tables of the plan.");
+                    throw new ApiErrorException(ApiError.InvalidModification, $"combination {combination.Name}: it must join at least two different tables of the plan.");
                 }
                 var known = publishedCombinations.FirstOrDefault(c => c.Id == combination.Id);
                 if (known != null && !known.TableIds.ToHashSet().SetEquals(combination.TableIds))
@@ -511,12 +512,12 @@ namespace TUROAPI.Controllers
             {
                 throw new ApiErrorException(ApiError.InvalidModification, $"combination {removedCombination.Name}: a published combination cannot be removed from the plan.");
             }
-            var samePair = content.Combinations
+            var sameTables = content.Combinations
                 .GroupBy(c => string.Join("|", c.TableIds.OrderBy(id => id)))
                 .FirstOrDefault(g => g.Count() > 1);
-            if (samePair != null)
+            if (sameTables != null)
             {
-                throw new ApiErrorException(ApiError.InvalidModification, $"combination {samePair.First().Name}: another combination already joins these tables.");
+                throw new ApiErrorException(ApiError.InvalidModification, $"combination {sameTables.First().Name}: another combination already joins these tables.");
             }
         }
 
@@ -577,6 +578,22 @@ namespace TUROAPI.Controllers
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: seats must be between {MinCombinationCapacity} and {MaxCombinationCapacity}.");
                 }
+            }
+
+            // Une combinaison active, ce sont des tables collées en ce moment : toutes dans une salle, et chacune dans une seule (§3.4)
+            Dictionary<Guid, DraftTableItem> tablesById = content.Tables.ToDictionary(t => t.Id);
+            List<DraftCombinationItem> active = content.Combinations.Where(c => c.IsActive).ToList();
+            foreach (DraftCombinationItem combination in active)
+            {
+                if (combination.TableIds.Select(id => tablesById[id].ZoneId).Distinct().Count() > 1)
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"combination {combination.Name.Trim()}: an active combination needs all its tables in the same room.");
+                }
+            }
+            var shared = active.SelectMany(c => c.TableIds).GroupBy(id => id).FirstOrDefault(g => g.Count() > 1);
+            if (shared != null)
+            {
+                throw new ApiErrorException(ApiError.InvalidModification, $"table {tablesById[shared.Key].Name.Trim()}: it belongs to two active combinations.");
             }
 
             // Toutes les tables actives et toutes les combinaisons sont dans le brouillon : l'unicité se vérifie sur lui seul.

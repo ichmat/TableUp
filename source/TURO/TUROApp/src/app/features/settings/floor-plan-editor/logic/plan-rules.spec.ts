@@ -59,21 +59,22 @@ describe('decorErrors', () => {
 describe('combinationErrors', () => {
   const t1 = table({ id: 't1', name: 'T1' });
   const t2 = table({ id: 't2', name: 'T2', x: 0.9 });
+  const t3 = table({ id: 't3', name: 'T3', x: 1.8 });
   const combination = (patch: Partial<PlanCombination>): PlanCombination =>
-    ({ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['t1', 't2'], ...patch });
+    ({ id: 'c', name: 'T1-T2', capacity: 8, tableIds: ['t1', 't2'], isActive: true, ...patch });
   const messages = (c: PlanCombination, others: PlanCombination[] = []) =>
-    combinationErrors(c, [t1, t2], [c, ...others]).map((e) => e.message);
+    combinationErrors(c, [t1, t2, t3], [c, ...others]).map((e) => e.message);
 
-  it('should accept a valid combination', () => {
+  it('should accept a valid combination, a chain of three tables, and a pair inside an inactive chain', () => {
     expect(messages(combination({}))).toEqual([]);
+    expect(messages(combination({ tableIds: ['t1', 't2', 't3'] }))).toEqual([]);
+    expect(messages(combination({}), [combination({ id: 'd', name: 'T1-T2-T3', tableIds: ['t1', 't2', 't3'], isActive: false })])).toEqual([]);
   });
 
   it('should refuse an empty, long, or already used name, including a table name', () => {
     expect(messages(combination({ name: ' ' }))).toEqual(['Indiquez un nom']);
     expect(messages(combination({ name: 'x'.repeat(21) }))).toEqual(['Le nom est limité à 20 caractères']);
     expect(messages(combination({ name: 't1 ' }))).toEqual(['Une table ou une combinaison porte déjà ce nom']);
-    expect(messages(combination({}), [combination({ id: 'd', tableIds: ['t2', 't1'], name: 'Autre' })]))
-      .toEqual(['Ces deux tables forment déjà une combinaison']);
   });
 
   it('should refuse seats outside 1 to 100', () => {
@@ -81,15 +82,37 @@ describe('combinationErrors', () => {
     expect(messages(combination({ capacity: 101 }))).toEqual(['Entre 1 et 100 places']);
   });
 
-  it('should refuse a combination whose table is missing', () => {
-    expect(messages(combination({ tableIds: ['t1', 'gone'] }))).toEqual(['Une combinaison réunit deux tables du plan']);
+  it('should refuse fewer than two tables, a table twice, or a missing table', () => {
+    const refused = ['Une combinaison réunit au moins deux tables du plan'];
+    expect(messages(combination({ tableIds: ['t1'] }))).toEqual(refused);
+    expect(messages(combination({ tableIds: ['t1', 't2', 't1'] }))).toEqual(refused);
+    expect(messages(combination({ tableIds: ['t1', 'gone'] }))).toEqual(refused);
+  });
+
+  it('should refuse the same set of tables in another order', () => {
+    expect(messages(combination({ tableIds: ['t1', 't2', 't3'] }), [combination({ id: 'd', name: 'Autre', tableIds: ['t3', 't1', 't2'], isActive: false })]))
+      .toEqual(['Ces tables forment déjà une combinaison']);
+  });
+
+  it('should refuse an active combination split between two rooms, but not an inactive one', () => {
+    const away = table({ id: 't9', name: 'T9', zoneId: 'terrasse' });
+    const split = combination({ tableIds: ['t1', 't9'] });
+    expect(combinationErrors(split, [t1, away], [split]).map((e) => e.message))
+      .toEqual(['Une combinaison active a toutes ses tables dans la même salle']);
+    const asleep = { ...split, isActive: false };
+    expect(combinationErrors(asleep, [t1, away], [asleep])).toEqual([]);
+  });
+
+  it('should refuse a table in two active combinations', () => {
+    expect(messages(combination({}), [combination({ id: 'd', name: 'T1-T2-T3', tableIds: ['t1', 't2', 't3'] })]))
+      .toEqual(['Une de ces tables est déjà dans une autre combinaison active']);
   });
 });
 
 describe('tableErrors and combination names', () => {
   it('should refuse a table named like a combination', () => {
     const t = table({ name: 'T1-T2' });
-    const combinations = [{ id: 'c', name: 't1-t2', capacity: 8, tableIds: ['x', 'y'] }];
+    const combinations = [{ id: 'c', name: 't1-t2', capacity: 8, tableIds: ['x', 'y'], isActive: false }];
     expect(tableErrors(t, ROOM, [t], combinations).map((e) => e.message)).toEqual(['Une table ou une combinaison porte déjà ce nom']);
   });
 });

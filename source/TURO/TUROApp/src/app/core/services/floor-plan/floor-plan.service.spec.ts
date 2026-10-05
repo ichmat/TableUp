@@ -30,6 +30,16 @@ describe('FloorPlanService', () => {
     expect((await result).value).toEqual({ tables: [], decors: [], combinations: [], updatedAt: '2026-10-01T10:00:00Z' });
   });
 
+  it('should read a combination saved before the activation existed as inactive', async () => {
+    const result = service.getDraft();
+    http.expectOne('/api/restaurant/floor-plan/draft').flush({
+      tables: [], decors: [], updatedAt: '2026-10-01T10:00:00Z',
+      combinations: [{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['a', 'b'] }],
+    });
+
+    expect((await result).value!.combinations).toEqual([{ id: 'c', name: 'T1-T2', capacity: 4, tableIds: ['a', 'b'], isActive: false }]);
+  });
+
   it('should carry the API error code, to tell a non-admin apart', async () => {
     const result = service.getDraft();
     http.expectOne('/api/restaurant/floor-plan/draft').flush(

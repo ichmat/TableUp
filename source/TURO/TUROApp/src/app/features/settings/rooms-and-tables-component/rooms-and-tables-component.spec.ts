@@ -85,18 +85,22 @@ describe('RoomsAndTablesComponent', () => {
     expect(floorPlan.createZone).toHaveBeenCalledOnceWith({ name: 'Étage', width: 10, height: 6.5 });
   });
 
-  it('should list the combinations of a room', () => {
+  it('should list the combinations of a room, and say which ones sleep', () => {
+    expect(text()).toContain('T3-T4 · 8p — en sommeil');
+
+    zones.set([{ ...SALLE, combinations: [{ ...T3_T4, isActive: true }] }, TERRASSE]);
+    fixture.detectChanges();
     expect(text()).toContain('T3-T4 · 8p');
-    expect(text()).not.toContain('tables dans deux salles');
+    expect(text()).not.toContain('en sommeil');
   });
 
-  it('should say when the tables of a combination are in two rooms', () => {
+  it('should say when the tables of a combination are in several rooms', () => {
     zones.set([
       { ...SALLE, tables: [T3] },
       { ...TERRASSE, tables: [{ ...T4, zoneId: 'terrasse' }] },
     ]);
     fixture.detectChanges();
-    expect(text()).toContain('T3-T4 · 8p — tables dans deux salles : inactive');
+    expect(text()).toContain('T3-T4 · 8p — en sommeil, tables dans plusieurs salles');
   });
 
   it('should move a room one step up', async () => {

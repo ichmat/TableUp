@@ -65,11 +65,11 @@ export function countChanges(published: FloorPlanDraftContent, draft: FloorPlanD
   return changedTables + changedDecors + deletedDecors + changedCombinations;
 }
 
-export function toPlanCombination({ id, name, capacity, tableIds }: PlanCombination | Combination): PlanCombination {
-  return { id, name, capacity, tableIds: [...tableIds] };
+export function toPlanCombination({ id, name, capacity, tableIds, isActive }: PlanCombination | Combination): PlanCombination {
+  return { id, name, capacity, tableIds: [...tableIds], isActive };
 }
 
-/** Les tables d'une combinaison ne changent jamais : seuls son nom et ses places se modifient */
+/** Les tables d'une combinaison ne changent jamais : son nom, ses places et son activité se modifient */
 export function sameCombination(a: PlanCombination, b: PlanCombination): boolean {
-  return a.name === b.name && a.capacity === b.capacity;
+  return a.name === b.name && a.capacity === b.capacity && a.isActive === b.isActive;
 }

@@ -1,0 +1,15 @@
+<div class="fixed inset-0 z-40 flex items-center justify-center bg-slate/40" (pointerdown)="$event.stopPropagation()">
+    <div role="dialog" aria-modal="true" class="flex w-96 flex-col gap-3 rounded-xl bg-surface p-4 text-text shadow-xl">
+        <div class="flex flex-col">
+            <p class="font-bold text-lg">Séparer la table {{ combination().name }} ?</p>
+            <p class="text-sm text-text-muted">Ses tables ne se réserveront plus ensemble. La combinaison reste en mémoire.</p>
+        </div>
+        @if (reactivated(); as rest) {
+            <p data-reactivated class="text-sm">{{ rest.name }} redevient active : ses tables sont toujours collées.</p>
+        }
+        <div class="flex flex-row gap-2 *:flex-1">
+            <app-button text="Non, juste la déplacer" type="Secondary" buttonClass="w-full h-11" (click)="dismiss.emit()" />
+            <app-button text="Séparer" type="Secondary" buttonClass="w-full h-11" (click)="separate.emit()" />
+        </div>
+    </div>
+</div>

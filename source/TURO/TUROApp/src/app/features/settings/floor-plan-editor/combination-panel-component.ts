@@ -16,16 +16,21 @@ export class CombinationPanelComponent {
   combination = input.required<DraftCombination>();
   memberNames = input.required<readonly string[]>();
   errors = input<readonly PlanError[]>([]);
-  /** Une combinaison publiée ne se retire jamais : elle reste, au pire dormante */
+  /** Une combinaison publiée ne se retire jamais : séparée, elle reste en mémoire */
   isPublished = input(true);
 
   changed = output<{ id: string, patch: Partial<DraftCombination> }>();
   remove = output<void>();
+  separate = output<void>();
 
   private _fields = linkedSignal(() => ({ name: this.combination().name, capacity: this.combination().capacity as number | null }));
   protected fields = form(this._fields);
 
-  protected members = computed(() => this.memberNames().join(' et '));
+  /** « 12, 13 et 14 » */
+  protected members = computed(() => {
+    const names = this.memberNames();
+    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`;
+  });
 
   protected errorsOf(field: PlanField): PlanError[] {
     return this.errors().filter((error) => error.field === field);
