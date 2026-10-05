@@ -2564,7 +2564,7 @@ a{color:inherit;}
     <h4>✗ Écartée — estompée, pas de halo</h4>
     <ul>
       <li>Une affectation recouvre déjà <b>T → T + durée</b></li>
-      <li><code>capacité &lt; couverts − tolérance_basse</code><br><s style="font:italic 300 11px/1.5 var(--font);color:var(--dim);text-decoration:none">une 2p pour 6 personnes ne sert à rien</s></li>
+      <li><code>capacité &lt; couverts</code><br><s style="font:italic 300 11px/1.5 var(--font);color:var(--dim);text-decoration:none">jamais de tolérance vers le bas</s></li>
       <li>La zone est fermée pour ce service</li>
     </ul>
   </div>
@@ -2572,7 +2572,7 @@ a{color:inherit;}
     <h4>✓ Parfaite — halo vert plein</h4>
     <ul>
       <li>Libre sur tout l'intervalle</li>
-      <li><code>couverts ≤ capacité ≤ couverts + tolérance</code></li>
+      <li><code>capacité − couverts ≤ 1</code></li>
       <li>Propre</li>
       <li>Zone conforme au souhait, s'il y en a un</li>
       <li><b>Dépôt immédiat</b>, aucun popup</li>
@@ -2582,8 +2582,17 @@ a{color:inherit;}
     <h4>~✓ À réserve — halo vert-jaune</h4>
     <ul>
       <li>Possible, mais avec <b>au moins une raison</b> à dire</li>
-      <li>Chaque raison est un texte du catalogue&nbsp;: non nettoyée, places en trop, places en moins, réservée plus tard, zone non demandée</li>
+      <li>Chaque raison est un texte du catalogue&nbsp;: non nettoyée, places en trop, réservée plus tard, zone non demandée</li>
+      <li>Côté places&nbsp;: <code>1 &lt; vides ≤ tolérance</code></li>
       <li>Le popup les <b>liste toutes</b>, puis Annuler / Placer</li>
+    </ul>
+  </div>
+  <div class="rl mh" style="border-style:dashed">
+    <h4>! Déconseillée — toujours plaçable</h4>
+    <ul>
+      <li><code>vides &gt; tolérance</code></li>
+      <li>Rien ne bloque&nbsp;: un soir creux, il n'y a parfois pas d'autre place</li>
+      <li>Le popup dit «&nbsp;6 places de trop — au-delà de la tolérance de 2&nbsp;»</li>
     </ul>
   </div>
 </div>
@@ -4208,9 +4217,8 @@ a{color:inherit;}
 <table class="cat g">
   <tr><th style="width:34%">Raison</th><th>Texte affiché au dépôt</th></tr>
   <tr><td class="k">Table non nettoyée</td><td><b>Table non nettoyée</b> — Legrand est parti à 20:12, elle n'a pas encore été redressée.</td></tr>
-  <tr><td class="k">Places en trop</td><td><b>2 places de trop</b> — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir.</td></tr>
+  <tr><td class="k">Places en trop (dans la tolérance)</td><td><b>2 places de trop</b> — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir.</td></tr>
   <tr><td class="k">Réservée plus tard</td><td><b>Réservée à 22:00</b> — il reste 1h30, la rotation moyenne est de 1h45.</td></tr>
-  <tr><td class="k">Places en moins</td><td><b>1 place manquante</b> — table de 3 pour 4 personnes. À rapprocher d'une autre&nbsp;?</td></tr>
   <tr><td class="k">Zone non demandée</td><td><b>Terrasse</b> — la réservation demandait la salle. <em style="color:#8A8377">(note du client&nbsp;: « intérieur svp »)</em></td></tr>
 </table>
 
@@ -7559,6 +7567,7 @@ a{color:inherit;}
   .mini.ok { background:#E7F0E9; border:1.5px solid #4E7C59; color:#31563B; }
   .mini.tw { background:#FBF2DC; border:1.5px dashed #B08628; color:#7A5C12; }
   .mini.no { background:#EDE8E2; border:1.5px solid #DCD4C9; color:#B5ADA2; text-decoration:line-through; }
+  .mini.nr { background:#FBFAF8; border:1.5px dashed #B4674F; color:#8C4E3A; }
 
   /* --- ouvertures : semaine --- */
   .wk { display:flex; gap:5px; margin:10px 0 4px; }
@@ -7650,13 +7659,14 @@ a{color:inherit;}
       <div class="set">
         <div class="lft">
           <div class="nm">Places en trop tol&eacute;r&eacute;es</div>
-          <div class="cons">Au-del&agrave;, la table reste proposable mais passe en <b>&laquo;&nbsp;convient avec r&eacute;serve&nbsp;&raquo;</b>. Sers-toi de ce r&eacute;glage pour dire &agrave; quel point tu acceptes de &laquo;&nbsp;gaspiller&nbsp;&raquo; des couverts.</div>
+          <div class="cons">Une place vide reste parfaite. Dans la tol&eacute;rance, la table <b>&laquo;&nbsp;convient avec r&eacute;serve&nbsp;&raquo;</b>&nbsp;; au-del&agrave;, elle reste pla&ccedil;able mais d&eacute;conseill&eacute;e. Sers-toi de ce r&eacute;glage pour dire &agrave; quel point tu acceptes de &laquo;&nbsp;gaspiller&nbsp;&raquo; des couverts.</div>
           <div class="prev">
             <span class="plab">POUR UNE R&Eacute;SERVATION DE 4 PERSONNES, DANS TA SALLE&nbsp;:</span>
             <span class="mini ok">T5 &middot; 4 pl.</span>
-            <span class="mini ok">T2 &middot; 6 pl.</span>
-            <span class="mini tw">T7 &middot; 7 pl.</span>
-            <span class="mini no">T11 &middot; 10 pl.</span>
+            <span class="mini tw">T2 &middot; 6 pl.</span>
+            <span class="mini nr">T7 &middot; 7 pl.</span>
+            <span class="mini nr">T11 &middot; 10 pl.</span>
+            <span class="mini no">T1 &middot; 2 pl.</span>
           </div>
         </div>
         <div class="ctrl"><div class="num">2</div><div class="stepr"><span>&#9650;</span><span>&#9660;</span></div><span class="unit">places</span></div>

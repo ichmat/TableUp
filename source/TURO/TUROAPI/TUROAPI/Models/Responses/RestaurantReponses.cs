@@ -18,6 +18,12 @@
 
         public bool AutoConfirmation { get; set; }
 
+        public bool SuggestCombinations { get; set; }
+
+        public int MinBookingNoticeMinutes { get; set; }
+
+        public int BookingHorizonDays { get; set; }
+
         public List<ZoneResponse> Zones { get; set; } = [];
         public List<ServiceResponse> Services { get; set; } = [];
         public List<CancellationConditionsResponse> CancellationConditions { get; set; } = [];

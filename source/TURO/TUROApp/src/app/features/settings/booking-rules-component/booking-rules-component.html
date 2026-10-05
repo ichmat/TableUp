@@ -1,0 +1,52 @@
+<div class="flex flex-col gap-6 text-text p-2">
+    <div class="flex flex-col">
+        <p class="font-bold text-lg">Règles de réservation</p>
+        <p class="text-sm text-text-muted">Les jours et heures qu'un client peut choisir lui-même.</p>
+    </div>
+
+    @if (restaurant()) {
+        <section class="flex flex-col gap-2">
+            <p class="font-bold">Délai minimum avant une réservation</p>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [step]="15" [formField]="windowForm.minNoticeMinutes" />
+                <span class="text-text-muted">min
+                    @if (draft().minNoticeMinutes) { ({{ formatDuration(draft().minNoticeMinutes!) }}) }
+                </span>
+            </div>
+            @for (error of windowForm.minNoticeMinutes().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        </section>
+
+        <section class="flex flex-col gap-2">
+            <p class="font-bold">Horizon maximum</p>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [formField]="windowForm.horizonDays" />
+                <span class="text-text-muted">jours</span>
+            </div>
+            @for (error of windowForm.horizonDays().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        </section>
+
+        @if (preview(); as window) {
+            @if (window.earliestDay > window.lastDay) {
+                <p class="text-sm bg-coral-soft text-coral-ink rounded-lg p-3">
+                    Avec ces réglages, aucun client ne peut réserver : le délai minimum dépasse l'horizon.
+                </p>
+            } @else {
+                <p class="text-sm bg-app rounded-lg p-3">
+                    Si un client réserve maintenant ({{ window.now }}), le plus tôt possible est {{ window.earliestTime }}@if (window.earliestDay !== window.today) { le {{ formatLongDate(window.earliestDay) }}}, le plus tard le {{ formatLongDate(window.lastDay, window.lastDay.slice(0, 4) !== window.today.slice(0, 4)) }}.
+                </p>
+            }
+        }
+        <p class="text-sm text-text-muted">Le widget de réservation appliquera cette fenêtre.</p>
+
+        <div class="flex flex-row gap-2">
+            <app-button text="Enregistrer" (click)="hasChanges() && !isSaving() && save()" [disabled]="!hasChanges() || isSaving()" />
+            <app-button text="Annuler" type="Secondary" (click)="hasChanges() && cancel()" [disabled]="!hasChanges()" />
+        </div>
+    } @else {
+        <p class="text-sm text-text-muted">Chargement des réglages…</p>
+    }
+</div>

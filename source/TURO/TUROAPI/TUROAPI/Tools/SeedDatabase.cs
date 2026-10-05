@@ -25,6 +25,9 @@ namespace TUROAPI.Tools
                     ReminderEnabled = true,
                     ReminderDelayHours = 24,
                     AutoConfirmation = false,
+                    SuggestCombinations = true,
+                    MinBookingNoticeMinutes = 60,
+                    BookingHorizonDays = 60,
                 });
 
             Guid idService = Guid.Parse("11111111-1111-1111-1111-111111111112");

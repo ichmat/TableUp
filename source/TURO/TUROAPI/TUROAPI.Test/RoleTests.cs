@@ -24,6 +24,9 @@ namespace TUROAPI.Test
         [DataRow("PUT", "api/restaurant/floor-plan/draft")]
         [DataRow("DELETE", "api/restaurant/floor-plan/draft")]
         [DataRow("POST", "api/restaurant/floor-plan/publish")]
+        [DataRow("PUT", "api/restaurant/settings/placement")]
+        [DataRow("PUT", "api/restaurant/settings/booking-window")]
+        [DataRow("GET", "api/restaurant/settings/placement/preview?covers=4&tolerance=2")]
         public async Task Staff_cannot_call_an_admin_endpoint(string method, string path)
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();

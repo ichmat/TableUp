@@ -14,6 +14,8 @@
             <p>Salles et tables ›</p></div>
         <div [class]="isActive('Placement')" (click)="changeSettingPage('Placement')">
             <p>Placement</p></div>
+        <div [class]="isActive('Booking rules')" (click)="changeSettingPage('Booking rules')">
+            <p>Règles de réservation</p></div>
     </div>
 
     <!-- FENÊTRES -->
@@ -27,6 +29,12 @@
             }
             @case ('Room & tables') {
                 <app-rooms-and-tables-component />
+            }
+            @case ('Placement') {
+                <app-placement-settings-component />
+            }
+            @case ('Booking rules') {
+                <app-booking-rules-component />
             }
         }
     </div>

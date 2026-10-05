@@ -83,6 +83,106 @@ namespace TUROAPI.Controllers
             return Ok(service.ToResponse());
         }
 
+        [HttpPut("placement")]
+        [ProducesResponseType<RestaurantReponses>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdatePlacement(PlacementSettingsRequest request)
+        {
+            CheckRange(request.DefaultRotation, MinRotation, MaxRotation, "default rotation (minutes)");
+            if (request.DefaultRotation % RotationStep != 0)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, $"default rotation must be a multiple of {RotationStep} minutes.");
+            }
+            CheckRange(request.SeatTolerance, MinSeatTolerance, MaxSeatTolerance, "seat tolerance");
+            CheckRange(request.LateGrace, 0, MaxLateGrace, "late grace (minutes)");
+
+            Restaurant restaurant = await LoadRestaurantAsync();
+            // PAR-09 : les réservations gardent la durée reçue à leur création, les services leur durée propre
+            restaurant.DefaultRotation = request.DefaultRotation;
+            restaurant.SeatTolerance = request.SeatTolerance;
+            restaurant.LateGrace = request.LateGrace;
+            restaurant.SuggestCombinations = request.SuggestCombinations;
+
+            await context.SaveChangesAsync();
+            await NotifyChangedAsync(DataScope.Restaurant);
+            return Ok(restaurant.ToResponse());
+        }
+
+        [HttpPut("booking-window")]
+        [ProducesResponseType<RestaurantReponses>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateBookingWindow(BookingWindowRequest request)
+        {
+            CheckRange(request.MinNoticeMinutes, 0, MaxMinNotice, "minimum notice (minutes)");
+            CheckRange(request.HorizonDays, MinHorizon, MaxHorizon, "booking horizon (days)");
+
+            Restaurant restaurant = await LoadRestaurantAsync();
+            restaurant.MinBookingNoticeMinutes = request.MinNoticeMinutes;
+            restaurant.BookingHorizonDays = request.HorizonDays;
+
+            await context.SaveChangesAsync();
+            await NotifyChangedAsync(DataScope.Restaurant);
+            return Ok(restaurant.ToResponse());
+        }
+
+        /// <summary>
+        /// L'aperçu de tolerance_places sur les vraies tables (PAR-08). La tolérance vient de la requête : l'écran montre
+        /// l'effet d'une valeur avant de l'enregistrer. Une combinaison active est collée : elle se place comme une table
+        /// </summary>
+        [HttpGet("placement/preview")]
+        [ProducesResponseType<List<PlacementPreviewItemResponse>>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> PreviewPlacement([FromQuery] int covers, [FromQuery] int tolerance)
+        {
+            CheckRange(covers, MinPreviewCovers, MaxPreviewCovers, "covers");
+            CheckRange(tolerance, MinSeatTolerance, MaxSeatTolerance, "seat tolerance");
+
+            var tables = await context.Tables
+                .Where(t => t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
+                .Select(t => new { t.Id, t.Name, t.Capacity, Kind = PlacementEntityKind.Table })
+                .ToListAsync();
+            var combinations = await context.Combinations
+                .Where(c => c.Zone.RestaurantId == CurrentRestaurantId && c.IsActive)
+                .Select(c => new { c.Id, c.Name, c.Capacity, Kind = PlacementEntityKind.Combination })
+                .ToListAsync();
+
+            // Tri en mémoire, ordinal : le même ordre quelle que soit la collation de la base
+            return Ok(tables.Concat(combinations)
+                .OrderBy(e => e.Capacity)
+                .ThenBy(e => e.Name, StringComparer.Ordinal)
+                .Select(e => new PlacementPreviewItemResponse
+                {
+                    Id = e.Id,
+                    Name = e.Name,
+                    Capacity = e.Capacity,
+                    Kind = e.Kind,
+                    Fit = PlacementVerdict.Of(covers, e.Capacity, tolerance),
+                })
+                .ToList());
+        }
+
+        private async Task<Restaurant> LoadRestaurantAsync() =>
+            await context.Restaurants.WithFullInfo().FirstOrDefaultAsync(r => r.Id == CurrentRestaurantId)
+            ?? throw new ApiErrorException(ApiError.CriticalDataInternalError, $"Restaurant of user {CurrentUserId} not found");
+
+        private static void CheckRange(int value, int min, int max, string what)
+        {
+            if (value < min || value > max)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, $"{what} must be between {min} and {max}.");
+            }
+        }
+
+        // Bornes de Paramètres › Placement et Règles de réservation (miroir front : PLACEMENT_LIMITS)
+        private const int MinRotation = 30;
+        private const int MaxRotation = 6 * 60;
+        private const int RotationStep = 15;
+        private const int MinSeatTolerance = 1;
+        private const int MaxSeatTolerance = 20;
+        private const int MinPreviewCovers = 1;
+        private const int MaxPreviewCovers = 50;
+        private const int MaxLateGrace = 2 * 60;
+        private const int MaxMinNotice = 48 * 60;
+        private const int MinHorizon = 1;
+        private const int MaxHorizon = 365;
+
         /// <param name="existing">Le service modifié, null pour une création</param>
         private async Task CheckModificationValidity(AddOrUpdateServiceRequest request, Service? existing = null)
         {

@@ -28,6 +28,19 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task New_restaurant_suggests_combinations_and_takes_bookings_from_one_hour_to_sixty_days_ahead()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient admin = restaurant.AdminClient();
+
+            RestaurantReponses info = await ApiAssert.OkAsync<RestaurantReponses>(await admin.GetAsync("api/restaurant"));
+
+            Assert.IsTrue(info.SuggestCombinations);
+            Assert.AreEqual(60, info.MinBookingNoticeMinutes);
+            Assert.AreEqual(60, info.BookingHorizonDays);
+        }
+
+        [TestMethod]
         public async Task Token_of_a_vanished_restaurant_is_a_critical_error()
         {
             var ghost = new UserStaff { Id = Guid.NewGuid(), RestaurantId = Guid.NewGuid(), Role = UserRole.Admin, Login = "fantome" };

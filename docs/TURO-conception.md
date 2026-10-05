@@ -161,13 +161,15 @@ Toutes les requêtes sont filtrées par `restaurant_id`. C'est la frontière du 
 | `nom` | |
 | `fuseau` | `Europe/Paris` |
 | `rotation_defaut` | Durée par défaut d'un repas, en minutes (ex. 105) |
-| `tolerance_places` | Places en trop tolérées avant de dégrader en `~✓` (ex. 2) |
+| `tolerance_places` | Places vides tolérées au-delà de la première avant que la table ne devienne *déconseillée* (ex. 2). Une place vide reste parfaite |
 | `retard_grace` | Minutes avant d'afficher le cercle « en retard » (ex. 15) |
 | `rappel_actif`, `rappel_delai_h` | Rappel J-1. Le désactiver rend le compteur de no-show plus sévère qu'il n'est juste (§9.9) |
 | `confirmation_auto` | Confirmation automatique d'une réservation web sur un créneau franchement libre (§11.3) |
+| `proposer_rapprochements` | Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table |
+| `delai_min_reservation`, `horizon_reservation` | Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60) |
 
 
-Tous les champs de comportement — de `rotation_defaut` à `confirmation_auto` — se règlent au §9 et gouvernent les sections 5 à 8.
+Tous les champs de comportement — de `rotation_defaut` à `horizon_reservation` — se règlent au §9 et gouvernent les sections 5 à 8.
 
 #### Zone
 
@@ -454,27 +456,32 @@ Pour une réservation donnée et une heure T, chaque entité réservable reçoit
 #### Écartée — estompée à 26 %, pas de halo
 
 - Une affectation recouvre déjà `[T, T + durée]`, ou un conflit d'ensemble (§3.3)
-- `capacite < couverts − tolérance_basse` — une 2p pour 6 personnes ne sert à rien
+- `capacite < couverts` — jamais de tolérance vers le bas : 6 personnes ne vont pas sur une table de 5
 - La zone est fermée pour ce service
 
 #### `✓` Parfaite — halo vert plein, **dépôt immédiat sans popup**
 
 - Libre sur tout l'intervalle
-- `couverts ≤ capacite ≤ couverts + tolerance_places`
+- `capacite − couverts ≤ 1` — une place vide reste parfaite
 - Propre
 - Zone conforme au souhait, s'il y en a un
 
 #### `~✓` À réserve — halo vert-jaune, **popup de confirmation**
 
-Possible, mais avec au moins une raison à dire.
+Possible, mais avec au moins une raison à dire. Côté places : `1 < capacite − couverts ≤ tolerance_places`.
+
+#### `!` Déconseillée — toujours plaçable
+
+`capacite − couverts > tolerance_places`. Un soir creux, il n'y a parfois pas d'autre place : rien ne bloque, mais tous les indicateurs disent que c'est du gaspillage. Le dépôt ouvre le popup (« 6 places de trop — au-delà de la tolérance de 2 »). Le rendu sur le plan (halo) sera fixé avec le moteur ; l'aperçu des Paramètres le montre en contour corail pointillé.
+
+La règle de places vit dans l'API (`PlacementVerdict`) : l'aperçu des Paramètres et le moteur la partagent.
 
 #### Catalogue des raisons
 
 | Raison | Texte affiché au dépôt |
 |---|---|
 | Table non nettoyée | **Table non nettoyée** — Legrand est parti à 20:12, elle n'a pas encore été redressée. *En plaçant Moreau, elle sera considérée comme nettoyée.* |
-| Places en trop | **2 places de trop** — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. |
-| Places en moins | **1 place manquante** — table de 3 pour 4 personnes. À rapprocher d'une autre ? |
+| Places en trop (dans la tolérance) | **2 places de trop** — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. |
 | Réservée plus tard | **Réservée à 22:00** — il reste 1h30, la rotation moyenne est de 1h45. |
 | Zone non demandée | **Terrasse** — la réservation demandait la salle. *(note du client : « intérieur svp »)* |
 | Rapprochement nécessaire | **Rapprochement nécessaire** — les tables 12 et 13 devront être poussées l'une contre l'autre avant l'arrivée. |
@@ -487,7 +494,7 @@ Le moteur ne se contente pas d'accepter un rapprochement, il le **propose** : sa
 
 - **Aucun filtre de proximité** : le restaurateur connaît sa salle, c'est lui qui décide.
 - Mais les candidats sont **triés par distance croissante**, calculée depuis les `x/y` des tables physiques. Les voisines remontent en tête, le reste reste atteignable.
-- Un rapprochement est **toujours `~✓`**, jamais `✓` : pousser deux tables et refaire les couverts coûte du travail physique.
+- Un rapprochement n'est **jamais `✓`** — au mieux `~✓`, ou déconseillé si ses places vides dépassent la tolérance : pousser deux tables et refaire les couverts coûte du travail physique.
 
 ---
 
@@ -1079,7 +1086,7 @@ Presque toutes les règles fines des sections 5 à 8 reposent sur un nombre qui 
 
 > **Aucun réglage n'est posé nu.**
 
-Chacun est suivi d'une phrase qui dit sa conséquence *dans la langue de l'écran qu'il gouverne*, et — quand c'est possible — d'un aperçu construit avec les vraies tables du restaurant. Un champ « Tolérance de places : `[2]` » ne sera jamais réglé correctement par personne. « Pour une réservation de 4 personnes : T5 ✓ · T2 ✓ · T7 ~✓ · T11 ✗ » se règle en trois secondes.
+Chacun est suivi d'une phrase qui dit sa conséquence *dans la langue de l'écran qu'il gouverne*, et — quand c'est possible — d'un aperçu construit avec les vraies tables du restaurant. Un champ « Tolérance de places : `[2]` » ne sera jamais réglé correctement par personne. « Pour une réservation de 4 personnes : T5 ✓ · T2 ✓ · T7 ~✓ · T11 ! · T1 ✗ » se règle en trois secondes.
 
 C'est ici que les promesses du logiciel se tiennent ou se cassent : un réglage mal compris ne produit pas une erreur, il produit une dégradation silencieuse de toutes les aides au placement.
 
@@ -1099,6 +1106,8 @@ Dix sections dans une **colonne permanente de 158 px**, à droite du rail, la se
 | **Équipe** | Comptes, rôles (§4.7) |
 | **Widget** | Apparence et activation du parcours public |
 | **Restaurant** | Nom, fuseau, coordonnées |
+
+`proposer_rapprochements` ne concerne que les combinaisons en sommeil ; une combinaison active se place toujours comme une table.
 
 **Pourquoi une colonne permanente plutôt qu'une liste dont on revient.** Paramétrer, c'est régler plusieurs choses à la suite ; une liste avec retour coûte six navigations pour trois réglages. Surtout, un réglage qu'on ne voit jamais n'est jamais trouvé : la colonne expose en permanence l'étendue de ce qui est réglable. Il reste ~1 100 px pour le contenu sur une Surface Pro, largement assez — c'est du paramétrage, pas un plan de salle.
 

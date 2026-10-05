@@ -60,6 +60,13 @@
   --color-amber: #C9AC52;
   --color-amber-soft: #FDF4E6;
   --color-amber-ink: #8A6D20;
+  /* Vert — aide au placement uniquement, jamais un statut (§4.3, PLACE-04) : parfaite, puis à réserve (vert-jaune) */
+  --color-fit: #4E7C59;
+  --color-fit-soft: #E7F0E9;
+  --color-fit-ink: #31563B;
+  --color-fit-reserve: #A4A83C;
+  --color-fit-reserve-soft: #F6F5DF;
+  --color-fit-reserve-ink: #6C7320;
 }
 
 /* Hachures (PAR-02, PAR-03) : un état se lit aussi par sa forme, jamais par la seule teinte */

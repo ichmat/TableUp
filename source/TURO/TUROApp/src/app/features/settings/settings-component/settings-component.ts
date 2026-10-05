@@ -4,6 +4,8 @@ import { SettingsPages } from '../../../models/settings.model';
 import { OpeningsComponent } from '../openings-component/openings-component';
 import { ServicesAndTimeSlotsComponents } from '../services-and-time-slots-components/services-and-time-slots-components';
 import { RoomsAndTablesComponent } from '../rooms-and-tables-component/rooms-and-tables-component';
+import { PlacementSettingsComponent } from '../placement-settings-component/placement-settings-component';
+import { BookingRulesComponent } from '../booking-rules-component/booking-rules-component';
 
 /** `/parametres?page=salles` : le retour de l'éditeur de plan rouvre la bonne section */
 const PAGES_BY_QUERY: Record<string, SettingsPages> = {
@@ -11,7 +13,7 @@ const PAGES_BY_QUERY: Record<string, SettingsPages> = {
 };
 
 @Component({
-  imports: [OpeningsComponent, ServicesAndTimeSlotsComponents, RoomsAndTablesComponent],
+  imports: [OpeningsComponent, ServicesAndTimeSlotsComponents, RoomsAndTablesComponent, PlacementSettingsComponent, BookingRulesComponent],
   selector: 'app-settings-component',
   templateUrl: './settings-component.html',
   styles:``
