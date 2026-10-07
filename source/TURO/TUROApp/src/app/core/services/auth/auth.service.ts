@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { finalize, map, Observable, shareReplay, tap } from 'rxjs';
 import { ModalService } from '../modal/modal.service';
-import { ApiError, isApiErrorResponse } from '../../../models';
+import { ApiError, isApiErrorResponse, UserRole } from '../../../models';
 
 const KEY_JWT = "jwt";
 
@@ -14,6 +14,9 @@ export class AuthService {
     private _token = signal<string | null>(null);
     token = this._token.asReadonly();
     isConnected = computed(() => this._token() !== null);
+    /** Lu dans le JWT, pour l'affichage seulement : c'est l'API qui refuse ce qui n'est pas permis */
+    role = computed(() => roleOf(this._token()));
+    isAdmin = computed(() => this.role() === 'Admin');
 
     /** Refresh en cours, partagé par toutes les requêtes tombées en `TokenExpired` en même temps */
     private _refresh$: Observable<string> | null = null;
@@ -102,5 +105,21 @@ export class AuthService {
                 }
             })
         })
+    }
+}
+
+const ROLE_CLAIMS = ['role', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+
+/** Le rôle porté par un JWT, ou `null` s'il est absent ou illisible */
+export function roleOf(token: string | null): UserRole | null {
+    if (token === null) {
+        return null;
+    }
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>;
+        const role = ROLE_CLAIMS.map((claim) => payload[claim]).find((value) => value !== undefined);
+        return role === 'Admin' || role === 'Staff' ? role : null;
+    } catch {
+        return null;
     }
 }

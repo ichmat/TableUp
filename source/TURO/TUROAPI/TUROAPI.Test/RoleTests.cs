@@ -27,6 +27,8 @@ namespace TUROAPI.Test
         [DataRow("PUT", "api/restaurant/settings/placement")]
         [DataRow("PUT", "api/restaurant/settings/booking-window")]
         [DataRow("GET", "api/restaurant/settings/placement/preview?covers=4&tolerance=2")]
+        [DataRow("POST", "api/clients/" + AnyId + "/merge/" + AnyId)]
+        [DataRow("DELETE", "api/clients/" + AnyId)]
         public async Task Staff_cannot_call_an_admin_endpoint(string method, string path)
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();
@@ -44,6 +46,8 @@ namespace TUROAPI.Test
         [DataRow("api/restaurant")]
         [DataRow("api/restaurant/closures")]
         [DataRow("api/restaurant/floor-plan")]
+        [DataRow("api/clients")]
+        [DataRow("api/clients/export")]
         public async Task Staff_reads_what_the_service_needs(string path)
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();
@@ -66,6 +70,16 @@ namespace TUROAPI.Test
 
             int zones = await TestApi.WithDbAsync(db => db.Zones.CountAsync(z => z.RestaurantId == restaurant.Id));
             Assert.AreEqual(0, zones);
+        }
+
+        [TestMethod]
+        public async Task Staff_creates_and_updates_clients()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+
+            ClientResponse created = await ClientApi.CreateAsync(staff, ClientApi.Request(allergies: "Arachide", notes: "Habituée"));
+            await ApiAssert.OkAsync<ClientResponse>(await ClientApi.PutAsync(staff, created.Id, ClientApi.Request(allergies: "Arachide, lait")));
         }
     }
 }

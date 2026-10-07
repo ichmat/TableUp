@@ -1,0 +1,88 @@
+<div class="flex flex-col gap-4 p-3 text-text">
+    <p class="font-bold text-xl">{{ client() ? 'Modifier la fiche' : 'Nouveau client' }}</p>
+
+    <section class="flex flex-col gap-1">
+        <p class="text-sm font-bold">Nom</p>
+        <app-input inputClass="w-full" [formField]="clientForm.name" />
+        @for (error of clientForm.name().errors(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+    </section>
+
+    <section class="flex flex-col gap-1">
+        <p class="text-sm font-bold">Téléphones</p>
+        @for (phone of clientForm.phones; track $index; let index = $index) {
+            <div data-phone class="flex flex-row items-center gap-2">
+                <app-input type="tel" inputClass="grow w-auto" [formField]="phone" />
+                @if (index === 0) {
+                    <span class="text-xs text-text-muted">principal</span>
+                } @else {
+                    <button type="button" [attr.data-remove-phone]="index" aria-label="Retirer ce numéro"
+                        class="text-text-muted cursor-pointer px-1" (click)="removePhone(index)">✕</button>
+                }
+            </div>
+            @for (error of phone().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        }
+        @if (draft().phones.length < limits.maxContacts) {
+            <button type="button" class="text-sm text-text-muted underline cursor-pointer self-start" (click)="addPhone()">+ numéro</button>
+        }
+    </section>
+
+    <section class="flex flex-col gap-1">
+        <p class="text-sm font-bold">E-mails</p>
+        @for (email of clientForm.emails; track $index; let index = $index) {
+            <div data-email class="flex flex-row items-center gap-2">
+                <app-input type="email" inputClass="grow w-auto" [formField]="email" />
+                @if (index === 0) {
+                    <span class="text-xs text-text-muted">principal</span>
+                } @else {
+                    <button type="button" [attr.data-remove-email]="index" aria-label="Retirer cet e-mail"
+                        class="text-text-muted cursor-pointer px-1" (click)="removeEmail(index)">✕</button>
+                }
+            </div>
+            @for (error of email().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        }
+        @if (draft().emails.length < limits.maxContacts) {
+            <button type="button" class="text-sm text-text-muted underline cursor-pointer self-start" (click)="addEmail()">+ e-mail</button>
+        }
+    </section>
+    @for (error of clientForm.phones().errors(); track $index) {
+        <p class="text-sm text-red-700">{{ error.message }}</p>
+    }
+
+    <section class="flex flex-col gap-1">
+        <p class="text-sm font-bold text-coral-ink">Allergie</p>
+        <textarea [formField]="clientForm.allergies" rows="2" placeholder="Aucune allergie connue"
+            class="rounded-lg border-4 border-coral-soft bg-surface p-2 text-sm outline-none focus:border-coral"></textarea>
+        @for (error of clientForm.allergies().errors(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+    </section>
+
+    <section class="flex flex-col gap-1 rounded-lg bg-app p-2">
+        <p class="text-xs font-bold text-text-muted">NOTES · INTERNE — Ne sort jamais du logiciel</p>
+        <textarea [formField]="clientForm.internalNotes" rows="3"
+            class="rounded-lg border-4 border-border-soft bg-app p-2 text-sm outline-none focus:border-interactive"></textarea>
+        @for (error of clientForm.internalNotes().errors(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+    </section>
+
+    <section class="flex flex-row flex-wrap gap-3">
+        @for (tag of tags; track tag) {
+            <label class="flex flex-row items-center gap-1 text-sm cursor-pointer">
+                <input type="checkbox" class="size-4 accent-slate cursor-pointer" [checked]="draft().tags.includes(tag)" (change)="toggleTag(tag)" />
+                {{ tagLabel[tag] }}
+            </label>
+        }
+    </section>
+
+    <div class="flex flex-row gap-2">
+        <app-button text="Enregistrer" [disabled]="isSaving()" (click)="!isSaving() && save()" />
+        <app-button text="Annuler" type="Secondary" (click)="cancelled.emit()" />
+    </div>
+</div>

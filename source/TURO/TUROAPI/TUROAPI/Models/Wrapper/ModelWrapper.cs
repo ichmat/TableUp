@@ -193,6 +193,63 @@ namespace TUROAPI.Models.Wrapper
                 Users = restaurant.Users.Select(u => u.ToResponse()).ToList()
             };
         }
+
+        public static ClientListItemResponse ToListItem(this Client client, DateOnly? lastServiceDay)
+        {
+            return new ClientListItemResponse
+            {
+                Id = client.Id,
+                Name = client.Name,
+                Phone = ContactList.Split(client.Phone).FirstOrDefault(),
+                Tags = client.Tags,
+                HasAllergy = !string.IsNullOrWhiteSpace(client.Allergies),
+                VisitCount = client.VisitCount,
+                NoShowCount = client.NoShowCount,
+                AtRisk = ClientCounters.IsAtRisk(client),
+                LastServiceDay = lastServiceDay,
+            };
+        }
+
+        /// <summary>
+        /// <paramref name="client"/> doit avoir ses réservations chargées, avec leurs affectations, tables et combinaisons
+        /// </summary>
+        public static ClientResponse ToResponse(this Client client, List<ClientMergeCandidateResponse> mergeCandidates)
+        {
+            List<Reservation> visits = client.Reservations.Where(r => ClientCounters.IsVisit(r.Status)).ToList();
+            return new ClientResponse
+            {
+                Id = client.Id,
+                Name = client.Name,
+                Phones = ContactList.Split(client.Phone),
+                Emails = ContactList.Split(client.Email),
+                Allergies = client.Allergies,
+                InternalNotes = client.InternalNotes,
+                Tags = client.Tags,
+                VisitCount = client.VisitCount,
+                NoShowCount = client.NoShowCount,
+                AverageCovers = visits.Count == 0 ? null : Math.Round((decimal)visits.Average(r => r.Covers), 1),
+                AtRisk = ClientCounters.IsAtRisk(client),
+                MarketingConsent = client.MarketingConsent,
+                CreatedAt = client.CreatedAt,
+                MergeCandidates = mergeCandidates,
+                Version = client.Version,
+                History = client.Reservations
+                    .OrderByDescending(r => r.Start)
+                    .Select(r => new ClientHistoryItemResponse
+                    {
+                        Id = r.Id,
+                        Start = r.Start,
+                        ServiceDay = r.ServiceDay,
+                        Covers = r.Covers,
+                        Status = r.Status,
+                        PlaceName = r.Assignments
+                            .OrderByDescending(a => a.AssignedAt)
+                            .Select(a => a.Table?.Name ?? a.Combination?.Name)
+                            .FirstOrDefault(),
+                    })
+                    .ToList(),
+            };
+        }
     }
 
 }

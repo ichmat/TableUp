@@ -1,4 +1,4 @@
-import { addDays, dayCount, dayOfWeek, formatLongDate, monthGrid, todayIn } from './calendar-date';
+import { addDays, dayCount, dayOfWeek, formatHistoryDate, formatLongDate, formatShortDate, formatWeekday, monthGrid, todayIn } from './calendar-date';
 
 describe('calendar-date', () => {
   it('should add days across months and years', () => {
@@ -30,5 +30,21 @@ describe('calendar-date', () => {
 
   it('should format a long French date', () => {
     expect(formatLongDate('2026-12-24')).toBe('jeudi 24 décembre');
+  });
+});
+
+describe('client dates', () => {
+  it('should name the weekday of a day', () => {
+    expect(formatWeekday('2026-08-20')).toBe('jeudi');
+  });
+
+  it('should write a short date, with the year on demand', () => {
+    expect(formatShortDate('2026-08-28')).toBe('28 août');
+    expect(formatShortDate('2025-08-28', true)).toBe('28 août 2025');
+  });
+
+  it('should write a history date with a short weekday', () => {
+    expect(formatHistoryDate('2026-08-20')).toBe('jeu. 20 août');
+    expect(formatHistoryDate('2025-05-04', true)).toBe('dim. 4 mai 2025');
   });
 });

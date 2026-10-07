@@ -1,0 +1,85 @@
+<div class="flex flex-col h-full bg-surface rounded-xl shadow-xl p-3 gap-3 text-text overflow-hidden">
+    <div class="flex flex-row flex-wrap items-center gap-2">
+        <p class="font-bold text-lg mr-2">Clients</p>
+        <app-input inputClass="w-72" placeholder="Nom ou numéro de téléphone…" [value]="searchText()" (valueChange)="onSearch($event)" />
+        <app-button text="+ Client" (click)="create.emit()" />
+        <div class="grow"></div>
+        <app-button text="Exporter CSV" type="Secondary" [disabled]="isExporting()" (click)="!isExporting() && exportCsv()" />
+    </div>
+
+    <div class="flex flex-row flex-wrap items-center gap-2 text-sm">
+        @for (sort of sorts; track sort.value) {
+            <button type="button" [attr.data-sort]="sort.value" [class]="chipClass(query().sort === sort.value)" (click)="setSort(sort.value)">{{ sort.label }}</button>
+        }
+        <span class="w-px h-5 bg-border mx-1"></span>
+        <select data-filter="tag" class="px-3 py-1 rounded-full border-2 border-border-soft bg-surface cursor-pointer"
+            [value]="query().tag ?? ''" (change)="setTag($any($event.target).value)">
+            <option value="">Tous les tags</option>
+            @for (tag of tags; track tag) {
+                <option [value]="tag">{{ tagLabel[tag] }}</option>
+            }
+        </select>
+        <button type="button" data-filter="risk" [class]="chipClass(query().atRisk)" (click)="toggleRisk()">Risque</button>
+    </div>
+
+    @if (listFailed()) {
+        <p class="text-sm text-coral-ink">La liste des clients n'a pas pu être chargée.</p>
+    }
+
+    <div class="grow overflow-y-auto">
+        @if (page(); as current) {
+            @if (current.items.length === 0) {
+                <p class="text-sm text-text-muted p-3">
+                    @if (query().search.trim()) { Aucun client pour « {{ query().search.trim() }} » } @else { Aucun client }
+                </p>
+            } @else {
+                <table class="w-full text-sm">
+                    <thead class="text-xs text-text-muted text-left">
+                        <tr>
+                            <th class="py-2 px-2 font-bold">NOM</th>
+                            <th class="px-2 font-bold">TÉLÉPHONE</th>
+                            <th class="px-2 font-bold max-xl:hidden">TAGS</th>
+                            <th class="px-2 font-bold text-right max-lg:hidden">VISITES</th>
+                            <th class="px-2 font-bold max-lg:hidden">DERNIÈRE</th>
+                            <th class="px-2 font-bold text-right whitespace-nowrap">NO-SHOW / VISITES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (item of current.items; track item.id) {
+                            <tr [attr.data-client]="item.id" [class]="rowClass(item)" (click)="opened.emit(item.id)">
+                                <td class="py-2 px-2 font-bold">{{ listName(item.name) }}</td>
+                                <td class="px-2 tabular-nums whitespace-nowrap">{{ item.phone ? formatPhone(item.phone) : '—' }}</td>
+                                <td class="px-2 max-xl:hidden">
+                                    <div class="flex flex-row flex-wrap gap-1">
+                                        @for (tag of item.tags; track tag) {
+                                            <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ tagLabel[tag] }}</span>
+                                        }
+                                        @if (item.hasAllergy) {
+                                            <span data-allergy class="text-[0.65rem] font-bold px-1.5 rounded bg-coral-soft text-coral-ink">ALLERGIE</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="px-2 text-right tabular-nums max-lg:hidden">{{ item.visitCount }}</td>
+                                <td class="px-2 max-lg:hidden">{{ lastDay(item) }}</td>
+                                <td class="px-2 text-right">
+                                    <span data-ratio [attr.data-at-risk]="item.atRisk" [class]="ratioClass(item)">{{ item.noShowCount }} / {{ item.visitCount }}</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (current.items.length < current.total) {
+                    <div class="flex justify-center p-3">
+                        @if (query().pageSize < maxPageSize) {
+                            <app-button text="Afficher plus" type="Secondary" (click)="showMore()" />
+                        } @else {
+                            <p class="text-sm text-text-muted">Les {{ maxPageSize }} premiers clients sont affichés : affinez la recherche.</p>
+                        }
+                    </div>
+                }
+            }
+        } @else if (!listFailed()) {
+            <p class="text-sm text-text-muted p-3">Chargement des clients…</p>
+        }
+    </div>
+</div>

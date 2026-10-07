@@ -1090,13 +1090,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <div class="tw"><table><thead><tr><th>Champ</th><th>Rôle</th></tr></thead><tbody>
 <tr><td><code>id</code>, <code>restaurant_id</code></td><td></td></tr>
-<tr><td><code>nom</code>, <code>email</code>, <code>telephone</code></td><td><strong>Le téléphone est la clé d'identité</strong>, l'e-mail la clé de secours</td></tr>
+<tr><td><code>nom</code>, <code>email</code>, <code>telephone</code></td><td><strong>Le téléphone est la clé d'identité</strong>, l'e-mail la clé de secours. <code>telephone</code> et <code>email</code> sont des listes séparées par <code>;</code>, la première valeur est la principale ; les numéros sont normalisés (chiffres seuls, <code>+33</code> vaut <code>0</code>)</td></tr>
 <tr><td><code>allergies</code></td><td>Champ structuré, à part. C'est lui qui s'épingle en corail sur la fiche réservation</td></tr>
 <tr><td><code>notes_internes</code></td><td>Habitudes, occasions. <strong>Ne sort jamais du logiciel</strong> : ni e-mail, ni widget</td></tr>
 <tr><td><code>tags</code></td><td>vip · habitué · à surveiller · presse. <strong>Manuels</strong>, jamais calculés</td></tr>
-<tr><td><code>nb_visites</code>, <code>nb_noshow</code></td><td>Stockés, écriture symétrique, redressables</td></tr>
+<tr><td><code>nb_visites</code>, <code>nb_noshow</code></td><td>Stockés, écriture symétrique, justes par construction</td></tr>
 <tr><td><code>consentement_marketing</code>, <code>consentement_le</code></td><td>Au modèle, sans écran en V1</td></tr>
 <tr><td><code>anonymise_le</code></td><td>Effacement = anonymisation</td></tr>
+<tr><td><code>cree_le</code></td><td>Trie les fiches sans réservation</td></tr>
 </tbody></table></div>
 
 <p>Il n'existe <strong>pas</strong> de champ <code>preferences</code> : le commentaire ponctuel appartient à la réservation, ce qui doit durer va dans <code>notes_internes</code>.</p>
@@ -1833,7 +1834,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <div class="rg"><b>JRN-01</b><div>Une ligne <strong>horodatée et signée</strong> par événement, sur chaque réservation. L'auteur est une personne, ou <em>système</em>.</div></div>
 <div class="rg"><b>JRN-02</b><div>S'y inscrivent : création (avec la source) · acceptation ou refus · rappel envoyé · confirmation du client · placement et déplacements · arrivée · libération · no-show · annulation avec <code>annule_par</code> · toute modification d'heure, de date ou de couverts · acceptation des conditions avec leur numéro de version.</div></div>
-<div class="rg"><b>JRN-03</b><div>Le journal est <strong>l'autorité</strong> face aux compteurs client, qui ne sont qu'un cache.</div></div>
+<div class="rg"><b>JRN-03</b><div>Le journal trace chaque transition. Les compteurs client ne se recalculent pas à partir de lui : ils sont justes par construction (CPT-03).</div></div>
 </div>
 <h2 id="sec-10"><span class="hn">10</span>Clients — le mini-CRM</h2>
 
@@ -1858,7 +1859,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>CLI-02</b><div>Tri par défaut : <strong>récents</strong>, jamais alphabétique.</div></div>
 <div class="rg"><b>CLI-03</b><div>L'en-tête de la colonne de fiabilité s'appelle <strong>« No-show / Visites »</strong>, jamais « Fiabilité ».</div></div>
 <div class="rg"><b>CLI-04</b><div>Le ratio porte <strong>toujours son dénominateur</strong> : <code>2 / 41</code>, jamais <code>2</code>.</div></div>
-<div class="rg"><b>CLI-05</b><div>Le ratio passe en <strong>corail plein</strong> au-delà d'un seuil (seuil non tranché, cf. annexe C).</div></div>
+<div class="rg"><b>CLI-05</b><div>Le ratio passe en <strong>corail plein</strong> à partir de deux no-shows, quand le ratio affiché atteint un tiers (<code>3 × no-shows ≥ visites</code>) : <code>2 / 41</code> reste neutre, <code>2 / 3</code> passe en corail.</div></div>
 </div>
 
 <h3 id="sec-10.3"><span class="hn">10.3</span>La fiche</h3>
@@ -1883,7 +1884,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
       <div class="hs hs-sep"><em>PASSÉ</em></div>
       <div class="hs"><span>12 juin</span><span>2p · table 1</span><span class="bg bg-fin">TERMINÉE</span></div>
       <div class="hs"><span>4 mai</span><span>4p · table 7</span><span class="bg bg-ns">NO-SHOW</span></div>
-      <div class="fi-a"><span class="bt bt-or">Nouvelle réservation</span><span class="bt">Modifier</span><span class="bt bt-dsc">Recompter</span></div>
+      <div class="fi-a"><span class="bt bt-or">Nouvelle réservation</span><span class="bt">Modifier</span></div>
     </div>
   </div>
 </figure>
@@ -1902,7 +1903,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <div class="rg"><b>CPT-01</b><div><code>nb_visites</code> et <code>nb_noshow</code> sont des <strong>champs stockés</strong>, pas des agrégats calculés à l'affichage.</div></div>
 <div class="rg"><b>CPT-02</b><div><strong>L'écriture est symétrique</strong> : tout passage <em>vers</em> <code>no_show</code> incrémente, tout passage <em>hors de</em> <code>no_show</code> décrémente — y compris le bouton « Rouvrir ».</div></div>
-<div class="rg"><b>CPT-03</b><div>Le compteur est un <strong>cache</strong>. Une action <strong>« Recompter »</strong> existe sur la fiche, et un recomptage global tourne la nuit.</div></div>
+<div class="rg"><b>CPT-03</b><div><strong>Pas de recomptage.</strong> Une transition n'est acceptée que si l'état d'avant est toujours celui lu par l'API ; le compteur s'incrémente en base, dans la même transaction. Il est juste par construction.</div></div>
 </div>
 
 <h3 id="sec-10.5"><span class="hn">10.5</span>Doublons et anonymisation</h3>
@@ -1917,9 +1918,15 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
 <div class="rg"><b>CLI-11</b><div>La fusion ne se propose <strong>que sur une clé exacte</strong>. Jamais sur le nom : deux homonymes fusionnés mélangeraient leurs allergies.</div></div>
-<div class="rg"><b>CLI-12</b><div>La fusion additionne <code>nb_visites</code> et <code>nb_noshow</code>, puis déclenche un recomptage.</div></div>
+<div class="rg"><b>CLI-12</b><div>La fusion additionne <code>nb_visites</code> et <code>nb_noshow</code>.</div></div>
 <div class="rg"><b>CLI-13</b><div><strong>Supprimer un client = l'anonymiser.</strong> Sont effacés : nom, e-mail, téléphone, allergies, notes internes, tags. <code>anonymise_le</code> est horodaté.</div></div>
 <div class="rg"><b>CLI-14</b><div><strong>Les réservations survivent</strong>, signées « Client supprimé », avec leurs couverts, leurs dates et leurs statuts. Elles sont <strong>conservées définitivement</strong> : le chiffre d'affaires de l'an dernier ne bouge pas.</div></div>
+<div class="rg"><b>CLI-15</b><div>Une <strong>visite</strong> est une réservation assise ou terminée ; « Dernière » est la réservation la plus récente, à venir comprise.</div></div>
+<div class="rg"><b>CLI-16</b><div>Un numéro de téléphone n'appartient qu'à <strong>une seule fiche active</strong> ; un second est refusé, la fiche existante est proposée.</div></div>
+<div class="rg"><b>CLI-17</b><div>La fusion met les allergies et les notes internes <strong>bout à bout</strong> ; aucune allergie ne se perd.</div></div>
+<div class="rg"><b>CLI-18</b><div>La fusion et la suppression sont réservées à l'<strong>Administrateur</strong> : elles ne se défont pas.</div></div>
+<div class="rg"><b>CLI-19</b><div>L'export CSV ne contient <strong>ni allergies ni notes internes</strong>.</div></div>
+<div class="rg"><b>CLI-20</b><div>Une fiche modifiée sur un autre poste pendant qu'un formulaire est ouvert <strong>n'est pas écrasée</strong> : l'enregistrement est refusé et propose de recharger. Une allergie ajoutée ailleurs ne disparaît jamais en silence.</div></div>
 </div>
 
 <h2 id="sec-11"><span class="hn">11</span>Créer une réservation</h2>
@@ -2533,7 +2540,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="tw"><table><thead><tr><th>Sujet</th><th>Ce qui reste à décider</th></tr></thead><tbody>
 <tr><td>Coût de la bande d'heures</td><td>Tester chaque créneau contre l'occupation et les rapprochements possibles à chaque frappe. C'est ce que la projection matérialisée (§17) doit résoudre — son format exact n'est pas arrêté</td></tr>
 <tr><td>Pas des créneaux dans la bande</td><td>La bande affiche des demi-heures. Un service au quart d'heure la rend deux fois plus longue</td></tr>
-<tr><td>Seuil du ratio no-show</td><td>À partir de quel rapport <code>2 / 41</code> passe-t-il en corail plein ? Un seuil absolu punit le nouveau client, un seuil relatif le rare visiteur</td></tr>
 <tr><td>Zoom et déplacement du plan</td><td>Nécessaire pour les grandes salles sur tablette, en service comme dans l'éditeur. Mécanique non conçue</td></tr>
 <tr><td>Hauteur de l'agenda</td><td>Au-delà d'une vingtaine de tables, les lignes ne tiennent plus. Défilement vertical présumé, non conçu</td></tr>
 <tr><td>Agenda et salles</td><td>Les onglets de salle filtrent-ils l'agenda, ou l'agenda montre-t-il toutes les salles groupées ?</td></tr>
@@ -2545,7 +2551,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td>Deux demandes sur le même créneau serré</td><td>Le comportement métier est arrêté (RG RES-03) ; l'affichage de ce cas ne l'est pas</td></tr>
 <tr><td>Réservation à cheval sur deux services</td><td>Un déjeuner tardif qui déborde sur le dîner n'a pas de comportement défini</td></tr>
 <tr><td>Correction d'une clôture automatique</td><td>« Corriger les heures » est proposé ; l'écran de saisie n'est pas dessiné</td></tr>
-<tr><td>Recomptage nocturne</td><td>Fréquence et coût sur une grosse base non évalués</td></tr>
 <tr><td>Texte proposé des conditions d'annulation</td><td>La rédaction exacte n'est pas écrite, et elle engage le restaurant</td></tr>
 <tr><td>Nombre d'allergies par service</td><td>Repli au-delà de trois derrière « +3 autres ». Seuil posé au jugé</td></tr>
 <tr><td>Formats du fond de plan</td><td>Une image est acceptée. PDF multi-pages ou plan vectoriel demanderaient une conversion</td></tr>

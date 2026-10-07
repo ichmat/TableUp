@@ -117,6 +117,9 @@ namespace TUROAPI.Migrations
                     b.Property<DateTime?>("ConsentAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
@@ -143,12 +146,18 @@ namespace TUROAPI.Migrations
                         .IsRequired()
                         .HasColumnType("integer[]");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.Property<int>("VisitCount")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RestaurantId");
+                    b.HasIndex("RestaurantId", "AnonymizedAt");
 
                     b.ToTable("Clients");
                 });

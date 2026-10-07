@@ -12,6 +12,8 @@ export enum ApiError{
     ReservationsImpacted = 'ReservationsImpacted',
     ClosureImpactsReservations = 'ClosureImpactsReservations',
     InvalidRequest = 'InvalidRequest',
+    ClientPhoneTaken = 'ClientPhoneTaken',
+    ClientChanged = 'ClientChanged',
 }
 
 export interface ApiErrorResponse{

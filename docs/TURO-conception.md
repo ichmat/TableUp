@@ -307,13 +307,14 @@ Détaillé au §7.
 | Champ | Note |
 |---|---|
 | `id`, `restaurant_id` | |
-| `nom`, `email`, `telephone` | **Le téléphone est la clé d'identité**, l'e-mail la clé de secours (§7.2) |
+| `nom`, `email`, `telephone` | **Le téléphone est la clé d'identité**, l'e-mail la clé de secours (§7.2). `telephone` et `email` sont des listes séparées par `;`, la première valeur est la principale ; les numéros sont normalisés (chiffres seuls, `+33` vaut `0`) |
 | `allergies` | **Champ à part, jamais dans les notes.** C'est ce qui permet de l'épingler en corail sur la fiche réservation (§6.6) |
 | `notes_internes` | Habitudes, occasions, « habitué », « VIP ». **Ne sort jamais du logiciel** — ni e-mail, ni widget |
 | `tags` | vip · habitué · à surveiller · presse. **Manuels**, jamais calculés (§7.7) |
-| `nb_visites`, `nb_noshow` | **Stockés**, écriture symétrique, cache redressable (§7.4) |
+| `nb_visites`, `nb_noshow` | **Stockés**, écriture symétrique, justes par construction (§7.4) |
 | `consentement_marketing`, `consentement_le` | Distinct de la réservation. Prévu au modèle, pas d'écran en v1 (§7.9) |
 | `anonymise_le` | Suppression = anonymisation : les réservations survivent (§7.8) |
+| `cree_le` | Trie les fiches sans réservation (tri « Récents ») |
 
 Il n'y a **pas** de champ `preferences` : le commentaire appartient à la réservation, ce qui doit durer va dans `notes_internes`.
 
@@ -903,6 +904,8 @@ En-tête : recherche **par nom et par numéro de téléphone** (même règle qu'
 | Le ratio porte **toujours son dénominateur** | `2 / 41` est une bonne cliente ; `2 / 3` est autre chose. Le même chiffre nu condamnerait les deux |
 | Le ratio passe en **corail plein** au-delà d'un seuil | Même badge que le no-show du §6.2. Une anomalie coûteuse se voit de loin |
 
+**Le seuil corail** : au moins deux no-shows, et le ratio affiché atteint un tiers (`3 × no-shows ≥ visites`). `2 / 41` reste neutre, `2 / 6` et `2 / 3` passent en corail. **Visite** = réservation assise ou terminée ; **Dernière** = la réservation la plus récente, à venir comprise.
+
 ### 7.4 Les compteurs sont stockés, et l'écriture est symétrique
 
 `nb_visites` et `nb_noshow` sont **des champs stockés**, pas des agrégats calculés à l'affichage.
@@ -918,7 +921,7 @@ C'est l'exception à la règle du §3.2 (« ce qui se déduit ne se stocke pas �
 Deux garde-fous, sans lesquels le stockage produirait un compteur faux :
 
 1. **L'écriture est symétrique.** Tout passage **vers** `no_show` incrémente ; tout passage **hors de** `no_show` décrémente — y compris le bouton « Rouvrir » du §6.5. Un compteur qui ne sait que monter colle une faute à un client pour toujours.
-2. **Le journal reste l'autorité.** Le compteur est un *cache*, la vérité est dans les réservations et le journal (§6.8). D'où une action **« Recompter »** sur la fiche client, et un recomptage global nocturne — pour redresser une dérive après un import, une migration ou un bug, sans rien perdre.
+2. **Juste par construction, sans recomptage.** Seule l'API change un statut, et elle n'accepte une transition que si l'état d'avant est toujours celui qu'elle a lu ; sinon elle refuse et rien ne bouge. Le compteur s'incrémente en base, dans la même transaction que le changement de statut. Le compteur est donc juste par construction : aucun recomptage, qui obligerait à relire tout l'historique.
 
 ### 7.5 La fiche client
 
@@ -978,11 +981,19 @@ Le volet M parle d'un tag « fidèle » : tentant de le calculer sur le nombre d
 
 La dernière ligne ferme un vrai risque. Deux « Paul Lefebvre » sont souvent deux personnes réelles ; les fusionner mélange leurs allergies, et une allergie héritée du mauvais client envoie quelqu'un aux urgences. En n'autorisant la fusion que sur une clé identique, **le scénario devient impossible par construction** plutôt que déconseillé par un avertissement qu'on cliquera sans lire.
 
-La fusion additionne `nb_visites` et `nb_noshow`, puis déclenche un recomptage (§7.4).
+La fusion additionne `nb_visites` et `nb_noshow`.
+
+Un numéro n'appartient qu'à une seule fiche active : l'API refuse le second. La fusion met les allergies et les notes bout à bout, sans rien perdre. Fusion et suppression sont réservées à l'administrateur : elles ne se défont pas.
+
+Une fiche modifiée sur un autre poste pendant qu'un formulaire est ouvert n'est pas écrasée : l'enregistrement est refusé et propose de recharger la fiche. Sinon, une allergie ajoutée ailleurs disparaîtrait sans que personne ne le voie.
 
 #### Supprimer un client = anonymiser
 
 Le droit à l'effacement est réel, mais effacer *les réservations* ferait **bouger le chiffre d'affaires de l'an dernier**. La suppression efface le nom, l'e-mail, le téléphone, l'allergie et les notes ; les réservations restent, signées « Client supprimé », avec leurs couverts et leurs dates. Les comptes sont justes, la personne a disparu.
+
+#### Export CSV
+
+Nom, téléphones, e-mails, tags, visites, no-shows, dernière, consentement. **Jamais les allergies ni les notes internes.**
 
 ### 7.9 Ce qui ne va pas ici
 
@@ -1510,8 +1521,6 @@ Le reste ne bouge pas, et c'est voulu : **les tables non libérées apparaissent
 | Placer depuis l'écran Réservations | « Placer » bascule vers la vue Plan au bon service. Le retour vers la liste après placement n'est pas conçu |
 | File d'envoi différé | Le bandeau de 8 s suppose une file de messages annulable côté serveur. Comportement si l'application est fermée pendant le délai : non tranché |
 | Modification d'une réservation | §6.6 dit que le panneau signale l'affectation devenue invalide. L'écran de modification lui-même n'est pas dessiné |
-| Seuil du ratio no-show | À partir de quel rapport le badge `2 / 41` passe-t-il en corail plein ? Un seuil absolu punit le nouveau client, un seuil relatif punit le rare visiteur. Non tranché |
-| Recomptage nocturne | §7.4 prévoit un recomptage global des compteurs client. Sa fréquence et son coût sur une grosse base ne sont pas évalués |
 | Import de clients | Un restaurateur qui arrive avec un fichier existant contourne la règle « le téléphone est la clé » : l'écran d'import et sa déduplication ne sont pas conçus |
 | Calcul de la bande d'heures | §8.3 suppose de tester chaque créneau contre l'occupation et les rapprochements possibles. Le coût de ce calcul à chaque frappe n'est pas évalué |
 | Pas des créneaux | La bande affiche des demi-heures. Un service qui travaille au quart d'heure la rendrait deux fois plus longue : non tranché |

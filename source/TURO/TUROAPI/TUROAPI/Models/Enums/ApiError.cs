@@ -31,5 +31,9 @@ namespace TUROAPI.Models.Enums
         ClosureImpactsReservations = 9,
         [ApiErrorInfo(HttpStatusCode.BadRequest, "Invalid request : {0}")]
         InvalidRequest = 10,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "This phone number already belongs to {0}.")]
+        ClientPhoneTaken = 11,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "This client was changed on another device since it was opened.")]
+        ClientChanged = 12,
     }
 }

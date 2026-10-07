@@ -1,1 +1,15 @@
-<p>clients-component works!</p>
+<div class="flex flex-row h-full w-full gap-3">
+    <app-client-list class="flex-1 min-w-0" [selectedId]="selectedId()" (opened)="open($event)" (create)="startCreate()" />
+
+    @if (panelOpen()) {
+        <aside class="w-[322px] shrink-0 h-full bg-surface rounded-xl shadow-xl overflow-y-auto">
+            @if (mode() === 'create') {
+                <app-client-form (saved)="onSaved($event)" (cancelled)="close()" (openClient)="open($event)" />
+            } @else if (mode() === 'edit' && detail()) {
+                <app-client-form [client]="detail()" (saved)="onSaved($event)" (cancelled)="mode.set('view')" (openClient)="open($event)" />
+            } @else {
+                <app-client-sheet (edit)="startEdit()" (closed)="close()" />
+            }
+        </aside>
+    }
+</div>
