@@ -55,11 +55,18 @@
 
   /* Violet — les combinaisons (tables virtuelles), partout où elles apparaissent */
   --color-violet: #5B4A8A;
+  --color-violet-soft: #EDE6F5;
 
   /* Ambre — horaires modifiés */
   --color-amber: #C9AC52;
   --color-amber-soft: #FDF4E6;
   --color-amber-ink: #8A6D20;
+
+  /* Bleu d'une table réservée : c'est ce qu'une confirmation produit sur le plan (§6.2) */
+  --color-booked: #3D6E8E;
+  --color-booked-soft: #E4EFF7;
+  --color-booked-ink: #3D6E8E;
+
   /* Vert — aide au placement uniquement, jamais un statut (§4.3, PLACE-04) : parfaite, puis à réserve (vert-jaune) */
   --color-fit: #4E7C59;
   --color-fit-soft: #E7F0E9;

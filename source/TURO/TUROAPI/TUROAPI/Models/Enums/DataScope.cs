@@ -10,6 +10,8 @@ namespace TUROAPI.Models.Enums
         /// <summary>GET /api/restaurant/closures</summary>
         Closures,
         /// <summary>GET /api/restaurant/floor-plan</summary>
-        FloorPlan
+        FloorPlan,
+        /// <summary>GET /api/clients (liste et fiche)</summary>
+        Clients
     }
 }

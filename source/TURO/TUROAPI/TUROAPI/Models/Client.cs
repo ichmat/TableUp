@@ -37,6 +37,13 @@ namespace TUROAPI.Models
         // Deleting a client = anonymizing it
         public DateTime? AnonymizedAt { get; set; }
 
+        // Trie les fiches qui n'ont encore aucune réservation (tri « Récents »)
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Jeton de concurrence : la colonne système xmin de PostgreSQL, qui change à chaque écriture de la ligne
+        [Timestamp]
+        public uint Version { get; set; }
+
         public List<Reservation> Reservations { get; set; } = [];
     }
 }

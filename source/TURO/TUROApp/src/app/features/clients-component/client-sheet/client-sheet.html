@@ -1,0 +1,114 @@
+@if (client(); as c) {
+    <div class="flex flex-col gap-4 p-3 text-text">
+        <!-- 1. IDENTITÉ -->
+        <section data-block="identity" class="flex flex-col gap-1">
+            <div class="flex flex-row items-start gap-2">
+                <p class="font-bold text-xl grow">{{ c.name }}</p>
+                <button type="button" aria-label="Fermer la fiche" class="text-text-muted cursor-pointer px-2" (click)="closed.emit()">✕</button>
+            </div>
+            <div class="flex flex-row flex-wrap items-center gap-1">
+                @for (tag of c.tags; track tag) {
+                    <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ tagLabel[tag] }}</span>
+                }
+                @if (missingTags().length > 0) {
+                    <button type="button" class="text-xs text-text-muted border border-dashed border-border rounded px-1.5 cursor-pointer"
+                        (click)="tagMenuOpen.set(!tagMenuOpen())">+ tag</button>
+                }
+            </div>
+            @if (tagMenuOpen()) {
+                <div class="flex flex-row flex-wrap gap-1">
+                    @for (tag of missingTags(); track tag) {
+                        <button type="button" [attr.data-tag-option]="tag" class="text-xs px-2 py-1 rounded bg-app cursor-pointer hover:brightness-95"
+                            [disabled]="isBusy()" (click)="addTag(tag)">{{ tagLabel[tag] }}</button>
+                    }
+                </div>
+            }
+            @for (phone of c.phones; track phone) {
+                <p class="text-sm tabular-nums">{{ formatPhone(phone) }}</p>
+            }
+            @for (email of c.emails; track email) {
+                <p class="text-sm">{{ email }}</p>
+            }
+        </section>
+
+        <!-- 2. ALLERGIE : jamais repliée -->
+        <section data-block="allergy">
+            @if (c.allergies) {
+                <div class="rounded-lg bg-coral-soft text-coral-ink p-2">
+                    <p class="text-xs font-bold">ALLERGIE</p>
+                    <p class="text-sm whitespace-pre-line">{{ c.allergies }}</p>
+                </div>
+            } @else {
+                <p class="text-sm text-text-muted">Aucune allergie connue</p>
+            }
+        </section>
+
+        <!-- 3. COMPTEURS -->
+        <section data-block="counters" class="grid grid-cols-3 gap-2 text-center">
+            <div><p class="font-bold text-lg tabular-nums">{{ c.visitCount }}</p><p class="text-xs text-text-muted">visites</p></div>
+            <div><p class="font-bold text-lg tabular-nums">{{ formatCovers(c.averageCovers) }}</p><p class="text-xs text-text-muted">couverts moy.</p></div>
+            <div><p class="font-bold text-lg tabular-nums">{{ c.noShowCount }}</p><p class="text-xs text-text-muted">no-shows</p></div>
+        </section>
+
+        <!-- 4. NOTES · INTERNE : ne sortent jamais du logiciel -->
+        @if (c.internalNotes) {
+            <section data-block="notes" class="rounded-lg bg-app p-2">
+                <p class="text-xs font-bold text-text-muted">NOTES · INTERNE</p>
+                <p class="text-sm whitespace-pre-line">{{ c.internalNotes }}</p>
+            </section>
+        }
+
+        <!-- 5. FUSION (administrateur) -->
+        @if (isAdmin() && c.mergeCandidates.length > 0) {
+            <section data-block="merge" class="flex flex-col gap-2 rounded-lg border-2 border-dashed border-border p-2">
+                @for (candidate of c.mergeCandidates; track candidate.id) {
+                    <div class="flex flex-row items-center gap-2">
+                        <p class="text-sm grow">
+                            {{ candidate.sharedKey === 'Email' ? 'Même e-mail que' : 'Même numéro que' }} <b>{{ candidate.name }}</b>
+                            @if (candidate.phone) { ({{ formatPhone(candidate.phone) }}) }
+                        </p>
+                        <app-button text="Fusionner" type="Secondary" buttonClass="h-9 min-w-0 px-3" [disabled]="isBusy()" (click)="!isBusy() && merge(candidate)" />
+                    </div>
+                }
+            </section>
+        }
+
+        <!-- 6. HISTORIQUE -->
+        @if (history(); as h) {
+            <section data-block="history" class="flex flex-col gap-1">
+                <p class="text-xs font-bold text-text-muted">HISTORIQUE · {{ h.total }} RÉSERVATION{{ h.total > 1 ? 'S' : '' }}</p>
+                @if (h.total === 0) {
+                    <p class="text-sm text-text-muted">Aucune réservation pour l'instant.</p>
+                }
+                @for (row of h.rows; track row.item.id; let index = $index) {
+                    @if (index === h.ruleBefore) {
+                        <div data-past-separator class="flex flex-row items-center gap-2 text-[0.65rem] font-bold text-text-muted">
+                            <span class="h-px grow bg-border"></span>PASSÉES<span class="h-px grow bg-border"></span>
+                        </div>
+                    }
+                    <div [attr.data-history-row]="row.item.id" class="flex flex-row items-center gap-2 text-sm py-1">
+                        <span class="grow">{{ historyDate(row) }}</span>
+                        <span class="tabular-nums">{{ row.item.covers }}p</span>
+                        <span class="w-14 text-text-muted">{{ row.item.placeName ?? '—' }}</span>
+                        <span [class]="'text-[0.65rem] font-bold px-1.5 rounded ' + statusStyle[row.item.status].className">{{ statusStyle[row.item.status].label }}</span>
+                    </div>
+                }
+                @if (h.hidden > 0) {
+                    <button type="button" class="text-sm text-text-muted underline cursor-pointer self-start" (click)="showAllHistory.set(true)">Voir les {{ h.hidden }} autres</button>
+                }
+            </section>
+        }
+
+        <!-- 7. ACTIONS -->
+        <section data-block="actions" class="flex flex-row flex-wrap items-center gap-3">
+            <app-button text="Modifier" type="Secondary" (click)="edit.emit()" />
+            @if (isAdmin()) {
+                <button type="button" class="text-sm text-text-muted underline cursor-pointer" [disabled]="isBusy()" (click)="anonymize()">Supprimer le client</button>
+            }
+        </section>
+    </div>
+} @else if (detailFailed()) {
+    <p class="p-3 text-sm text-coral-ink">La fiche n'a pas pu être chargée.</p>
+} @else {
+    <p class="p-3 text-sm text-text-muted">Chargement de la fiche…</p>
+}

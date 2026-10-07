@@ -38,6 +38,10 @@ namespace TUROAPI.Context
                 .HasOne(d => d.Restaurant)
                 .WithOne()
                 .HasForeignKey<FloorPlanDraft>(d => d.RestaurantId);
+
+            // La liste ne lit que les fiches actives (anonymisées exclues)
+            modelBuilder.Entity<Client>()
+                .HasIndex(c => new { c.RestaurantId, c.AnonymizedAt });
         }
     }
 }

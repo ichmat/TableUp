@@ -1,4 +1,6 @@
 import { addDays, todayIn } from '../../../shared/utils/calendar-date';
+import { timeIn } from '../../../shared/utils/time-of-day';
+export { timeIn };
 
 /** Ce qu'un client qui réserverait à `now` pourrait choisir, en dates et heures du restaurant */
 export interface BookingWindowPreview {
@@ -18,8 +20,4 @@ export function bookingWindow(now: Date, timeZone: string, minNoticeMinutes: num
         earliestTime: timeIn(timeZone, earliest),
         lastDay: addDays(today, horizonDays),
     };
-}
-
-export function timeIn(timeZone: string, instant: Date): string {
-    return new Intl.DateTimeFormat('fr-FR', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
 }

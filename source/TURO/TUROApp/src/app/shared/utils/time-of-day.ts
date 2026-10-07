@@ -44,3 +44,8 @@ export function slotStarts(opening: string, closing: string, step: number): numb
     }
     return starts;
 }
+
+/** L'heure `HH:mm` d'un instant, dans le fuseau du restaurant */
+export function timeIn(timeZone: string, instant: Date): string {
+    return new Intl.DateTimeFormat('fr-FR', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
+}

@@ -62,3 +62,22 @@ export function formatLongDate(date: string, withYear = false): string {
         timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}),
     }).format(toUtc(date));
 }
+
+/** `'2026-08-20'` → `'jeudi'` */
+export function formatWeekday(date: string): string {
+    return new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'long' }).format(toUtc(date));
+}
+
+/** `'2026-08-28'` → `'28 août'` (`withYear` ajoute l'année) */
+export function formatShortDate(date: string, withYear = false): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+        timeZone: 'UTC', day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}),
+    }).format(toUtc(date));
+}
+
+/** `'2026-08-20'` → `'jeu. 20 août'` (`withYear` ajoute l'année) */
+export function formatHistoryDate(date: string, withYear = false): string {
+    return new Intl.DateTimeFormat('fr-FR', {
+        timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}),
+    }).format(toUtc(date));
+}

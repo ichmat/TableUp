@@ -69,7 +69,7 @@ namespace TUROAPI.Test.Infrastructure
         /// <param name="startDay">Le jour réel du début, quand le repas commence après minuit (RES-02)</param>
         public async Task<Reservation> AddReservationAsync(DateOnly serviceDay, int hour, int minute = 0, int covers = 2,
             ReservationStatus status = ReservationStatus.Confirmed, string? clientName = "Dupont",
-            Guid? preferredZoneId = null, DateOnly? startDay = null)
+            Guid? preferredZoneId = null, DateOnly? startDay = null, Guid? clientId = null)
         {
             var reservation = new Reservation
             {
@@ -83,7 +83,11 @@ namespace TUROAPI.Test.Infrastructure
                 Source = ReservationSource.Phone,
                 PreferredZoneId = preferredZoneId,
             };
-            if (clientName != null)
+            if (clientId != null)
+            {
+                reservation.ClientId = clientId;
+            }
+            else if (clientName != null)
             {
                 reservation.Client = new Client { Id = Guid.NewGuid(), RestaurantId = Id, Name = clientName, Phone = "0600000000" };
             }
