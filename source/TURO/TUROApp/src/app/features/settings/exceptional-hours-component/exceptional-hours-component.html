@@ -1,0 +1,71 @@
+<div class="flex flex-col gap-3">
+    <p class="font-bold text-text-muted text-sm">Horaires exceptionnels</p>
+
+    <div class="flex flex-row flex-wrap gap-4 items-start">
+        <!-- ANNÉE ET MOIS -->
+        <div class="flex flex-col gap-1 w-32 shrink-0">
+            <div class="flex flex-row items-center justify-between mb-1">
+                <button type="button" (click)="shiftYear(-1)" aria-label="Année précédente"
+                    class="size-7 rounded-md cursor-pointer text-text-muted hover:bg-app">‹</button>
+                <span class="font-bold text-text tabular-nums">{{ year() }}</span>
+                <button type="button" (click)="shiftYear(1)" aria-label="Année suivante"
+                    class="size-7 rounded-md cursor-pointer text-text-muted hover:bg-app">›</button>
+            </div>
+            @for (name of months; track $index; let index = $index) {
+                <button type="button" (click)="selectMonth(index + 1)"
+                    class="flex flex-row items-center justify-between text-left text-sm rounded-md px-2 py-1 cursor-pointer"
+                    [class]="month() === index + 1 ? 'bg-slate text-app font-bold' : 'text-text-muted hover:bg-app hover:text-text'">
+                    {{ name }}
+                    @if (monthsWithExceptions().has(index + 1)) {
+                        <span class="size-1.5 rounded-full bg-coral" aria-label="porte des exceptions"></span>
+                    }
+                </button>
+            }
+        </div>
+
+        <!-- MOIS -->
+        <div class="flex flex-col gap-2 w-80 shrink-0">
+            <p class="font-bold text-text">{{ months[month() - 1] }} {{ year() }}</p>
+            <div class="grid grid-cols-7 gap-1">
+                @for (header of dayHeaders; track header) {
+                    <span class="text-[10px] font-bold tracking-wider text-text-muted text-center">{{ header }}</span>
+                }
+                @for (day of days(); track day.date) {
+                    <button type="button" [class]="dayClass(day)" [disabled]="!day.clickable" (click)="select(day)">
+                        {{ day.dayOfMonth }}
+                    </button>
+                }
+            </div>
+
+            <!-- LÉGENDE : couleur ET forme (PAR-02) -->
+            <div class="flex flex-col gap-1 text-xs text-text-muted mt-1">
+                <span class="flex flex-row items-center gap-2"><span class="size-4 rounded-sm border-2 border-coral hatch-closed"></span>Fermeture exceptionnelle</span>
+                <span class="flex flex-row items-center gap-2"><span class="size-4 rounded-sm border-2 border-dashed border-amber bg-amber-soft"></span>Horaires modifiés</span>
+                <span class="flex flex-row items-center gap-2"><span class="size-4 rounded-sm hatch-usual-closed"></span>Fermé d'habitude, non modifiable ici</span>
+            </div>
+        </div>
+
+        <!-- PÉRIODE CHOISIE -->
+        <div class="grow basis-80 min-w-0">
+            @for (key of editorKeys(); track key) {
+                <app-closure-editor-component
+                    [closure]="selectedClosure()"
+                    [day]="selectedDate()!"
+                    [today]="today()"
+                    [restaurantName]="restaurantService.model()?.name ?? ''"
+                    [services]="restaurantService.model()?.services ?? []"
+                    (done)="closeEditor()" />
+            } @empty {
+                @if (closureService.loadFailed()) {
+                    <p class="text-sm text-coral-ink">
+                        Les horaires exceptionnels n'ont pas pu être chargés. Aucune exception n'est affichée, et aucune ne peut être ajoutée tant que l'API ne répond pas.
+                    </p>
+                } @else {
+                <p class="text-sm text-text-muted">
+                    Choisissez un jour pour le fermer ou modifier ses horaires. Un jour ouvert normalement ne porte aucune marque.
+                </p>
+                }
+            }
+        </div>
+    </div>
+</div>

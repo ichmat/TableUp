@@ -21,6 +21,12 @@ export interface Restaurant {
     reminderDelayHours: number,
     /** Confirme d'office une demande web posée sur un créneau franchement libre */
     autoConfirmation: boolean,
+    /** Propose de recoller les combinaisons en sommeil. Une combinaison active compte toujours */
+    suggestCombinations: boolean,
+    /** Fenêtre de réservation du widget : délai minimum, en minutes */
+    minBookingNoticeMinutes: number,
+    /** Fenêtre de réservation du widget : horizon, en jours */
+    bookingHorizonDays: number,
     zones: Zone[],
     services: RestaurantService[],
     /** Historique des versions du texte d'annulation */

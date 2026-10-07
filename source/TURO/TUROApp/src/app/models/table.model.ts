@@ -11,9 +11,9 @@ export interface Table {
     name: string,
     capacity: number,
     shape: TableShape,
-    /** Position horizontale sur le plan, en mètres */
+    /** En mètres : coin haut-gauche du rectangle non tourné, depuis le coin haut-gauche de la salle */
     x: number,
-    /** Position verticale sur le plan, en mètres */
+    /** En mètres, voir `x` */
     y: number,
     width: number,
     height: number,

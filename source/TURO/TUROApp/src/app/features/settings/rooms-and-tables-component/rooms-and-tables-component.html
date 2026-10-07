@@ -1,0 +1,68 @@
+<div class="flex flex-col gap-4 text-text p-2">
+    <div class="flex flex-row flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-col">
+            <p class="font-bold text-lg">Salles et tables</p>
+            <p class="text-sm text-text-muted">Les salles se règlent ici. Les tables se posent dans l'éditeur de plan, à l'échelle.</p>
+        </div>
+        <app-button text="+ Salle" (click)="addZone()" />
+    </div>
+
+    @if (draftChanges(); as changes) {
+        <a routerLink="/parametres/plan"
+            class="flex flex-row items-center justify-between rounded-lg border border-border bg-app px-3 py-2 text-sm hover:brightness-95">
+            <span>Brouillon en cours · {{ changes }} modification{{ changes > 1 ? 's' : '' }}, non publié</span>
+            <span class="font-bold">Reprendre ›</span>
+        </a>
+    }
+
+    @if (floorPlan.loadFailed()) {
+        <p class="text-sm text-coral-ink">Les salles n'ont pas pu être chargées.</p>
+    } @else if (zones().length === 0) {
+        <p class="text-sm text-text-muted">Aucune salle. Créez-en une pour y poser vos tables.</p>
+    }
+
+    @for (zone of zones(); track zone.id; let first = $first; let last = $last) {
+        <div data-zone class="flex flex-col gap-3 rounded-xl border border-border p-3">
+            <div class="flex flex-row flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-col">
+                    <p class="font-bold">{{ zone.name }}</p>
+                    <p class="text-sm text-text-muted">
+                        {{ formatMetres(zone.width) }} × {{ formatMetres(zone.height) }}
+                        · {{ activeTables(zone).length }} table{{ activeTables(zone).length > 1 ? 's' : '' }}
+                        · {{ seats(zone) }} place{{ seats(zone) > 1 ? 's' : '' }}
+                    </p>
+                </div>
+                <div class="flex flex-row flex-wrap items-center gap-1">
+                    <button type="button" (click)="moveZone(zone, -1)" [disabled]="first" aria-label="Monter la salle"
+                        class="size-9 rounded-lg cursor-pointer hover:bg-app disabled:opacity-30 disabled:cursor-default">↑</button>
+                    <button type="button" (click)="moveZone(zone, 1)" [disabled]="last" aria-label="Descendre la salle"
+                        class="size-9 rounded-lg cursor-pointer hover:bg-app disabled:opacity-30 disabled:cursor-default">↓</button>
+                    <app-button text="Modifier" type="Secondary" buttonClass="h-9" (click)="editZone(zone)" />
+                    @if (canDelete(zone)) {
+                        <app-button text="Supprimer" type="Tertiary" buttonClass="h-9" (click)="deleteZone(zone)" />
+                    }
+                    <a [routerLink]="['/parametres/plan']" [queryParams]="{ salle: zone.id }"
+                        class="h-9 px-3 rounded-lg font-bold bg-slate text-app flex items-center hover:brightness-110">Modifier le plan ›</a>
+                </div>
+            </div>
+            @if (activeTables(zone).length > 0) {
+                <div class="flex flex-row flex-wrap gap-1">
+                    @for (table of activeTables(zone); track table.id) {
+                        <span class="rounded-full bg-app px-3 py-1 text-sm">{{ table.name }} · {{ table.capacity }}p</span>
+                    }
+                </div>
+            } @else {
+                <p class="text-sm text-text-muted">Aucune table : ouvrez le plan pour en poser.</p>
+            }
+            @if (zone.combinations.length > 0) {
+                <div class="flex flex-row flex-wrap gap-1">
+                    @for (combination of zone.combinations; track combination.id) {
+                        <span class="rounded-full bg-violet px-3 py-1 text-sm text-surface" [class.opacity-60]="!combination.isActive">
+                            {{ combination.name }} · {{ combination.capacity }}p{{ combinationState(combination) }}
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
-import { DayWeek, OccupancyMode, RestaurantService as ServiceModel } from '../../../models';
+import { Component, computed, inject, input } from '@angular/core';
+import { DayWeek, RestaurantService as ServiceModel } from '../../../models';
 import { DayWeekPipe } from '../../../shared/pipes/day-week/day-week-pipe';
 import { Button } from '../../../shared/components/button/button';
 import { TimeOnlyPipe } from '../../../shared/pipes/time-only/time-only-pipe';
@@ -23,6 +23,7 @@ export class UsualOpeningHoursComponent {
     ));
 
   addService(){
+    // Réglages de créneaux par défaut, modifiables ensuite dans « Services et créneaux »
     let data : ServiceModel = {
       id: "",
       restaurantId: "",
@@ -30,14 +31,14 @@ export class UsualOpeningHoursComponent {
       opening: '',
       closing: '',
       slotStep: 15,
-      occupancyMode: 'Rotate',
+      occupancyMode: 'Rotation',
       expectedDuration: null,
       maxCadence: null,
       coverCap: null,
     }
     this.displayModal("Ajouter service", data).then((isOk) => {
       if(isOk){
-        this.restaurantService.createService(data);
+        this.restaurantService.createService(data).then((error) => this.showError(error));
       }
     });
   }
@@ -54,15 +55,23 @@ export class UsualOpeningHoursComponent {
   }
 
   updateService(service:ServiceModel){
-    this.displayModal("Modifier service", service).then((isOk) => {
+    // Copie : le modèle affiché ne change qu'au rechargement, une fois l'API d'accord
+    const data = {...service};
+    this.displayModal("Modifier service", data).then((isOk) => {
       if(isOk){
-        this.restaurantService.updateService(service.id, service);
+        this.restaurantService.updateService(service.id, data).then((error) => this.showError(error));
       }
     });
   }
 
   deleteService(service:ServiceModel){
-    this.restaurantService.deleteService(service.id);
+    this.restaurantService.deleteService(service.id).then((error) => this.showError(error));
+  }
+
+  private showError(error: string | null){
+    if(error !== null){
+      this._modalService.infoModal("Erreur", error);
+    }
   }
 
   displayModal(title:string, data:ServiceModel): Promise<boolean>{
@@ -83,35 +92,6 @@ export class UsualOpeningHoursComponent {
           required: true, 
           setValue: (val) => data.closing = val ?? '' 
         },
-        
-        {
-          valueType: 'radio-number', 
-          label: "Pas pour chaque créneaux", 
-          required: true,
-          defaultValue: data.slotStep,
-          options: [
-            {label:"15 min", value: 15},
-            {label:"30 min", value: 30},
-            {label:"1 h", value: 60},
-          ],
-          setValue: (val) => data.slotStep = val ?? 15
-        },
-
-        {
-          valueType: 'radio', 
-          label: "Type d'occupation", 
-          required: true,
-          defaultValue: data.occupancyMode,
-          options: [
-            {label:"Rotation", value: 'Rotate'},
-            {label:"Service unique", value: 'SingleService'},
-          ],
-          setValue: (val) => data.occupancyMode = val as OccupancyMode
-        },
-
-        {valueType: 'number', label: "Durée moyen d'une réservation", defaultValue: data.expectedDuration, setValue: (val) => data.expectedDuration = val },
-        {valueType: 'number', label: "Nb couvert max par créneaux", defaultValue: data.maxCadence, setValue: (val) => data.maxCadence = val },
-        {valueType: 'number', label: "Nb couvert max du service", defaultValue: data.coverCap, setValue: (val) => data.coverCap = val },
       ]
     )
   }

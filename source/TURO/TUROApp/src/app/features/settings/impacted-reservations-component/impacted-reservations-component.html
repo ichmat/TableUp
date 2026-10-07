@@ -1,0 +1,15 @@
+<div class="flex flex-col rounded-lg border border-border bg-app text-text">
+    @for (reservation of reservations(); track reservation.id) {
+        <div class="flex flex-row items-baseline gap-3 px-3 py-2 border-b border-border last:border-b-0 text-sm">
+            <span class="font-bold tabular-nums shrink-0">
+                @if (spansDays()) { {{ formatLongDate(reservation.serviceDay) }} · }
+                {{ formatMinutes(toMinutes(reservation.localStart)) }}
+            </span>
+            <span class="grow min-w-0 truncate">
+                {{ reservation.clientName ?? 'Client de passage' }} · {{ reservation.covers }}p
+                @if (reservation.tables.length > 0) { · {{ reservation.tables.join(', ') }} }
+            </span>
+            <span class="shrink-0 text-text-muted tabular-nums">{{ reservation.clientPhone ?? 'pas de téléphone' }}</span>
+        </div>
+    }
+</div>

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TUROAPI.Context;
 using TUROAPI.Controllers.Base;
+using TUROAPI.Extensions;
 using TUROAPI.Models;
 using TUROAPI.Models.Enums;
 using TUROAPI.Models.Responses;
@@ -23,10 +24,7 @@ namespace TUROAPI.Controllers
         {
             Restaurant restaurant =
                 await context.Restaurants
-                .Include(r => r.Zones)
-                .Include(r => r.Services)
-                .Include(r => r.CancellationConditions)
-                .Include(r => r.Users)
+                .WithFullInfo()
                 .FirstOrDefaultAsync(x => x.Id == CurrentRestaurantId)
                 ?? throw new ApiErrorException(ApiError.CriticalDataInternalError, $"Restaurant of user {CurrentUserId} not found");
 

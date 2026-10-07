@@ -26,6 +26,15 @@ namespace TUROAPI.Models
         // Auto-confirms a web request placed on a clearly free slot
         public bool AutoConfirmation { get; set; }
 
+        // Propose de recoller les combinaisons en sommeil (IsActive = false). Une combinaison active compte toujours
+        public bool SuggestCombinations { get; set; } = true;
+
+        // Fenêtre de réservation du widget (PAR-10) : pas de réservation à moins de ce délai…
+        public int MinBookingNoticeMinutes { get; set; } = 60;
+
+        // … ni au-delà de cet horizon
+        public int BookingHorizonDays { get; set; } = 60;
+
         public List<Zone> Zones { get; set; } = [];
         public List<Service> Services { get; set; } = [];
         public List<Closure> Closures { get; set; } = [];

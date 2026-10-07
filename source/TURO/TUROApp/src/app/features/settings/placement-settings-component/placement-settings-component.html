@@ -1,0 +1,130 @@
+<div class="flex flex-col gap-6 text-text p-2">
+    <div class="flex flex-col">
+        <p class="font-bold text-lg">Placement</p>
+        <p class="text-sm text-text-muted">Comment le logiciel propose une table quand tu places une réservation.</p>
+    </div>
+
+    @if (restaurant()) {
+        <!-- PLACES EN TROP TOLÉRÉES (PAR-08) -->
+        <section class="flex flex-col gap-2">
+            <p class="font-bold">Places en trop tolérées</p>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [formField]="settingsForm.seatTolerance" />
+                <span class="text-text-muted">places</span>
+            </div>
+            @for (error of settingsForm.seatTolerance().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+            <p class="text-sm">
+                Une place vide reste parfaite.
+                @if ((draft().seatTolerance ?? 0) > 1) {
+                    Jusqu'à {{ draft().seatTolerance }} places vides, la table convient avec réserve ;
+                    au-delà, elle reste plaçable mais déconseillée.
+                } @else {
+                    Au-delà, la table reste plaçable mais déconseillée.
+                }
+                Une table trop petite n'est jamais proposée.
+            </p>
+            <div class="flex flex-col gap-2 bg-app rounded-lg p-3">
+                <div class="flex flex-row flex-wrap items-center gap-2 text-sm">
+                    <span>Pour une réservation de</span>
+                    <app-number-input inputClass="w-20" [min]="limits.minPreviewCovers" [max]="limits.maxPreviewCovers" [(value)]="previewCovers" />
+                    <span>personnes, dans ta salle :</span>
+                </div>
+                @if (preview.hasValue() && preview.value().length === 0) {
+                    <p class="text-sm text-text-muted">Aucune table active : posez-en dans l'éditeur de plan.</p>
+                } @else if (preview.hasValue()) {
+                    <div class="flex flex-row flex-wrap gap-2">
+                        @for (item of preview.value(); track item.id) {
+                            <span [attr.data-fit]="item.fit" [class]="chipClass(item)"
+                                [title]="item.name + ' : ' + fitLabel[item.fit]">
+                                <b>{{ fitSymbol[item.fit] }}</b>
+                                @if (item.kind === 'Combination') { <span class="size-2 rounded-full bg-violet"></span> }
+                                {{ item.name }} · {{ item.capacity }} pl.
+                            </span>
+                        }
+                    </div>
+                    <p class="text-xs text-text-muted">✓ parfaite · ~✓ à réserve · ! déconseillée, toujours plaçable · ✗ trop petite · ● combinaison collée</p>
+                } @else if (preview.error()) {
+                    <p class="text-sm text-coral-ink">L'aperçu n'a pas pu être calculé.</p>
+                }
+            </div>
+        </section>
+
+        <!-- DURÉE DE ROTATION PAR DÉFAUT (PAR-09) -->
+        <section class="flex flex-col gap-2">
+            <p class="font-bold">Durée de rotation par défaut</p>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [step]="limits.rotationStep" [formField]="settingsForm.defaultRotation" />
+                <span class="text-text-muted">min
+                    @if (draft().defaultRotation) { ({{ formatDuration(draft().defaultRotation!) }}) }
+                </span>
+            </div>
+            @for (error of settingsForm.defaultRotation().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+            <p class="text-sm">
+                Durée attribuée à une nouvelle réservation.
+                Une réservation à {{ formatMinutes(rotationExample) }} libère sa table à {{ formatMinutes(rotationEnd()) }}.
+                Les réservations déjà prises ne bougent pas : chacune garde la durée qu'elle avait le jour de sa création.
+            </p>
+            @for (service of servicesWithOwnDuration(); track service.id) {
+                <p class="text-sm text-text-muted">
+                    {{ service.day | dayWeekPipe }} {{ formatMinutes(toMinutes(service.opening)) }} garde sa durée de {{ formatDuration(service.expectedDuration!) }}.
+                </p>
+            }
+        </section>
+
+        <!-- DÉLAI AVANT « EN RETARD » -->
+        <section class="flex flex-col gap-2">
+            <p class="font-bold">Délai avant « en retard »</p>
+            <div class="flex flex-row items-center gap-2">
+                <app-number-input inputClass="w-28" [step]="5" [formField]="settingsForm.lateGrace" />
+                <span class="text-text-muted">min</span>
+            </div>
+            @for (error of settingsForm.lateGrace().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+            <p class="text-sm">
+                @if (draft().lateGrace === 0) {
+                    Une réservation de {{ formatMinutes(lateExample) }} passe en retard dès {{ formatMinutes(lateExample) }} :
+                } @else {
+                    Une réservation de {{ formatMinutes(lateExample) }} passe en retard à {{ formatMinutes(lateAt()) }} :
+                }
+                la table prend l'anneau corail et le bouton « No-show » apparaît sur la fiche. Avant, il n'existe pas.
+            </p>
+        </section>
+
+        <!-- PROPOSER LES RAPPROCHEMENTS -->
+        <section class="flex flex-col gap-2">
+            <label class="flex flex-row items-center gap-2 cursor-pointer font-bold">
+                <input type="checkbox" class="size-4 accent-interactive cursor-pointer" [formField]="settingsForm.suggestCombinations" />
+                Proposer les rapprochements de tables
+            </label>
+            <p class="text-sm">
+                Quand aucune table seule ne convient, proposer de recoller les combinaisons déjà déclarées dans l'éditeur de plan.
+                Désactivé, la bande d'heures affichera davantage de « complet ».
+                Les combinaisons collées en ce moment se placent toujours comme une table.
+            </p>
+            <p class="text-sm text-text-muted">
+                @if (sleepingCombinations() === 0) {
+                    Aucune combinaison en sommeil pour l'instant.
+                } @else if (!draft().suggestCombinations) {
+                    {{ sleepingCombinations() }} combinaison{{ sleepingCombinations() > 1 ? 's' : '' }} en sommeil
+                    {{ sleepingCombinations() > 1 ? 'resteront' : 'restera' }} en mémoire, sans être proposée{{ sleepingCombinations() > 1 ? 's' : '' }}.
+                } @else if (sleepingCombinations() === 1) {
+                    1 combinaison en sommeil pourra être proposée.
+                } @else {
+                    {{ sleepingCombinations() }} combinaisons en sommeil pourront être proposées.
+                }
+            </p>
+        </section>
+
+        <div class="flex flex-row gap-2">
+            <app-button text="Enregistrer" (click)="hasChanges() && !isSaving() && save()" [disabled]="!hasChanges() || isSaving()" />
+            <app-button text="Annuler" type="Secondary" (click)="hasChanges() && cancel()" [disabled]="!hasChanges()" />
+        </div>
+    } @else {
+        <p class="text-sm text-text-muted">Chargement des réglages…</p>
+    }
+</div>

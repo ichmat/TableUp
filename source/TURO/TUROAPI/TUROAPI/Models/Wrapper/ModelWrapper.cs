@@ -1,9 +1,34 @@
-﻿using TUROAPI.Models.Responses;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using TUROAPI.Models.Requests;
+using TUROAPI.Models.Responses;
+using TUROAPI.Services;
 
 namespace TUROAPI.Models.Wrapper
 {
     public static class ModelWrapper
     {
+        // Les enums partent en chaînes, comme dans le reste de l'API
+        public static readonly JsonSerializerOptions DraftJsonOptions =
+            new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
+        public static FloorPlanDraftContent ReadContent(this FloorPlanDraft draft)
+        {
+            return JsonSerializer.Deserialize<FloorPlanDraftContent>(draft.Content, DraftJsonOptions) ?? new FloorPlanDraftContent();
+        }
+
+        public static FloorPlanDraftResponse ToResponse(this FloorPlanDraft draft)
+        {
+            FloorPlanDraftContent content = draft.ReadContent();
+            return new FloorPlanDraftResponse
+            {
+                Tables = content.Tables,
+                Decors = content.Decors,
+                Combinations = content.Combinations,
+                UpdatedAt = draft.UpdatedAt,
+            };
+        }
+
         public static UserStaffResponse ToResponse(this UserStaff user)
         {
             return new UserStaffResponse
@@ -41,6 +66,42 @@ namespace TUROAPI.Models.Wrapper
                 ExpectedDuration = service.ExpectedDuration,
                 MaxCadence = service.MaxCadence,
                 CoverCap = service.CoverCap
+            };
+        }
+
+        public static ClosureResponse ToResponse(this Closure closure)
+        {
+            return new ClosureResponse
+            {
+                Id = closure.Id,
+                RestaurantId = closure.RestaurantId,
+                From = closure.From,
+                To = closure.To,
+                Type = closure.Type,
+                ReplacementHours = closure.ReplacementHours?
+                    .Select(h => new ReplacementHoursResponse { Opening = h.Opening, Closing = h.Closing })
+                    .ToList(),
+                Reason = closure.Reason,
+                ReasonDetail = closure.ReasonDetail,
+                CustomerMessage = closure.CustomerMessage
+            };
+        }
+
+        public static ImpactedReservationResponse ToImpactedResponse(this ReservationImpact.LocalReservation impacted)
+        {
+            Reservation reservation = impacted.Reservation;
+            return new ImpactedReservationResponse
+            {
+                Id = reservation.Id,
+                ServiceDay = reservation.ServiceDay,
+                LocalStart = impacted.LocalStart,
+                Covers = reservation.Covers,
+                ClientName = reservation.Client?.Name,
+                ClientPhone = reservation.Client?.Phone,
+                Tables = reservation.Assignments
+                    .Select(a => a.Table?.Name ?? a.Combination?.Name)
+                    .OfType<string>()
+                    .ToList()
             };
         }
 
@@ -87,7 +148,7 @@ namespace TUROAPI.Models.Wrapper
                 ZoneId = combination.ZoneId,
                 Name = combination.Name,
                 Capacity = combination.Capacity,
-                Tables = combination.Tables.Select(t => t.ToResponse()).ToList(),
+                TableIds = combination.Tables.Select(t => t.Id).ToList(),
                 IsActive = combination.IsActive,
                 ActivateAt = combination.ActivateAt,
                 DeactivateAt = combination.DeactivateAt
@@ -123,6 +184,9 @@ namespace TUROAPI.Models.Wrapper
                 ReminderEnabled = restaurant.ReminderEnabled,
                 ReminderDelayHours = restaurant.ReminderDelayHours,
                 AutoConfirmation = restaurant.AutoConfirmation,
+                SuggestCombinations = restaurant.SuggestCombinations,
+                MinBookingNoticeMinutes = restaurant.MinBookingNoticeMinutes,
+                BookingHorizonDays = restaurant.BookingHorizonDays,
                 Zones = restaurant.Zones.Select(z => z.ToResponse()).ToList(),
                 Services = restaurant.Services.Select(s => s.ToResponse()).ToList(),
                 CancellationConditions = restaurant.CancellationConditions.Select(c => c.ToResponse()).ToList(),

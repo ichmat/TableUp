@@ -12,7 +12,8 @@ namespace TUROAPI.Models.Responses
 
         public int Capacity { get; set; }
 
-        public List<TableResponse> Tables { get; set; } = [];
+        // Les tables physiques membres (miroir front : tableIds)
+        public List<Guid> TableIds { get; set; } = [];
 
         public bool IsActive { get; set; }
 

@@ -555,6 +555,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 .ap-ok{background:var(--vert-f);color:#3B6244;border:1px solid #A9C6B2}
 .ap-rs{background:#F6F5DF;color:#6C7320;border:1px solid #D3D68F}
 .ap-no{background:#E9E5DF;color:#A29B92;border:1px solid #D2CBC2}
+.ap-nr{background:#FBFAF8;color:#8C4E3A;border:1px dashed #B4674F}
 
 /* ===================== §9.3 calendrier ===================== */
 .split-cal .bx{padding-bottom:12px}
@@ -954,10 +955,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td><code>id</code>, <code>nom</code></td><td></td></tr>
 <tr><td><code>fuseau</code></td><td>Fuseau horaire local, ex. <code>Europe/Paris</code></td></tr>
 <tr><td><code>rotation_defaut</code></td><td>Durée par défaut d'un repas, en minutes (ex. 105)</td></tr>
-<tr><td><code>tolerance_places</code></td><td>Places en trop tolérées avant de dégrader le verdict en <code>~✓</code> (ex. 2)</td></tr>
+<tr><td><code>tolerance_places</code></td><td>Places vides tolérées au-delà de la première avant que la table ne devienne <em>déconseillée</em> (ex. 2). Une place vide reste parfaite</td></tr>
 <tr><td><code>retard_grace</code></td><td>Minutes après l'heure avant d'afficher l'anneau « en retard » (ex. 15)</td></tr>
 <tr><td><code>rappel_actif</code>, <code>rappel_delai_h</code></td><td>Rappel avant la réservation, et son délai</td></tr>
 <tr><td><code>confirmation_auto</code></td><td>Confirme d'office une demande web posée sur un créneau franchement libre</td></tr>
+<tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table</td></tr>
+<tr><td><code>delai_min_reservation</code>, <code>horizon_reservation</code></td><td>Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60)</td></tr>
 </tbody></table></div>
 
 <h3 id="sec-3.2"><span class="hn">3.2</span>Zone, table, décor, combinaison</h3>
@@ -1201,24 +1204,25 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
   <div class="bx bx-ko"><b class="bx-t">Écartée</b>
   <ul style="margin:0;padding-left:17px;font-size:12.5px;line-height:1.6;color:#6E675F">
     <li>Une affectation recouvre déjà <code>[T, T+durée]</code>, ou conflit d'ensemble</li>
-    <li><code>capacite &lt; couverts − tolérance_basse</code></li>
+    <li><code>capacite &lt; couverts</code> — jamais de tolérance vers le bas</li>
     <li>La zone est fermée pour ce service</li>
   </ul></div>
   <div class="bx bx-ok"><b class="bx-t"><code>✓</code> Parfaite</b>
   <ul style="margin:0;padding-left:17px;font-size:12.5px;line-height:1.6;color:#6E675F">
     <li>Libre sur tout l'intervalle</li>
-    <li><code>couverts ≤ capacite ≤ couverts + tolerance_places</code></li>
+    <li><code>capacite − couverts ≤ 1</code> — une place vide reste parfaite</li>
     <li>Propre</li>
     <li>Zone conforme au souhait, s'il y en a un</li>
   </ul></div>
   <div class="bx"><b class="bx-t"><code>~✓</code> À réserve</b>
-  <span style="font-size:12.5px;color:#6E675F;line-height:1.6">Possible, avec au moins une raison à dire. Le dépôt ouvre un popup qui <strong>liste toutes</strong> les raisons.</span></div>
+  <span style="font-size:12.5px;color:#6E675F;line-height:1.6">Possible, avec au moins une raison à dire. Le dépôt ouvre un popup qui <strong>liste toutes</strong> les raisons.</span><span style="font-size:12.5px;color:#6E675F;line-height:1.6"> Côté places : <code>1 &lt; capacite − couverts ≤ tolerance_places</code>.</span></div>
 </div>
+<div class="bx" style="margin-top:11px;border-style:dashed"><b class="bx-t"><code>!</code> Déconseillée</b>
+<span style="font-size:12.5px;color:#6E675F;line-height:1.6"><code>capacite − couverts &gt; tolerance_places</code>. Toujours plaçable — un soir creux, il n'y a parfois pas d'autre place — mais tous les indicateurs disent que c'est du gaspillage. Le dépôt ouvre le popup, avec « 6 places de trop — au-delà de la tolérance de 2 ». Son rendu sur le plan (halo) sera fixé avec le moteur ; l'aperçu des Paramètres le montre en contour corail pointillé.</span></div>
 
 <div class="tw"><table><thead><tr><th>Raison de <code>~✓</code></th><th>Message affiché au dépôt</th></tr></thead><tbody>
 <tr><td>Table non nettoyée</td><td>« Legrand est parti à 20:12, elle n'a pas encore été redressée. <em>En plaçant Moreau, elle sera considérée comme nettoyée.</em> »</td></tr>
-<tr><td>Places en trop</td><td>« 2 places de trop — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. »</td></tr>
-<tr><td>Places en moins</td><td>« 1 place manquante — table de 3 pour 4 personnes. À rapprocher d'une autre ? »</td></tr>
+<tr><td>Places en trop (dans la tolérance)</td><td>« 2 places de trop — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. »</td></tr>
 <tr><td>Réservée plus tard</td><td>« Réservée à 22:00 — il reste 1h30, la rotation moyenne est de 1h45. »</td></tr>
 <tr><td>Zone non demandée</td><td>« Terrasse — la réservation demandait la salle. <em>(note : « intérieur svp »)</em> »</td></tr>
 <tr><td>Rapprochement nécessaire</td><td>« Les tables 12 et 13 devront être poussées l'une contre l'autre avant l'arrivée. »</td></tr>
@@ -1228,8 +1232,9 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <span class="rules-t">Règles de gestion</span>
 <div class="rg"><b>PLACE-01</b><div>Un dépôt sur une entité <code>✓</code> place <strong>sans aucun popup</strong>.</div></div>
 <div class="rg"><b>PLACE-02</b><div>Un dépôt sur une entité <code>~✓</code> ouvre un popup qui <strong>informe</strong> et propose <em>Annuler</em> / <em>Placer</em>. Il ne demande pas confirmation, il énonce ce qu'on ne peut pas voir.</div></div>
-<div class="rg"><b>PLACE-03</b><div>Un rapprochement est <strong>toujours</strong> <code>~✓</code>, jamais <code>✓</code>.</div></div>
+<div class="rg"><b>PLACE-03</b><div>Un rapprochement n'est <strong>jamais</strong> <code>✓</code> : au mieux <code>~✓</code>, ou déconseillé si ses places vides dépassent la tolérance.</div></div>
 <div class="rg"><b>PLACE-04</b><div>Les couleurs d'aide au placement n'existent que pendant un placement. Elles n'entrent jamais en concurrence avec les statuts.</div></div>
+<div class="rg"><b>PLACE-05</b><div>La règle de places vit dans l'API (<code>PlacementVerdict</code>) : l'aperçu des Paramètres et le moteur de placement la partagent.</div></div>
 </div>
 
 <h3 id="sec-4.4"><span class="hn">4.4</span>Modes d'occupation et état d'un créneau</h3>
@@ -2114,7 +2119,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
       <div class="reg-cs">Pour une réservation de <b>4 personnes</b> :</div>
       <div class="reg-ap">
         <span class="ap ap-ok">T5 · 4p ✓</span><span class="ap ap-ok">T2 · 5p ✓</span>
-        <span class="ap ap-rs">T7 · 6p ~✓</span><span class="ap ap-no">T11 · 8p ✗</span>
+        <span class="ap ap-rs">T7 · 6p ~✓</span><span class="ap ap-nr">T11 · 8p !</span><span class="ap ap-no">T1 · 2p ✗</span>
       </div>
     </div>
   </div>
@@ -2188,6 +2193,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PAR-08</b><div><code>tolerance_places</code>, <code>rotation_defaut</code>, <code>retard_grace</code> : chacun affiche son <strong>aperçu sur les vraies tables</strong> du restaurant.</div></div>
 <div class="rg"><b>PAR-09</b><div>Changer <code>rotation_defaut</code> est <strong>sans effet</strong> sur les réservations existantes, qui gardent la durée reçue à leur création.</div></div>
 <div class="rg"><b>PAR-10</b><div>La <strong>fenêtre de réservation</strong> — délai minimum avant une réservation, horizon maximum — gouverne les jours et heures proposés par le widget.</div></div>
+<div class="rg"><b>PAR-11</b><div><code>proposer_rapprochements</code> ne concerne que les combinaisons <strong>en sommeil</strong>. Une combinaison active est déjà collée : elle se place toujours comme une table, quel que soit ce réglage.</div></div>
 </div>
 
 <h3 id="sec-13.5"><span class="hn">13.5</span>Conditions d'annulation</h3>
