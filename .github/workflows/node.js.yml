@@ -3,16 +3,17 @@
 
 name: Node.js CI
 
+# Lancé uniquement par dotnet.yml (job « node »), après le succès du build .NET
 on:
-  push:
-    branches: [ "master" , "dev" ]
-  pull_request:
-    branches: [ "master" , "dev" ]
+  workflow_call:
 
 jobs:
   build:
 
     runs-on: self-hosted
+    env:
+      NG_BUILD_MAX_WORKERS: 1
+      NODE_OPTIONS: --max-old-space-size=3072
     strategy:
       matrix:
         # Angular 22 n'est pas supporté sur Node 18/20
