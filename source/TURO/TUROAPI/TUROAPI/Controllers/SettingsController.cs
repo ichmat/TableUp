@@ -101,6 +101,8 @@ namespace TUROAPI.Controllers
             restaurant.SeatTolerance = request.SeatTolerance;
             restaurant.LateGrace = request.LateGrace;
             restaurant.SuggestCombinations = request.SuggestCombinations;
+            // Désactiver ne vide pas les tables déjà marquées : elles sont ignorées, et reviennent si on réactive
+            restaurant.TrackTableCleaning = request.TrackTableCleaning;
 
             await context.SaveChangesAsync();
             await NotifyChangedAsync(DataScope.Restaurant);

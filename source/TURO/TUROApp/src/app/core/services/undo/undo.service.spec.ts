@@ -71,4 +71,20 @@ describe('UndoService', () => {
     jasmine.clock().tick(4000);
     expect(service.state()).toBeNull();
   });
+
+  it('should undo any action through its own call, and name what changed when it is too late', async () => {
+    const run = jasmine.createSpy('run').and.resolveTo({ value: null, error: null });
+    service.offer({ message: 'Table 6 nettoyée', run, tooLate: 'Trop tard : la table a changé entre-temps' });
+
+    await service.undo();
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(reservations.undo).not.toHaveBeenCalled();
+    expect(service.state()).toBeNull();
+
+    run.and.resolveTo({ value: null, error: 'This action can no longer be undone.', code: ApiError.UndoExpired });
+    service.offer({ message: 'Table 6 nettoyée', run, tooLate: 'Trop tard : la table a changé entre-temps' });
+    await service.undo();
+    expect(service.state()).toEqual({ kind: 'failed', message: 'Trop tard : la table a changé entre-temps' });
+  });
 });

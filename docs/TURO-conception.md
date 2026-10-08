@@ -166,6 +166,7 @@ Toutes les requêtes sont filtrées par `restaurant_id`. C'est la frontière du 
 | `rappel_actif`, `rappel_delai_h` | Rappel J-1. Le désactiver rend le compteur de no-show plus sévère qu'il n'est juste (§9.9) |
 | `confirmation_auto` | Confirmation automatique d'une réservation web sur un créneau franchement libre (§11.3) |
 | `proposer_rapprochements` | Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table |
+| `suivre_nettoyage` | « Libérer » passe la table « à nettoyer ». **Désactivé par défaut** : un petit restaurant n'a pas à cocher chaque table (§3.2) |
 | `delai_min_reservation`, `horizon_reservation` | Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60) |
 
 
@@ -360,6 +361,10 @@ C'est ce qui rend la frise possible. Avec un statut stocké, une table n'aurait 
 
 **Nettoyage implicite :** placer une réservation sur une table à nettoyer **la nettoie**. La table passe directement en « réservée ». Conséquence à connaître : elle quitte instantanément tout décompte de tables à redresser — le nettoyage devient la responsabilité de celui qui a placé.
 
+**Le suivi du nettoyage est un réglage, désactivé par défaut.** Désactivé, « Libérer » rend la table libre aussitôt et l'état « à nettoyer » n'apparaît nulle part — ni sur le plan, ni dans la légende. Activé, la table libérée passe « à nettoyer » ; la toucher sur le plan ouvre une bulle **« Nettoyée »**, qui la rend libre, avec le bandeau « Annuler » 8 s. Désactiver le réglage ne vide pas les tables déjà marquées : elles sont ignorées, et reviennent si on le réactive.
+
+**Ce qu'occupe une réservation.** Confirmée : son heure prévue. Assise : depuis l'arrivée — ou l'heure prévue si elle est plus tard — et **tant qu'elle déborde** : une table qui dépasse sa durée reste occupée jusqu'à maintenant. Terminée : jusqu'à la libération, ou jusqu'à l'heure prévue si elle a été close automatiquement. Une demande, une annulation, un no-show n'occupent rien.
+
 ---
 
 ### 3.3 Tables virtuelles : la règle de conflit
@@ -540,6 +545,8 @@ Une seule ligne, toujours au même endroit, partagée par les deux vues : horlog
 
 **Par défaut, l'en-tête affiche le service en cours** — il n'y a rien à choisir en arrivant.
 
+Hors service, il affiche le prochain service du jour, sinon le dernier, sinon le premier du prochain jour ouvert. À 00:30, le dîner de la veille qui passe minuit est encore « le service en cours ». Un service se désigne par son jour et son heure d'ouverture : un jour à horaires modifiés n'a que des plages.
+
 **Toucher la date ouvre la popup de sélection.** Elle contient :
 
 - un calendrier du mois. Le jour courant est marqué ; **les jours de fermeture sont grisés et non cliquables** — la fermeture exceptionnelle se voit donc ici, sans écran supplémentaire ;
@@ -673,11 +680,15 @@ Un créneau par pas de service (15 ou 30 min). Chacun porte l'heure, le nombre d
 - Un badge **`!` violet** signale les créneaux ayant des réservations non placées. **Pas de compteur** : le nombre exact est déjà dans « À placer ». Le badge dit « regarde ici », pas « combien ».
 - Le violet est choisi parce que l'orange est déjà pris par le créneau actif : un badge orange posé dessus disparaîtrait.
 
+Les couverts d'un créneau sont ceux des convives présents à cette heure, placés ou non ; la barre dit la part des tables tenues. L'état du plan se calcule pour l'heure du créneau actif, sans nouvel appel : changer de créneau est instantané.
+
 **Sélectionner une réservation déplace la frise sur son créneau.** Sinon on illuminerait les tables libres à 20:00 pour une réservation de 20:30.
 
 ### 5.5 Onglets de zone
 
 Une pastille par zone, avec son taux d'occupation. L'onglet actif est orange.
+
+Le taux d'un onglet compte les tables réservées ou occupées à l'heure du créneau actif, sur les tables actives de la salle. Une table à nettoyer n'est pas tenue.
 
 Pendant un placement, chaque onglet porte **le meilleur niveau qu'il contient** : vert s'il a du parfait, vert-jaune s'il n'a que du possible, estompé s'il n'a rien. Une zone vide mais sans table assez grande est **estompée, pas badgée** — le badge dit « compatible », pas « libre ».
 
@@ -698,6 +709,8 @@ Chaque table affiche son statut par **couleur + forme du contour**. La légende 
 Elles appartiennent à la réservation, pas à la table : une pastille suit un déplacement.
 
 L'allergie est le premier cas de cette règle et le plus sérieux — pastille corail portant l'icône couvert (§2.5), en haut à droite de la table.
+
+Sur la table, seule l'allergie est dessinée, avec le nom et l'heure de la réservation en dessous : à l'échelle d'une table, une seule pastille se lit. Les autres marques restent sur la pastille de la colonne et sur la fiche.
 
 **Cette règle remplace l'idée d'un bloc de veille « ce qui demande une attention ».** Un digest posé sur un seul écran laisse invisible ce qui est déjà confirmé et placé — précisément les réservations qu'on croise le plus. Une marque qui voyage n'a pas ce défaut.
 
@@ -1129,7 +1142,7 @@ Dix sections dans une **colonne permanente de 158 px**, à droite du rail, la se
 | **Ouvertures** | Horaires habituels et exceptionnels (§9.3) |
 | **Services et créneaux** | `pas_creneau`, mode d'occupation, durée prévue, avertissements de cuisine (§9.4) |
 | **Salles et tables** | Liste des salles et des tables, dimensions d'une salle — puis **porte vers l'éditeur de plan** (§10), en plein écran. Le chevron `›` le signale. La création d'une table se fait dans l'éditeur (§10.2) |
-| **Placement** | `tolerance_places`, `rotation_defaut`, `retard_grace`, proposition des rapprochements |
+| **Placement** | `tolerance_places`, `rotation_defaut`, `retard_grace`, proposition des rapprochements, suivi du nettoyage |
 | **Règles de réservation** | Fenêtre : délai minimum avant réservation, horizon maximum |
 | **No-show** | Conditions d'annulation (§9.6) |
 | **Notifications** | Confirmation automatique, rappel J-1 et son délai |
@@ -1138,6 +1151,8 @@ Dix sections dans une **colonne permanente de 158 px**, à droite du rail, la se
 | **Restaurant** | Nom, fuseau, coordonnées |
 
 `proposer_rapprochements` ne concerne que les combinaisons en sommeil ; une combinaison active se place toujours comme une table.
+
+`suivre_nettoyage` affiche sa conséquence sous la case : « Une table libérée redevient libre aussitôt » ou « Une table libérée passe « à nettoyer » jusqu'à ce qu'on la touche → « Nettoyée » ».
 
 **Pourquoi une colonne permanente plutôt qu'une liste dont on revient.** Paramétrer, c'est régler plusieurs choses à la suite ; une liste avec retour coûte six navigations pour trois réglages. Surtout, un réglage qu'on ne voit jamais n'est jamais trouvé : la colonne expose en permanence l'étendue de ce qui est réglable. Il reste ~1 100 px pour le contenu sur une Surface Pro, largement assez — c'est du paramétrage, pas un plan de salle.
 

@@ -11,6 +11,9 @@ import { guestName, journalLine, originLabel, primaryAction, sheetSubtitle } fro
 
 const CLOCK_MS = 30_000;
 
+/** Lot A de l'écran Service : les boutons de placement restent à leur place (FICHE-03), estompés */
+export const PLACEMENT_NOT_YET = 'Le placement arrive avec le lot suivant';
+
 /**
  * La fiche réservation (§6.5) : un panneau, une seule action principale déduite de l'état (FICHE-01),
  * des boutons qui ne changent jamais de place (FICHE-03)
@@ -27,6 +30,9 @@ export class ReservationSheet implements OnDestroy {
 
   /** D'où l'on vient (§7.6) : « Sophie Marchand » ; `null` au premier niveau */
   origin = input<string | null>(null);
+  /** Faux sur l'écran Service tant que le placement n'existe pas : les boutons restent à leur place, estompés */
+  placementAvailable = input(true);
+  protected readonly placementNotYet = PLACEMENT_NOT_YET;
   closed = output<void>();
   back = output<void>();
   edit = output<ReservationDetail>();

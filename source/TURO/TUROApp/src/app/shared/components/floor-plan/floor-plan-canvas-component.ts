@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, signal, untracked, viewChild } from '@angular/core';
-import { DecorType, PlanCombination, PlanDecor, PlanTable, Zone } from '../../../models';
+import { DecorType, PlanCombination, PlanDecor, PlanTable, TableMark, Zone } from '../../../models';
+import { TABLE_STATUS_STYLE } from '../constants/table-status-style';
 import { fitView, panBy, PlanView, toViewBox, zoomAt, ZOOM_STEP } from './floor-plan-view';
 
 const GRID_STEP = 0.25;
@@ -47,7 +48,31 @@ const DECOR_NAMES: Record<DecorType, string> = {
   host: { class: 'block relative overflow-hidden' },
 })
 export class FloorPlanCanvasComponent implements OnDestroy {
-  zone = input.required<Zone>();
+  /** La salle : seules son identité et ses dimensions comptent (l'éditeur passe une `Zone`, le service une `ServiceZone`) */
+  zone = input.required<Pick<Zone, 'id' | 'width' | 'height'>>();
+  /** `slate` : l'ardoise du service (§2.1) ; `light` : l'éditeur */
+  theme = input<'light' | 'slate'>('light');
+  /** En service : le statut et les marques de chaque table (§5.6). Sans elles, rendu de l'éditeur */
+  tableMarks = input<Readonly<Record<string, TableMark>> | null>(null);
+
+  protected markOf(table: PlanTable): TableMark | null {
+    return this.tableMarks()?.[table.id] ?? null;
+  }
+
+  protected roomClass(): string {
+    return this.theme() === 'slate' ? 'fill-slate stroke-slate-border' : 'fill-surface stroke-chalk';
+  }
+
+  /** Les numéros de table à la craie en service (§2.5) */
+  protected nameClass(table: PlanTable): string {
+    const mark = this.markOf(table);
+    return mark === null ? 'fill-text font-bold' : `${TABLE_STATUS_STYLE[mark.status].text} font-caveat font-bold`;
+  }
+
+  protected dashOf(table: PlanTable): string | null {
+    const mark = this.markOf(table);
+    return mark !== null && TABLE_STATUS_STYLE[mark.status].dashed ? '5 3' : null;
+  }
   tables = input<readonly PlanTable[]>([]);
   selectedIds = input<readonly string[]>([]);
   /** Tables à marquer : dans l'éditeur, celles qui empêchent la publication */
@@ -301,13 +326,15 @@ export class FloorPlanCanvasComponent implements OnDestroy {
   }
 
   protected tableClass(table: PlanTable): string {
+    const mark = this.markOf(table);
     if (this.selectedIds().includes(table.id)) {
-      return 'fill-surface stroke-interactive';
+      // En service, la table garde le fond de son statut : seul le contour orange dit qu'elle est désignée
+      return mark === null ? 'fill-surface stroke-interactive' : `${TABLE_STATUS_STYLE[mark.status].shape.split(' ')[0]} stroke-interactive`;
     }
     if (this.flaggedIds().includes(table.id)) {
       return 'fill-surface stroke-red-700';
     }
-    return 'fill-app stroke-slate';
+    return mark === null ? 'fill-app stroke-slate' : TABLE_STATUS_STYLE[mark.status].shape;
   }
 
   protected strokeWidth(table: PlanTable): number {

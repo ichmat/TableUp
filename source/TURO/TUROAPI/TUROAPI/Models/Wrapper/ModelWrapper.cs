@@ -185,6 +185,7 @@ namespace TUROAPI.Models.Wrapper
                 ReminderDelayHours = restaurant.ReminderDelayHours,
                 AutoConfirmation = restaurant.AutoConfirmation,
                 SuggestCombinations = restaurant.SuggestCombinations,
+                TrackTableCleaning = restaurant.TrackTableCleaning,
                 MinBookingNoticeMinutes = restaurant.MinBookingNoticeMinutes,
                 BookingHorizonDays = restaurant.BookingHorizonDays,
                 Zones = restaurant.Zones.Select(z => z.ToResponse()).ToList(),
@@ -329,17 +330,23 @@ namespace TUROAPI.Models.Wrapper
                 Note = reservation.Note,
                 PlaceName = assignment?.Table?.Name ?? assignment?.Combination?.Name,
                 NoShowFrom = reservation.Start.AddMinutes(lateGrace),
-                Client = client == null ? null : new ReservationListClientResponse
-                {
-                    Id = client.Id,
-                    Name = client.Name,
-                    Phone = ContactList.Split(client.Phone).FirstOrDefault(),
-                    Tags = client.Tags,
-                    HasAllergy = !string.IsNullOrWhiteSpace(client.Allergies),
-                    VisitCount = client.VisitCount,
-                    NoShowCount = client.NoShowCount,
-                    AtRisk = ClientCounters.IsAtRisk(client),
-                },
+                Client = client?.ToListClient(),
+            };
+        }
+
+        /// <summary>Le nom et les marques qui voyagent avec la réservation (§5.6)</summary>
+        public static ReservationListClientResponse ToListClient(this Client client)
+        {
+            return new ReservationListClientResponse
+            {
+                Id = client.Id,
+                Name = client.Name,
+                Phone = ContactList.Split(client.Phone).FirstOrDefault(),
+                Tags = client.Tags,
+                HasAllergy = !string.IsNullOrWhiteSpace(client.Allergies),
+                VisitCount = client.VisitCount,
+                NoShowCount = client.NoShowCount,
+                AtRisk = ClientCounters.IsAtRisk(client),
             };
         }
 

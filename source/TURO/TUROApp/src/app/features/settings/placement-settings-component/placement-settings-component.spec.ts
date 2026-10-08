@@ -8,7 +8,7 @@ import { PlacementSettingsComponent } from './placement-settings-component';
 
 const RESTAURANT: Restaurant = {
   id: 'r', name: 'Chez nous', timeZone: 'Europe/Paris', defaultRotation: 105, seatTolerance: 2, lateGrace: 15,
-  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: true,
+  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: true, trackTableCleaning: false,
   minBookingNoticeMinutes: 60, bookingHorizonDays: 60, zones: [], cancellationConditions: [], users: [],
   services: [{
     id: 's', restaurantId: 'r', day: 'Saturday', opening: '19:00:00', closing: '23:00:00', slotStep: 30,
@@ -87,7 +87,7 @@ describe('PlacementSettingsComponent', () => {
     await component.save();
 
     expect(restaurants.updatePlacement).toHaveBeenCalledOnceWith(
-      { defaultRotation: 120, seatTolerance: 2, lateGrace: 15, suggestCombinations: false });
+      { defaultRotation: 120, seatTolerance: 2, lateGrace: 15, suggestCombinations: false, trackTableCleaning: false });
   });
 
   it('should cancel back to the saved settings', () => {
@@ -123,6 +123,19 @@ describe('PlacementSettingsComponent', () => {
     model.set({ ...RESTAURANT, name: 'Rechargé' });
     fixture.detectChanges();
     expect(component.hasChanges()).toBeTrue();
+  });
+
+  it('should say what tracking the cleaning changes, before it is saved', async () => {
+    const effect = () => (fixture.nativeElement as HTMLElement).querySelector('[data-track-cleaning-effect]')!.textContent!.replace(/\s+/g, ' ');
+    expect(effect()).toContain('Une table libérée redevient libre aussitôt.');
+
+    component['settingsForm'].trackTableCleaning().value.set(true);
+    fixture.detectChanges();
+
+    expect(effect()).toContain('passe « à nettoyer »');
+    expect(component.hasChanges()).toBeTrue();
+    await component.save();
+    expect(restaurants.updatePlacement).toHaveBeenCalledOnceWith(jasmine.objectContaining({ trackTableCleaning: true }));
   });
 });
 

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlanTable, Zone } from '../../../models';
+import { PlanTable, TableMark, Zone } from '../../../models';
 import { FloorPlanCanvasComponent, PlanPointerEvent } from './floor-plan-canvas-component';
 
 const ZONE: Zone = { id: 'z', restaurantId: 'r', name: 'Salle', order: 0, width: 8, height: 5.5 };
@@ -191,5 +191,53 @@ describe('FloorPlanCanvasComponent', () => {
 
     expect(pressed.length).toBe(1);
     expect(pressed[0].item.id).toBe('a');
+  });
+
+  describe('in service', () => {
+    const marks = (mark: Partial<TableMark>): Record<string, TableMark> =>
+      ({ [RECT.id]: { status: 'Free', late: false, label: null, allergy: false, ...mark } });
+    const element = () => fixture.nativeElement as HTMLElement;
+    const shape = () => element().querySelector(`[data-table-id="${RECT.id}"] rect:not([data-late]), [data-table-id="${RECT.id}"] ellipse:not([data-late])`)!;
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('theme', 'slate');
+      fixture.componentRef.setInput('tables', [RECT]);
+    });
+
+    it('should draw the room as a slate', () => {
+      fixture.detectChanges();
+      expect(element().querySelector('[data-room]')!.getAttribute('class')).toContain('fill-slate');
+    });
+
+    it('should colour each table by its status, the outline dashed only when it is to clean', () => {
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'Reserved' }));
+      fixture.detectChanges();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-reserved-line');
+      expect(shape().getAttribute('stroke-dasharray')).toBeNull();
+
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'ToClean' }));
+      fixture.detectChanges();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-clean-line');
+      expect(shape().getAttribute('stroke-dasharray')).not.toBeNull();
+    });
+
+    it('should ring a late table, write its guest and pin its allergy', () => {
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'Reserved', late: true, label: 'Moreau · 20:00', allergy: true }));
+      fixture.detectChanges();
+
+      expect(element().querySelector('[data-late]')).not.toBeNull();
+      expect(element().querySelector('[data-allergy]')).not.toBeNull();
+      expect(element().querySelector('[data-label]')!.textContent).toContain('Moreau · 20:00');
+    });
+
+    it('should draw nothing of the kind on a free table', () => {
+      fixture.componentRef.setInput('tableMarks', marks({}));
+      fixture.detectChanges();
+
+      expect(element().querySelector('[data-late]')).toBeNull();
+      expect(element().querySelector('[data-allergy]')).toBeNull();
+      expect(element().querySelector('[data-label]')).toBeNull();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-free-line');
+    });
   });
 });

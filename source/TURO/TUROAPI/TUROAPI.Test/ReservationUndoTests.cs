@@ -99,6 +99,7 @@ namespace TUROAPI.Test
             using HttpClient staff = restaurant.StaffClient();
             (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T12", 4), ("T13", 4));
             Guid combination = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[0].Id, tables[1].Id);
+            await ReservationApi.TrackCleaningAsync(restaurant.Id);
             Client roux = await ClientApi.AddAsync(restaurant.Id, "Roux", phone: "0611111111", visits: 4);
             Reservation group = await restaurant.AddReservationAsync(Dates.Today, 20, covers: 8, status: ReservationStatus.Seated, clientId: roux.Id);
             await ReservationApi.AssignAsync(group.Id, combinationId: combination);
@@ -106,6 +107,7 @@ namespace TUROAPI.Test
 
             ReservationActionResponse released = await ReservationApi.DoAsync(staff, group.Id, "release");
             ReservationActionResponse noShow = await ReservationApi.DoAsync(staff, late.Id, "no-show");
+            Assert.IsTrue(await TestApi.WithDbAsync(db => db.Tables.Where(t => t.ZoneId == zoneId).AnyAsync(t => t.NeedsCleaningSince != null)));
             ReservationResponse seatedAgain = await ApiAssert.OkAsync<ReservationResponse>(
                 await ReservationApi.UndoAsync(staff, group.Id, released.EventId!.Value));
             ReservationResponse confirmedAgain = await ApiAssert.OkAsync<ReservationResponse>(

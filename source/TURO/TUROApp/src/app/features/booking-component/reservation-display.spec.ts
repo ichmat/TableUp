@@ -1,6 +1,6 @@
 import { ExceptionalClosure, ReservationDay, ReservationDetail, ReservationEvent, ReservationListClient, RestaurantService } from '../../models';
 import {
-  createdMessage, dayHeader, gestureMessage, guestName, isBookableDay, journalLine, marks, modifiedMessage, ordinal, originLabel,
+  createdMessage, dayHeader, gestureMessage, guestName, isBookableDay, isServiceDay, journalLine, marks, modifiedMessage, ordinal, originLabel,
   pendingBanner, primaryAction, quickAction, sheetSubtitle,
 } from './reservation-display';
 
@@ -110,5 +110,19 @@ describe('reservation display', () => {
     // Un vendredi sans service, ouvert exceptionnellement
     expect(isBookableDay('2026-08-21', services, closures, '2026-08-20')).toBeTrue();
     expect(isBookableDay('2026-08-22', services, closures, '2026-08-20')).toBeFalse();
+  });
+});
+
+describe('isServiceDay', () => {
+  const services = [{ day: 'Saturday' } as RestaurantService];
+
+  it('should keep a past service day, unlike the booking form', () => {
+    expect(isServiceDay('2020-01-04', services, [])).toBeTrue();
+    expect(isBookableDay('2020-01-04', services, [], '2026-10-08')).toBeFalse();
+  });
+
+  it('should refuse a day without service or closed', () => {
+    expect(isServiceDay('2026-10-12', services, [])).toBeFalse();
+    expect(isServiceDay('2026-10-10', services, [{ from: '2026-10-10', to: '2026-10-10', type: 'Closed' } as ExceptionalClosure])).toBeFalse();
   });
 });

@@ -19,6 +19,8 @@ export interface PlacementSettingsRequest {
     seatTolerance: number,
     lateGrace: number,
     suggestCombinations: boolean,
+    /** « Libérer » passe la table « à nettoyer » */
+    trackTableCleaning: boolean,
 }
 
 /** PUT /api/restaurant/settings/booking-window */

@@ -63,12 +63,16 @@
         <section data-block="actions" class="flex flex-col gap-2">
             @switch (primary()) {
                 @case ('acceptAndPlace') {
-                    <app-button text="Accepter et placer à une table" buttonClass="w-full" [disabled]="isBusy()" (click)="acceptAndPlace()" />
+                    <span class="w-full" [attr.title]="placementAvailable() ? null : placementNotYet">
+                        <app-button text="Accepter et placer à une table" buttonClass="w-full" [disabled]="isBusy() || !placementAvailable()" (click)="placementAvailable() && acceptAndPlace()" />
+                    </span>
                     <app-button text="Accepter" type="Secondary" buttonClass="w-full" [disabled]="isBusy()" (click)="run('accept')" />
                     <button type="button" class="text-sm text-coral-ink underline cursor-pointer self-start" [disabled]="isBusy()" (click)="run('refuse')">Refuser</button>
                 }
                 @case ('place') {
-                    <app-button text="Placer à une table" buttonClass="w-full" (click)="place()" />
+                    <span class="w-full" [attr.title]="placementAvailable() ? null : placementNotYet">
+                        <app-button text="Placer à une table" buttonClass="w-full" [disabled]="!placementAvailable()" (click)="placementAvailable() && place()" />
+                    </span>
                 }
                 @case ('arrive') {
                     <!-- Encre, pas orange : l'orange est réservé à ce qui n'est pas encore fait (FICHE-02) -->

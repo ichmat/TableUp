@@ -1,0 +1,16 @@
+<div class="flex flex-row flex-wrap items-center gap-2">
+    @for (tab of tabs(); track tab.id) {
+        <button type="button" [attr.data-zone]="tab.id" [class]="tabClass(tab.id)" (click)="selected.emit(tab.id)">
+            {{ tab.name }} {{ tab.taken }}/{{ tab.total }}
+        </button>
+    }
+    @if (canEdit()) {
+        <a data-edit-plan routerLink="/parametres/plan"
+            class="ml-auto flex flex-row items-center gap-1 px-3 py-1 rounded-full border-2 border-interactive text-interactive font-bold">
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />
+            </svg>
+            Éditer le plan
+        </a>
+    }
+</div>

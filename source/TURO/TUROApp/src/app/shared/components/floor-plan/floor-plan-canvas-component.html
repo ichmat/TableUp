@@ -8,8 +8,8 @@
     </defs>
 
     <!-- LA SALLE -->
-    <rect x="0" y="0" [attr.width]="zone().width" [attr.height]="zone().height"
-        class="fill-surface stroke-chalk" stroke-width="2" vector-effect="non-scaling-stroke" />
+    <rect data-room x="0" y="0" [attr.width]="zone().width" [attr.height]="zone().height"
+        [attr.class]="roomClass()" stroke-width="2" vector-effect="non-scaling-stroke" />
     @if (showGrid()) {
         <rect data-grid x="0" y="0" [attr.width]="zone().width" [attr.height]="zone().height"
             [attr.fill]="'url(#' + gridId + ')'" class="pointer-events-none" />
@@ -61,19 +61,45 @@
             [attr.transform]="'translate(' + table.x + ' ' + table.y + ')'"
             (pointerdown)="onTablePointerDown(table, $event)" (pointerenter)="hover(table.id)" (pointerleave)="hover(null)">
             <g [attr.transform]="'rotate(' + table.rotation + ' ' + table.width / 2 + ' ' + table.height / 2 + ')'">
+                @if (markOf(table)?.late) {
+                    <!-- « En retard » n'est pas un statut : un anneau corail par-dessus le bleu (§2.3) -->
+                    @if (table.shape === 'Round') {
+                        <ellipse data-late [attr.cx]="table.width / 2" [attr.cy]="table.height / 2"
+                            [attr.rx]="table.width / 2 + 0.07" [attr.ry]="table.height / 2 + 0.07"
+                            class="fill-none stroke-plan-late" stroke-width="2" vector-effect="non-scaling-stroke" />
+                    } @else {
+                        <rect data-late x="-0.07" y="-0.07" [attr.width]="table.width + 0.14" [attr.height]="table.height + 0.14" rx="0.1"
+                            class="fill-none stroke-plan-late" stroke-width="2" vector-effect="non-scaling-stroke" />
+                    }
+                }
                 @if (table.shape === 'Round') {
                     <ellipse [attr.cx]="table.width / 2" [attr.cy]="table.height / 2"
                         [attr.rx]="table.width / 2" [attr.ry]="table.height / 2"
-                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" vector-effect="non-scaling-stroke" />
+                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" [attr.stroke-dasharray]="dashOf(table)" vector-effect="non-scaling-stroke" />
                 } @else {
                     <rect [attr.width]="table.width" [attr.height]="table.height" rx="0.06"
-                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" vector-effect="non-scaling-stroke" />
+                        [attr.class]="tableClass(table)" [attr.stroke-width]="strokeWidth(table)" [attr.stroke-dasharray]="dashOf(table)" vector-effect="non-scaling-stroke" />
                 }
             </g>
             <text [attr.x]="table.width / 2" [attr.y]="table.height / 2 - 0.06" text-anchor="middle" dominant-baseline="central"
-                font-size="0.22" class="fill-text font-bold pointer-events-none">{{ table.name }}</text>
+                [attr.font-size]="markOf(table) ? 0.26 : 0.22" [attr.class]="nameClass(table) + ' pointer-events-none'">{{ table.name }}</text>
             <text [attr.x]="table.width / 2" [attr.y]="table.height / 2 + 0.17" text-anchor="middle" dominant-baseline="central"
                 font-size="0.15" class="fill-text-muted pointer-events-none">{{ table.capacity }}p</text>
+            @if (markOf(table); as mark) {
+                @if (mark.label) {
+                    <!-- Exo 2, jamais la craie : une donnée qu'on lit vite (§2.1) -->
+                    <text data-label [attr.x]="table.width / 2" [attr.y]="table.height + 0.2" text-anchor="middle" dominant-baseline="central"
+                        font-size="0.15" class="fill-plan-free-text font-exo pointer-events-none">{{ mark.label }}</text>
+                }
+                @if (mark.allergy) {
+                    <!-- UI-04 : la couleur porte l'alerte, le couvert porte le sujet -->
+                    <g data-allergy [attr.transform]="'translate(' + table.width + ' 0)'" class="pointer-events-none">
+                        <circle r="0.15" class="fill-coral stroke-slate" stroke-width="1" vector-effect="non-scaling-stroke" />
+                        <path d="M -0.05 -0.08 v 0.07 M -0.075 -0.08 v 0.04 a 0.025 0.025 0 0 0 0.05 0 v -0.04 M -0.05 -0.01 v 0.1 M 0.06 -0.08 c -0.03 0.02 -0.04 0.06 -0.04 0.11 h 0.04 v 0.06"
+                            fill="none" class="stroke-surface" stroke-width="1.2" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+                    </g>
+                }
+            }
         </g>
     }
 

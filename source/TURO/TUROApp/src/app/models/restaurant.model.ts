@@ -23,6 +23,8 @@ export interface Restaurant {
     autoConfirmation: boolean,
     /** Propose de recoller les combinaisons en sommeil. Une combinaison active compte toujours */
     suggestCombinations: boolean,
+    /** « Libérer » passe la table « à nettoyer » ; désactivé par défaut */
+    trackTableCleaning: boolean,
     /** Fenêtre de réservation du widget : délai minimum, en minutes */
     minBookingNoticeMinutes: number,
     /** Fenêtre de réservation du widget : horizon, en jours */

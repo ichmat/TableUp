@@ -438,11 +438,14 @@ namespace TUROAPI.Controllers
                     break;
                 case ReservationGesture.Release:
                     reservation.FinishedAt = now;
-                    // DISPO-03 : libérer passe la table, ou chaque table du groupe, « à nettoyer »
-                    foreach (Table table in TablesOf(assignment))
+                    // DISPO-03 / NET-01 : libérer passe la table, ou chaque table du groupe, « à nettoyer » si le restaurant le suit
+                    if (await context.Restaurants.Where(r => r.Id == CurrentRestaurantId).Select(r => r.TrackTableCleaning).FirstAsync())
                     {
-                        tablesBefore[table.Id] = table.NeedsCleaningSince;
-                        table.NeedsCleaningSince = now;
+                        foreach (Table table in TablesOf(assignment))
+                        {
+                            tablesBefore[table.Id] = table.NeedsCleaningSince;
+                            table.NeedsCleaningSince = now;
+                        }
                     }
                     break;
                 case ReservationGesture.Refuse:

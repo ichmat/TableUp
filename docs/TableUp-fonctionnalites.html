@@ -822,6 +822,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <a class="nv h3" href="#sec-7.6"><i>7.6</i>Le placement</a>
 <a class="nv h3" href="#sec-7.7"><i>7.7</i>Le bouton Allergies</a>
 <a class="nv h3" href="#sec-7.8"><i>7.8</i>Client de passage</a>
+<a class="nv h3" href="#sec-7.9"><i>7.9</i>Nettoyage des tables</a>
 <a class="nv h2" href="#sec-8"><i>8</i>Service — Agenda</a>
 <a class="nv h2" href="#sec-9"><i>9</i>Réservations</a>
 <a class="nv h3" href="#sec-9.1"><i>9.1</i>La liste</a>
@@ -960,6 +961,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td><code>rappel_actif</code>, <code>rappel_delai_h</code></td><td>Rappel avant la réservation, et son délai</td></tr>
 <tr><td><code>confirmation_auto</code></td><td>Confirme d'office une demande web posée sur un créneau franchement libre</td></tr>
 <tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table</td></tr>
+<tr><td><code>suivre_nettoyage</code></td><td>« Libérer » passe la table « à nettoyer ». <strong>Désactivé par défaut</strong> : un petit restaurant n'a pas à cocher chaque table</td></tr>
 <tr><td><code>delai_min_reservation</code>, <code>horizon_reservation</code></td><td>Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60)</td></tr>
 </tbody></table></div>
 
@@ -1580,6 +1582,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>FRISE-02</b><div>Le créneau actif est <strong>orange plein</strong>. Le plan affiche l'état des tables <em>à cette heure</em>, pas à l'heure courante.</div></div>
 <div class="rg"><b>FRISE-03</b><div>Un badge <strong><code>!</code> violet</strong> signale les créneaux portant des réservations non placées. <strong>Pas de compteur</strong> — le nombre est dans « À placer ».</div></div>
 <div class="rg"><b>FRISE-04</b><div>Sélectionner une réservation <strong>déplace la frise sur son créneau</strong>.</div></div>
+<div class="rg"><b>FRISE-05</b><div>Les couverts d'un créneau sont ceux des convives <strong>présents à cette heure</strong>, placés ou non ; la barre dit la part des tables tenues.</div></div>
+<div class="rg"><b>FRISE-06</b><div>Le service affiché par défaut : en cours (y compris celui de la veille qui passe minuit), sinon le prochain du jour, sinon le dernier, sinon le premier du prochain jour ouvert. Hors de lui, l'en-tête change de ton et propose <strong>« Aujourd'hui »</strong>.</div></div>
 </div>
 
 <h3 id="sec-7.3"><span class="hn">7.3</span>Onglets de zone</h3>
@@ -1589,6 +1593,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>ZONE-02</b><div>Pendant un placement, chaque onglet porte <strong>le meilleur niveau qu'il contient</strong> : vert s'il a du <code>✓</code>, vert-jaune s'il n'a que du <code>~✓</code>, estompé s'il n'a rien.</div></div>
 <div class="rg"><b>ZONE-03</b><div>Une zone vide mais sans table assez grande est <strong>estompée, pas badgée</strong> : le badge dit « compatible », pas « libre ».</div></div>
 <div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible en mode admin seulement, et <strong>estompé pendant un placement</strong>.</div></div>
+<div class="rg"><b>ZONE-05</b><div>Le taux d'un onglet compte les tables réservées ou occupées <strong>à l'heure du créneau actif</strong>, sur ses tables actives.</div></div>
 </div>
 
 <h3 id="sec-7.4"><span class="hn">7.4</span>Le plan et les marques</h3>
@@ -1603,6 +1608,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PLAN-04</b><div>Ces marques appartiennent à la <strong>réservation</strong>, pas à la table : une pastille suit un déplacement.</div></div>
 <div class="rg"><b>PLAN-05</b><div>Sur la <em>fiche</em>, l'allergie reste écrite en toutes lettres et épinglée, jamais réduite à une icône.</div></div>
 <div class="rg"><b>PLAN-06</b><div>Icônes : SVG dessinés, <strong>jamais d'emoji</strong>. Allergie = un couvert, blanc sur corail.</div></div>
+<div class="rg"><b>PLAN-07</b><div>Sur la table, <strong>seule l'allergie est dessinée</strong>, avec le nom et l'heure de la réservation en dessous ; une table assise qui déborde sa durée reste occupée jusqu'à maintenant.</div></div>
 </div>
 
 <h3 id="sec-7.5"><span class="hn">7.5</span>Colonne « À placer »</h3>
@@ -1656,6 +1662,15 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>WALK-01</b><div>Un walk-in ne passe <strong>pas</strong> par le formulaire de création : <strong>toucher une table libre sur le plan → « Asseoir maintenant » → couverts</strong>. Deux gestes.</div></div>
 <div class="rg"><b>WALK-02</b><div>Ni nom, ni téléphone demandés. <strong>Aucune fiche client n'est créée.</strong></div></div>
 <div class="rg"><b>WALK-03</b><div>La réservation créée porte <code>source = sur_place</code>, <code>client_id = null</code>, et passe directement en <code>assise</code>.</div></div>
+</div>
+
+<h3 id="sec-7.9"><span class="hn">7.9</span>Nettoyage des tables</h3>
+
+<div class="rules">
+<div class="rg"><b>NET-01</b><div>Le suivi du nettoyage est un réglage du restaurant, <strong>désactivé par défaut</strong>. Désactivé, « Libérer » rend la table libre et « à nettoyer » n'apparaît nulle part.</div></div>
+<div class="rg"><b>NET-02</b><div>Activé, toucher une table « à nettoyer » ouvre une bulle <strong>« Nettoyée »</strong> : la table redevient libre, avec le bandeau « Annuler » 8 s.</div></div>
+<div class="rg"><b>NET-03</b><div>Désactiver le réglage <strong>ne vide pas</strong> les tables marquées : elles sont ignorées, et reviennent si on le réactive.</div></div>
+<div class="rg"><b>NET-04</b><div>Une table occupée à l'heure regardée montre son occupation, même si elle est marquée « à nettoyer ».</div></div>
 </div>
 
 <h2 id="sec-8"><span class="hn">8</span>Service — Agenda</h2>

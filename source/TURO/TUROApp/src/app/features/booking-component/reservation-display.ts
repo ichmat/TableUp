@@ -178,11 +178,8 @@ export function originLabel(reservation: ReservationDetail, timeZone: string): s
   return `Réservation de ${formatWeekday(reservation.serviceDay)} ${timeIn(timeZone, new Date(reservation.start))}`;
 }
 
-/** Le calendrier du formulaire grise un jour passé, fermé, ou sans service. L'API reste juge (`OutsideService`) */
-export function isBookableDay(day: string, services: RestaurantService[], closures: ExceptionalClosure[], today: string): boolean {
-  if (day < today) {
-    return false;
-  }
+/** Un jour qui a au moins un service : ni fermé, ni sans service. Le sélecteur de l'écran Service garde les jours passés */
+export function isServiceDay(day: string, services: RestaurantService[], closures: ExceptionalClosure[]): boolean {
   const closure = closures.find((c) => c.from <= day && day <= c.to);
   if (closure?.type === 'Closed') {
     return false;
@@ -191,4 +188,9 @@ export function isBookableDay(day: string, services: RestaurantService[], closur
     return (closure.replacementHours?.length ?? 0) > 0;
   }
   return services.some((service) => service.day === dayOfWeek(day));
+}
+
+/** Le calendrier du formulaire grise un jour passé, fermé, ou sans service. L'API reste juge (`OutsideService`) */
+export function isBookableDay(day: string, services: RestaurantService[], closures: ExceptionalClosure[], today: string): boolean {
+  return day >= today && isServiceDay(day, services, closures);
 }

@@ -140,4 +140,17 @@ describe('ReservationSheet', () => {
     expect(opened).toHaveBeenCalledOnceWith({ id: 'c1', origin: 'Réservation de jeudi 20:30' });
     expect(back).toHaveBeenCalled();
   });
+
+  it('should keep the placement buttons where they are, dimmed, until placement exists on the service screen', () => {
+    fixture.componentRef.setInput('placementAvailable', false);
+    show(SHEET({ status: 'Pending' }));
+
+    expect(buttons().slice(0, 3)).toEqual(['Accepter et placer à une table', 'Accepter', 'Refuser']);
+    expect(button('Accepter et placer à une table').disabled).toBeTrue();
+    expect(button('Accepter').disabled).toBeFalse();
+    expect(element().querySelector('[title="Le placement arrive avec le lot suivant"]')).not.toBeNull();
+
+    show(SHEET({ status: 'Confirmed', place: null }));
+    expect(button('Placer à une table').disabled).toBeTrue();
+  });
 });

@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiError, ReservationDetail } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
-import { UndoService } from '../../core/services/undo/undo.service';
+import { UndoService, ReservationUndoOffer } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
 import { ReservationActions } from './reservation-actions';
@@ -83,7 +83,7 @@ describe('ReservationActions', () => {
 
     actions.saved({ result: { reservation: created, eventId: 'e1' }, draft, mode: 'create', thenPlace: true });
 
-    const offer = undo.offer.calls.mostRecent().args[0];
+    const offer = undo.offer.calls.mostRecent().args[0] as ReservationUndoOffer;
     expect(offer.message).toBe('Réservation créée · Moreau, jeu. 20 août 20:30');
     expect(router.navigate).toHaveBeenCalledOnceWith(['/service'], { queryParams: { day: '2026-08-20', place: 'r1' } });
     expect(actions.reopened()).toBeNull();
@@ -102,7 +102,7 @@ describe('ReservationActions', () => {
     expect(undo.offer).not.toHaveBeenCalled();
 
     actions.saved({ result: { reservation: { ...AFTER, events: [] }, eventId: 'e3' }, draft, mode: 'edit', thenPlace: false });
-    undo.offer.calls.mostRecent().args[0].onUndone!(restored);
+    (undo.offer.calls.mostRecent().args[0] as ReservationUndoOffer).onUndone!(restored);
     expect(actions.reopened()).toEqual({ kind: 'edit', reservation: restored, draft });
   });
 });
