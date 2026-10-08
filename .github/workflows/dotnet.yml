@@ -21,8 +21,8 @@ jobs:
       with:
         dotnet-version: 10.0.x
     - name: Restore dependencies
-      run: dotnet restore source/TURO/TUROAPI
+      run: dotnet restore source/TURO/TUROAPI/TUROAPI.slnx
     - name: Build
-      run: dotnet build source/TURO/TUROAPI --no-restore
+      run: dotnet build source/TURO/TUROAPI/TUROAPI.slnx --no-restore -c Release
     - name: Test
-      run: dotnet test source/TURO/TUROAPI --no-build --verbosity normal
+      run: dotnet test source/TURO/TUROAPI/TUROAPI.slnx --no-build -c Release --verbosity normal
