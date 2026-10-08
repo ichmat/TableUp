@@ -192,6 +192,7 @@ namespace TUROAPI.Controllers
 
             Client? client = await ClientIdentity.FindOrCreateAsync(context, CurrentRestaurantId, name, phone, email);
             bool clientIsNew = client != null && context.Entry(client).State == EntityState.Added;
+            await CheckNoOverlapAsync(client?.Id, null, start, duration, timeZone);
             var reservation = new Reservation
             {
                 Id = Guid.NewGuid(),
@@ -216,11 +217,7 @@ namespace TUROAPI.Controllers
             {
                 CreatedClientId = clientIsNew ? client!.Id : null,
             });
-            await NotifyChangedAsync(DataScope.Reservations);
-            if (clientIsNew)
-            {
-                await NotifyChangedAsync(DataScope.Clients);
-            }
+            await NotifyAsync(client != null);
             var response = new ReservationActionResponse { Reservation = await DetailAsync(reservation.Id), EventId = creation.Id };
             return Created($"/api/reservations/{reservation.Id}", response);
         }
@@ -263,6 +260,7 @@ namespace TUROAPI.Controllers
                 : reservation.Start;
             int duration = request.Duration ?? reservation.Duration;
             CheckBooking(request.Covers, duration, request.Note);
+            await CheckNoOverlapAsync(reservation.ClientId, id, start, duration, timeZone);
             Guid? zoneId = await CheckZoneAsync(request.PreferredZoneId);
             string? note = Optional(request.Note);
 
@@ -292,7 +290,7 @@ namespace TUROAPI.Controllers
             await transaction.CommitAsync();
 
             _undo.Remember(line.Id, new UndoEntry(id, CurrentUserId, UndoKind.Modification) { ValuesBefore = before });
-            await NotifyChangedAsync(DataScope.Reservations);
+            await NotifyAsync(reservation.ClientId != null);
             return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = line.Id });
         }
 
@@ -351,7 +349,7 @@ namespace TUROAPI.Controllers
                 throw new ApiErrorException(ApiError.ReservationChanged);
             }
 
-            bool clientsChanged = false;
+            Guid? clientId = reservation.ClientId;
             if (entry.Kind == UndoKind.Creation)
             {
                 // Le journal et les affectations partent avec la réservation (suppression en cascade)
@@ -359,9 +357,9 @@ namespace TUROAPI.Controllers
                 await context.SaveChangesAsync();
                 if (entry.CreatedClientId is Guid createdId)
                 {
-                    clientsChanged = await context.Clients
+                    await context.Clients
                         .Where(c => c.Id == createdId && !c.Reservations.Any())
-                        .ExecuteDeleteAsync() > 0;
+                        .ExecuteDeleteAsync();
                 }
             }
             else
@@ -382,16 +380,12 @@ namespace TUROAPI.Controllers
                 // Le client est relu sous verrou : après une fusion, c'est la fiche gardée qui rend le compteur
                 (int Visits, int NoShows) delta = ClientCounters.Delta(after, reservation.Status);
                 await ApplyCountersAsync(reservation.ClientId, delta);
-                clientsChanged = reservation.ClientId != null && delta != (0, 0);
+                clientId = reservation.ClientId;
             }
             await transaction.CommitAsync();
 
             _undo.Forget(eventId);
-            await NotifyChangedAsync(DataScope.Reservations);
-            if (clientsChanged)
-            {
-                await NotifyChangedAsync(DataScope.Clients);
-            }
+            await NotifyAsync(clientId != null);
             return entry.Kind == UndoKind.Creation ? NoContent() : Ok(await DetailAsync(id));
         }
 
@@ -413,6 +407,11 @@ namespace TUROAPI.Controllers
             ReservationStatus to = ReservationTransitions.Target(gesture, from, closedByRefusal)
                 ?? throw new ApiErrorException(ApiError.ReservationActionNotAllowed, $"{gesture} is not possible on a {from} reservation.");
 
+            if (gesture == ReservationGesture.Reopen)
+            {
+                TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById((await LoadRestaurantAsync()).TimeZone);
+                await CheckNoOverlapAsync(reservation.ClientId, id, reservation.Start, reservation.Duration, timeZone);
+            }
             Assignment? assignment = reservation.LatestAssignment();
             DateTime now = DateTime.UtcNow;
             if (gesture == ReservationGesture.Arrive && assignment == null)
@@ -477,12 +476,48 @@ namespace TUROAPI.Controllers
                 StateBefore = before,
                 TablesBefore = tablesBefore,
             });
+            await NotifyAsync(reservation.ClientId != null);
+            return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = line.Id });
+        }
+
+        private static readonly ReservationStatus[] ActiveStatuses = [ReservationStatus.Pending, ReservationStatus.Confirmed, ReservationStatus.Seated];
+
+        /// <summary>
+        /// Un client ne tient pas deux tables à la fois : une autre de ses réservations actives qui chevauche ce créneau
+        /// est un doublon. Bout à bout, ou le midi et le soir, c'est permis ; un client de passage n'est jamais concerné
+        /// </summary>
+        private async Task CheckNoOverlapAsync(Guid? clientId, Guid? reservationId, DateTime start, int duration, TimeZoneInfo timeZone)
+        {
+            if (clientId is not Guid id)
+            {
+                return;
+            }
+            DateTime end = start.AddMinutes(duration);
+            // Une réservation dure moins d'un jour : celles commencées la veille suffisent à couvrir le début du créneau
+            var others = await context.Reservations
+                .Where(r => r.ClientId == id && r.Id != reservationId && ActiveStatuses.Contains(r.Status)
+                    && r.Start < end && r.Start > start.AddDays(-1))
+                .Select(r => new { r.Start, r.Duration, r.ServiceDay, r.Client!.Name })
+                .ToListAsync();
+            var clash = others.Where(r => r.Start.AddMinutes(r.Duration) > start).OrderBy(r => r.Start).FirstOrDefault();
+            if (clash != null)
+            {
+                throw new ApiErrorException(ApiError.ClientAlreadyBooked, clash.Name,
+                    ReservationClock.LocalTime(clash.Start, timeZone).ToString("HH:mm"), clash.ServiceDay.ToString("yyyy-MM-dd"));
+            }
+        }
+
+        /// <summary>
+        /// Les listes de réservations se rechargent ; les écrans Clients aussi quand la réservation est celle d'un client :
+        /// sa fiche montre son historique et sa liste le jour de sa dernière réservation, même quand aucun compteur ne bouge
+        /// </summary>
+        private async Task NotifyAsync(bool ofAClient)
+        {
             await NotifyChangedAsync(DataScope.Reservations);
-            if (reservation.ClientId != null && delta != (0, 0))
+            if (ofAClient)
             {
                 await NotifyChangedAsync(DataScope.Clients);
             }
-            return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = line.Id });
         }
 
         /// <summary>

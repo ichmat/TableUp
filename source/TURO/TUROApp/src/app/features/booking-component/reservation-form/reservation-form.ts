@@ -218,6 +218,13 @@ export class ReservationForm {
       }
       return;
     }
+    if (result.code === ApiError.ClientAlreadyBooked) {
+      // Un client ne tient pas deux tables à la fois : on renvoie vers la réservation qui existe déjà
+      const name = this.known()?.name ?? (draft.name.trim() || 'Ce client');
+      await this._modal.infoModal('Déjà réservé',
+        `${name} a déjà une réservation sur ce créneau. Ouvrez-la depuis la liste pour la modifier plutôt que d'en créer une deuxième.`);
+      return;
+    }
     await this._modal.infoModal('Erreur', result.error);
   }
 }

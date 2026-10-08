@@ -1,6 +1,6 @@
-import { inject, Service } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { CancelledBy, ReservationActionResult, ReservationDetail, ReservationGesture } from '../../models';
+import { ApiError, CancelledBy, ReservationActionResult, ReservationDetail, ReservationGesture } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { UndoService } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
@@ -21,6 +21,16 @@ export class ReservationActions {
   private _router = inject(Router);
   private _restaurant = inject(RestaurantService);
 
+  private _reopened = signal<ReservationFormMode | null>(null);
+  /** Le formulaire qu'« Annuler » rend à l'écran qui l'avait rempli : il le reprend, même s'il en était sorti entre-temps */
+  reopened = this._reopened.asReadonly();
+
+  takeReopened(): ReservationFormMode | null {
+    const mode = this._reopened();
+    this._reopened.set(null);
+    return mode;
+  }
+
   /** La fiche après le geste, `null` si l'API l'a refusé (le message est déjà montré) */
   async run(id: string, gesture: ReservationGesture): Promise<ReservationDetail | null> {
     return this.offerUndo(gesture, await this._reservations.act(id, gesture));
@@ -36,20 +46,24 @@ export class ReservationActions {
   }
 
 /**
-   * Après le formulaire : le bandeau propose de défaire (§6.7), et défaire rouvre le formulaire avec la saisie.
-   * Une modification rouvre sur la réservation rétablie, pour repartir de sa nouvelle version
+   * Après le formulaire : le bandeau propose de défaire (§6.7), et défaire ramène à l'écran du formulaire,
+   * rouvert avec la saisie — même après « Créer et placer ». Une modification rouvre sur la réservation rétablie
    */
-  saved(event: ReservationSaved, reopen: (mode: ReservationFormMode) => void) {
+  saved(event: ReservationSaved) {
     const { reservation, eventId } = event.result;
+    const origin = this._router.url;
     if (eventId !== null) {
       const timeZone = this._restaurant.model()?.timeZone ?? 'Europe/Paris';
       this._undo.offer({
         message: event.mode === 'create' ? createdMessage(reservation, timeZone) : modifiedMessage(reservation),
         reservationId: reservation.id,
         eventId,
-        onUndone: (restored) => reopen(event.mode === 'create'
-          ? { kind: 'create', draft: event.draft }
-          : { kind: 'edit', reservation: restored ?? reservation, draft: event.draft }),
+        onUndone: (restored) => {
+          this._reopened.set(event.mode === 'create'
+            ? { kind: 'create', draft: event.draft }
+            : { kind: 'edit', reservation: restored ?? reservation, draft: event.draft });
+          void this._router.navigateByUrl(origin);
+        },
       });
     }
     if (event.thenPlace) {
@@ -59,7 +73,9 @@ export class ReservationActions {
 
   private async offerUndo(gesture: ReservationGesture | 'cancel', result: ApiResult<ReservationActionResult>): Promise<ReservationDetail | null> {
     if (result.error !== null) {
-      await this._modal.infoModal('Action impossible', result.error);
+      await this._modal.infoModal('Action impossible', result.code === ApiError.ClientAlreadyBooked
+        ? 'Ce client a déjà une autre réservation sur ce créneau : la rouvrir ferait un doublon.'
+        : result.error);
       return null;
     }
     const { reservation, eventId } = result.value;

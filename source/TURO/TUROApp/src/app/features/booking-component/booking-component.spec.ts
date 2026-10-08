@@ -40,6 +40,8 @@ describe('BookingComponent', () => {
   const clientSelect = jasmine.createSpy('select');
   const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
   const saved = jasmine.createSpy('saved');
+  const reopened = signal<ReservationFormMode | null>(null);
+  const actions = { saved, reopened, takeReopened: () => { const mode = reopened(); reopened.set(null); return mode; } };
   const text = () => (fixture.nativeElement as HTMLElement).textContent!;
   const page = () => fixture.componentInstance as unknown as Page;
 
@@ -48,6 +50,7 @@ describe('BookingComponent', () => {
     clientId.set(null);
     clientSelect.calls.reset();
     saved.calls.reset();
+    reopened.set(null);
     router.navigate.and.resolveTo(true);
     await TestBed.configureTestingModule({
       imports: [BookingComponent],
@@ -55,7 +58,7 @@ describe('BookingComponent', () => {
         { provide: ReservationService, useValue: reservations },
         { provide: ClientService, useValue: { select: clientSelect } },
         { provide: Router, useValue: router },
-        { provide: ReservationActions, useValue: { saved } },
+        { provide: ReservationActions, useValue: actions },
       ],
     }).overrideComponent(BookingComponent, { set: { imports: [ListStub, SheetStub, ClientStub, FormStub] } }).compileComponents();
     fixture = TestBed.createComponent(BookingComponent);
@@ -124,11 +127,24 @@ describe('BookingComponent', () => {
 
     expect(selectedId()).toBe('r9');
     expect(text()).toContain('RESERVATION');
-    expect(saved.calls.mostRecent().args[0]).toBe(event);
-    // « Annuler » dans le bandeau rouvre le formulaire avec la saisie
-    saved.calls.mostRecent().args[1]({ kind: 'create', draft: {} });
+    expect(saved).toHaveBeenCalledOnceWith(event);
+  });
+
+  it('should take back the form of an undone creation, without the deleted reservation behind it', () => {
+    page().open('r9');
     fixture.detectChanges();
+
+    // « Annuler » dans le bandeau, ici ou depuis le Service d'où l'on revient
+    reopened.set({ kind: 'create', draft: { covers: 4 } });
+    fixture.detectChanges();
+
     expect(text()).toContain('FORM create');
+    expect(reopened()).toBeNull();
+    expect(selectedId()).toBeNull();
+    const form = fixture.debugElement.query((d) => d.name === 'app-reservation-form').componentInstance as FormStub;
+    form.cancelled.emit();
+    fixture.detectChanges();
+    expect(text()).not.toContain('RESERVATION');
   });
 
   it('should modify the open reservation in the same panel', () => {

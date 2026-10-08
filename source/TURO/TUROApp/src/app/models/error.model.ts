@@ -18,6 +18,7 @@ export enum ApiError{
     ReservationActionNotAllowed = 'ReservationActionNotAllowed',
     OutsideService = 'OutsideService',
     UndoExpired = 'UndoExpired',
+    ClientAlreadyBooked = 'ClientAlreadyBooked',
 }
 
 export interface ApiErrorResponse{

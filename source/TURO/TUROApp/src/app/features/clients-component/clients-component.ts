@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ClientDetail, ReservationDetail } from '../../models';
 import { ClientService } from '../../core/services/client/client.service';
 import { ClientList } from './client-list/client-list';
@@ -46,7 +46,24 @@ export class ClientsComponent {
   protected onReservationSaved(event: ReservationSaved) {
     this.reservationForm.set(null);
     this.openReservation(event.result.reservation.id);
-    this._actions.saved(event, (mode) => this.reservationForm.set(mode));
+    this._actions.saved(event);
+  }
+
+  constructor() {
+    // « Annuler » dans le bandeau : le formulaire revient ; une création défaite n'a plus de fiche derrière lui
+    effect(() => {
+      if (this._actions.reopened() === null) {
+        return;
+      }
+      untracked(() => {
+        const mode = this._actions.takeReopened()!;
+        if (mode.kind === 'create') {
+          this.closeReservation();
+          this._reservations.select(null);
+        }
+        this.reservationForm.set(mode);
+      });
+    });
   }
 
   protected mode = signal<PanelMode>('view');

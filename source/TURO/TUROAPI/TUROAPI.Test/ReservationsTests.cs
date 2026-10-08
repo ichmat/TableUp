@@ -168,6 +168,51 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task Booking_modifying_and_undoing_for_a_known_client_reload_the_client_screens()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddServiceAsync(restaurant.Id, DayOfWeek.Saturday, 19, 23);
+            await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0612345678");
+            await using Screen screen = await Screen.ConnectAsync(restaurant.StaffJwt());
+
+            ReservationActionResponse created = await ReservationApi.CreateAsync(staff, ReservationApi.Request());
+            Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
+            Assert.AreEqual(DataScope.Clients, await screen.NextAsync());
+
+            HttpResponseMessage modified = await ReservationApi.PutAsync(staff, created.Reservation.Id, ReservationApi.Request(hour: 21));
+            Assert.AreEqual(HttpStatusCode.OK, modified.StatusCode, await modified.Content.ReadAsStringAsync());
+            Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
+            Assert.AreEqual(DataScope.Clients, await screen.NextAsync());
+
+            ReservationActionResponse modification = (await modified.Content.ReadFromJsonAsync<ReservationActionResponse>(TestJson.Options))!;
+            await ReservationApi.UndoAsync(staff, created.Reservation.Id, modification.EventId!.Value);
+            Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
+            Assert.AreEqual(DataScope.Clients, await screen.NextAsync());
+            Assert.IsFalse(screen.TryNext(out _));
+        }
+
+        [TestMethod]
+        public async Task A_client_cannot_hold_two_reservations_that_overlap()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddServiceAsync(restaurant.Id, DayOfWeek.Saturday, 19, 23);
+            ReservationActionResponse first = await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120));
+
+            // 21:00 tombe pendant 20:00–22:00 ; le nom saisi n'y change rien, seul le numéro identifie
+            await ApiAssert.ErrorAsync(await ReservationApi.PostAsync(staff, ReservationApi.Request(hour: 21, duration: 120, name: "Sophie")),
+                HttpStatusCode.Conflict, "ClientAlreadyBooked");
+            // Bout à bout : 22:00 commence quand la première finit
+            await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 22, duration: 60));
+            // Une réservation annulée ne retient plus le créneau
+            await ReservationApi.DoAsync(staff, first.Reservation.Id, "cancel");
+            await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120));
+            // Un autre client, au même moment : rien à voir
+            await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120, phone: "06 99 99 99 99", name: "Paul"));
+        }
+
+        [TestMethod]
         public async Task The_sheet_carries_the_client_band_the_place_and_the_no_show_threshold()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();

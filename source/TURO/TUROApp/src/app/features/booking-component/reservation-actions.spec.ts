@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ReservationDetail } from '../../models';
+import { ApiError, ReservationDetail } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { UndoService } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
@@ -22,8 +22,9 @@ describe('ReservationActions', () => {
     undo = jasmine.createSpyObj<UndoService>('UndoService', ['offer']);
     modal = jasmine.createSpyObj<ModalService>('ModalService', ['infoModal']);
     modal.infoModal.and.resolveTo();
-    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    router = jasmine.createSpyObj<Router>('Router', ['navigate', 'navigateByUrl'], { url: '/reservation' });
     router.navigate.and.resolveTo(true);
+    router.navigateByUrl.and.resolveTo(true);
     TestBed.configureTestingModule({
       providers: [
         { provide: ReservationService, useValue: reservations },
@@ -54,6 +55,14 @@ describe('ReservationActions', () => {
     expect(undo.offer).not.toHaveBeenCalled();
   });
 
+  it('should say in plain words why a reservation cannot be reopened onto another one of its client', async () => {
+    reservations.act.and.resolveTo({ value: null, error: 'Moreau already has a reservation at 20:30 on 2026-08-20.', code: ApiError.ClientAlreadyBooked });
+
+    expect(await actions.run('r1', 'reopen')).toBeNull();
+    expect(modal.infoModal).toHaveBeenCalledOnceWith('Action impossible',
+      'Ce client a déjà une autre réservation sur ce créneau : la rouvrir ferait un doublon.');
+  });
+
   it('should cancel for whoever cancels', async () => {
     reservations.cancel.and.resolveTo({ value: { reservation: { ...AFTER, status: 'Cancelled' }, eventId: 'e2' }, error: null });
 
@@ -68,30 +77,32 @@ describe('ReservationActions', () => {
 
     expect(router.navigate).toHaveBeenCalledOnceWith(['/service'], { queryParams: { day: '2026-08-20', place: 'r1' } });
   });
-  it('should offer to undo a creation, and reopen the form on its draft when undone', () => {
-    const reopen = jasmine.createSpy('reopen');
+  it('should offer to undo a creation, and bring its form back on the screen it was filled on, even after leaving it', () => {
     const draft = { covers: 4, phone: '0611111111', name: 'Julien' } as never;
     const created = { ...AFTER, start: '2026-08-20T18:30:00Z', serviceDay: '2026-08-20' } as ReservationDetail;
 
-    actions.saved({ result: { reservation: created, eventId: 'e1' }, draft, mode: 'create', thenPlace: true }, reopen);
+    actions.saved({ result: { reservation: created, eventId: 'e1' }, draft, mode: 'create', thenPlace: true });
 
     const offer = undo.offer.calls.mostRecent().args[0];
     expect(offer.message).toBe('Réservation créée · Moreau, jeu. 20 août 20:30');
     expect(router.navigate).toHaveBeenCalledOnceWith(['/service'], { queryParams: { day: '2026-08-20', place: 'r1' } });
+    expect(actions.reopened()).toBeNull();
+
     offer.onUndone!(null);
-    expect(reopen).toHaveBeenCalledOnceWith({ kind: 'create', draft });
+    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/reservation');
+    expect(actions.takeReopened()).toEqual({ kind: 'create', draft });
+    expect(actions.reopened()).toBeNull();
   });
 
   it('should reopen a modification on the restored reservation, and offer nothing when nothing changed', () => {
-    const reopen = jasmine.createSpy('reopen');
     const restored = { ...AFTER, version: 9 } as ReservationDetail;
     const draft = { covers: 6 } as never;
 
-    actions.saved({ result: { reservation: AFTER, eventId: null }, draft, mode: 'edit', thenPlace: false }, reopen);
+    actions.saved({ result: { reservation: AFTER, eventId: null }, draft, mode: 'edit', thenPlace: false });
     expect(undo.offer).not.toHaveBeenCalled();
 
-    actions.saved({ result: { reservation: { ...AFTER, events: [] }, eventId: 'e3' }, draft, mode: 'edit', thenPlace: false }, reopen);
+    actions.saved({ result: { reservation: { ...AFTER, events: [] }, eventId: 'e3' }, draft, mode: 'edit', thenPlace: false });
     undo.offer.calls.mostRecent().args[0].onUndone!(restored);
-    expect(reopen).toHaveBeenCalledOnceWith({ kind: 'edit', reservation: restored, draft });
+    expect(actions.reopened()).toEqual({ kind: 'edit', reservation: restored, draft });
   });
 });

@@ -36,18 +36,21 @@ describe('ClientsComponent', () => {
   const clients = { selectedId, detail, detailFailed: signal(false), select: (id: string | null) => selectedId.set(id) };
   const reservationSelect = jasmine.createSpy('select');
   const saved = jasmine.createSpy('saved');
+  const reopened = signal<ReservationFormMode | null>(null);
+  const actions = { saved, reopened, takeReopened: () => { const mode = reopened(); reopened.set(null); return mode; } };
   const text = () => (fixture.nativeElement as HTMLElement).textContent!;
   const page = () => fixture.componentInstance as unknown as Page;
 
   beforeEach(async () => {
     selectedId.set(null);
     detail.set(null);
+    reopened.set(null);
     await TestBed.configureTestingModule({
       imports: [ClientsComponent],
       providers: [
         { provide: ClientService, useValue: clients },
         { provide: ReservationService, useValue: { select: reservationSelect } },
-        { provide: ReservationActions, useValue: { saved } },
+        { provide: ReservationActions, useValue: actions },
       ],
     }).overrideComponent(ClientsComponent, { set: { imports: [ListStub, SheetStub, FormStub, ReservationSheetStub, ReservationFormStub] } }).compileComponents();
 
@@ -115,5 +118,16 @@ describe('ClientsComponent', () => {
     fixture.detectChanges();
     expect(reservationSelect).toHaveBeenCalledWith('r9');
     expect(text()).toContain('RESERVATION Sophie Marchand');
+
+    // « Annuler » dans le bandeau : le formulaire revient, la fiche client derrière lui
+    reopened.set({ kind: 'create', draft: { covers: 4 } });
+    fixture.detectChanges();
+    expect(text()).toContain('FORM create');
+    expect(reopened()).toBeNull();
+    const form = fixture.debugElement.query((d) => d.name === 'app-reservation-form').componentInstance as ReservationFormStub;
+    form.cancelled.emit();
+    fixture.detectChanges();
+    expect(text()).toContain('SHEET');
+    expect(text()).not.toContain('RESERVATION');
   });
 });

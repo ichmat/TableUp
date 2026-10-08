@@ -60,6 +60,29 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task Moving_onto_another_reservation_of_the_same_client_is_refused()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddServiceAsync(restaurant.Id, DayOfWeek.Saturday, 19, 23);
+            DateOnly day = ReservationApi.Saturday;
+            Client sophie = await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0612345678");
+            await restaurant.AddReservationAsync(day, 19, clientId: sophie.Id);
+            Reservation later = await restaurant.AddReservationAsync(day, 21, clientId: sophie.Id);
+            ReservationResponse sheet = await ReservationApi.GetAsync(staff, later.Id);
+
+            ReservationRequest onTop = Same(sheet);
+            onTop.Time = new TimeOnly(20, 0);
+            await ApiAssert.ErrorAsync(await ReservationApi.PutAsync(staff, later.Id, onTop), HttpStatusCode.Conflict, "ClientAlreadyBooked");
+
+            // La réservation ne se gêne pas elle-même
+            ReservationRequest bigger = Same(sheet);
+            bigger.Covers = 6;
+            HttpResponseMessage kept = await ReservationApi.PutAsync(staff, later.Id, bigger);
+            Assert.AreEqual(HttpStatusCode.OK, kept.StatusCode, await kept.Content.ReadAsStringAsync());
+        }
+
+        [TestMethod]
         public async Task Nothing_changed_writes_no_journal_line()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();

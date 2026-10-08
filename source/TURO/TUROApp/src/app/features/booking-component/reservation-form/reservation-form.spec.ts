@@ -178,6 +178,20 @@ describe('ReservationForm', () => {
     expect(element().querySelector('[data-field="date"] input')!.hasAttribute('disabled')).toBeTrue();
   });
 
+  it('should say in plain words that the caller already holds a table at that time', async () => {
+    reservations.create.and.resolveTo({ value: null, error: 'Julien already has a reservation at 20:00 on 2026-08-20.', code: ApiError.ClientAlreadyBooked });
+    await open({ kind: 'create' });
+
+    click('[data-slot="20:00:00"]');
+    type('phone', '06 11 11 11 11');
+    type('identity', 'Julien');
+    button('Créer').click();
+    await fixture.whenStable();
+
+    expect(modal.infoModal).toHaveBeenCalledOnceWith('Déjà réservé',
+      "Julien a déjà une réservation sur ce créneau. Ouvrez-la depuis la liste pour la modifier plutôt que d'en créer une deuxième.");
+  });
+
   it('should offer to reload when another device changed the reservation', async () => {
     reservations.update.and.resolveTo({ value: null, error: 'This reservation was changed on another device.', code: ApiError.ReservationChanged });
     modal.confirmModal.and.resolveTo(true);

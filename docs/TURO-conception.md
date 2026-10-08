@@ -1059,6 +1059,8 @@ Le restaurateur connaît sa salle mieux que le logiciel : il sait que la 7 part 
 
 Seuls un jour passé, un jour fermé ou une heure hors des services sont refusés : ce n'est pas une question de place, le restaurant n'est pas ouvert.
 
+**Un doublon est refusé, lui aussi.** Un client ne tient pas deux tables à la fois : si sa fiche a déjà une réservation active (à répondre, confirmée ou assise) qui chevauche le créneau, la création, la modification ou la réouverture est refusée. Le formulaire renvoie vers la réservation existante. Bout à bout, ou le midi et le soir, c'est permis ; un client de passage n'est jamais concerné.
+
 La **liste d'attente** serait la vraie réponse à « complet », mais elle est au niveau 2 du cahier (volet G). Le formulaire est dessiné pour l'accueillir plus tard sans bouger : un troisième bouton à côté de « Créer ».
 
 ### 8.5 Le client se reconnaît au numéro, pendant l'appel

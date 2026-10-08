@@ -144,20 +144,37 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public async Task Screens_reload_reservations_and_clients_only_when_counters_move()
+        public async Task A_gesture_on_a_client_reservation_reloads_the_client_screens_a_walk_in_does_not()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();
             using HttpClient staff = restaurant.StaffClient();
             Reservation pending = await restaurant.AddReservationAsync(ReservationApi.Saturday, 20, status: ReservationStatus.Pending);
-            Reservation late = await restaurant.AddReservationAsync(Dates.Today.AddDays(-1), 20);
+            Reservation walkIn = await restaurant.AddReservationAsync(ReservationApi.Saturday, 21, clientName: null);
             await using Screen screen = await Screen.ConnectAsync(restaurant.StaffJwt());
 
+            // La fiche client montre l'historique de ses réservations : sans compteur qui bouge, elle change quand même
             await ReservationApi.DoAsync(staff, pending.Id, "accept");
             Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
-            await ReservationApi.DoAsync(staff, late.Id, "no-show");
-            Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
             Assert.AreEqual(DataScope.Clients, await screen.NextAsync());
+            await ReservationApi.DoAsync(staff, walkIn.Id, "cancel");
+            Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
             Assert.IsFalse(screen.TryNext(out _));
+        }
+
+        [TestMethod]
+        public async Task Reopening_onto_another_reservation_of_the_same_client_is_refused()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            Client sophie = await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0612345678");
+            Reservation cancelled = await restaurant.AddReservationAsync(ReservationApi.Saturday, 20, status: ReservationStatus.Cancelled, clientId: sophie.Id);
+            await restaurant.AddReservationAsync(ReservationApi.Saturday, 20, 30, clientId: sophie.Id);
+            // Deux clients de passage peuvent bien tomber en même temps
+            Reservation walkIn = await restaurant.AddReservationAsync(ReservationApi.Saturday, 20, status: ReservationStatus.Cancelled, clientName: null);
+            await restaurant.AddReservationAsync(ReservationApi.Saturday, 20, clientName: null);
+
+            await ApiAssert.ErrorAsync(await ReservationApi.ActAsync(staff, cancelled.Id, "reopen"), HttpStatusCode.Conflict, "ClientAlreadyBooked");
+            await ReservationApi.DoAsync(staff, walkIn.Id, "reopen");
         }
 
         [TestMethod]

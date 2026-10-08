@@ -43,5 +43,7 @@ namespace TUROAPI.Models.Enums
         OutsideService = 15,
         [ApiErrorInfo(HttpStatusCode.Conflict, "This action can no longer be undone.")]
         UndoExpired = 16,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "{0} already has a reservation at {1} on {2}.")]
+        ClientAlreadyBooked = 17,
     }
 }

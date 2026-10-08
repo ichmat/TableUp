@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ReservationDetail } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
@@ -43,7 +43,23 @@ export class BookingComponent {
     if (event.mode === 'create') {
       this.open(event.result.reservation.id);
     }
-    this._actions.saved(event, (mode) => this.form.set(mode));
+    this._actions.saved(event);
+  }
+
+  constructor() {
+    // « Annuler » dans le bandeau : le formulaire revient ; une création défaite n'a plus de fiche derrière lui
+    effect(() => {
+      if (this._actions.reopened() === null) {
+        return;
+      }
+      untracked(() => {
+        const mode = this._actions.takeReopened()!;
+        if (mode.kind === 'create') {
+          this.close();
+        }
+        this.form.set(mode);
+      });
+    });
   }
 
   protected stack = signal<PanelEntry[]>([]);
