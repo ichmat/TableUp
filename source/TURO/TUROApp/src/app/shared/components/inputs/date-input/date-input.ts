@@ -36,6 +36,8 @@ export class DateInput implements FormValueControl<string> {
   required = input(false);
 
   inputClass = input<string>();
+  /** Les jours que le calendrier grise et refuse */
+  isDisabled = input<(date: Date) => boolean>(() => false);
 
   inputDay = viewChild.required<ElementRef<HTMLInputElement>>('inputDay');
   inputMonth = viewChild.required<ElementRef<HTMLInputElement>>('inputMonth');

@@ -39,7 +39,7 @@
 | Position des boutons | **Jamais réordonnés selon le contexte** — une position stable vaut mieux qu'une hiérarchie juste |
 | Fiche ouverte sur le plan | Remplace la colonne, **pas de voile**, et le plan se recompose (seule exception à la règle du recouvrement) |
 | Glisser une demande en attente | Accepte **et** place d'un geste |
-| Gestes conséquents | Pas de popup : **envoi différé de 8 s + bandeau « Annuler »** |
+| Gestes conséquents | Pas de popup : **action immédiate + bandeau « Annuler » 8 s**, qui la défait |
 | Journal | Une ligne horodatée et signée par événement, sur chaque réservation |
 | Identité client | **Le téléphone est la clé.** Un walk-in sans numéro ne crée aucune fiche client |
 | Compteurs client | **Stockés**, pas déduits — mais toute sortie de `no_show` décrémente, et le journal reste l'autorité |
@@ -269,6 +269,7 @@ La disponibilité se résout **sur les tables**, jamais sur un total de couverts
 | `assis_a` | |
 | `termine_a` | **Nullable** — une clôture automatique ne connaît pas l'heure de fin (§12.4) |
 | `cloture_auto` | Vrai si la réservation a été close par l'ouverture du service suivant. Permet aux statistiques de durée d'**exclure ces lignes au lieu de les croire** |
+| `cree_le` | Trie la file des demandes (« la plus ancienne depuis 4 h ») |
 
 `jour_service` n'est pas une commodité : sans lui, le chiffre d'affaires d'un samedi soir se retrouve à cheval sur deux dates et tous les rapports sont faux.
 
@@ -284,7 +285,7 @@ Une ligne par fait, rattachée à une réservation. Voir §6.8.
 |---|---|
 | `id`, `reservation_id` | |
 | `horodatage` | |
-| `type` | création · acceptation · refus · rappel · confirmation client · placement · déplacement · arrivée · libération · no-show · annulation · modification |
+| `type` | création · acceptation · refus · rappel · confirmation client · placement · déplacement · arrivée · libération · no-show · annulation · modification · réouverture |
 | `auteur_id` | Null si l'auteur est le système |
 | `details` | Ce qui a changé, pour les modifications |
 
@@ -770,6 +771,8 @@ Il n'est demandé **qu'à la création manuelle**. Partout ailleurs le logiciel 
 
 Dans ce dernier cas, les quatre valeurs restent affichées côte à côte, une seule allumée. Un menu déroulant refermé cache la question ; quatre boutons dont un allumé la posent en permanence, sans coûter un geste.
 
+À la création manuelle, quatre valeurs sont proposées : **Téléphone** (allumée par défaut), **Sur place**, **Plateforme**, **Autre**. Web et Google ne sont jamais choisies : le logiciel les écrit.
+
 ### 6.4 La colonne « Action »
 
 Actions rapides, directement dans la liste, sans ouvrir la fiche.
@@ -811,7 +814,9 @@ Une fiche peut théoriquement déclencher huit choses. Les afficher à parité o
 | `confirmee` sans table | **Placer à une table** *(orange)* | Ferme la colonne, allume les tables compatibles |
 | `confirmee` placée | **Marquer l'arrivée** *(encre)* | → `assise`, horodate `assis_a`, la table passe occupée |
 | `assise` | **Libérer la table** *(encre)* | → `terminee`, `termine_a`, la table passe « à nettoyer » |
-| `terminee`, `no_show`, `annulee` | Aucune | Lecture seule. Une sortie discrète : « Rouvrir », en cas d'erreur de saisie |
+| `terminee`, `no_show`, `annulee` | Aucune | Lecture seule. Une sortie discrète : « Rouvrir », en cas d'erreur de saisie — un no-show redevient confirmé, une terminée redevient assise, une annulée redevient confirmée, ou une demande si c'était un refus |
+
+**Annuler une réservation** est une sortie discrète de la fiche : elle se déplie sur place en « Le client annule » / « Le restaurant annule » — pas de popup.
 
 **L'orange est réservé à ce qui n'est pas encore fait.** *Placer* et *Accepter* sont oranges ; *Marquer l'arrivée* et *Libérer* passent en encre. Sinon l'orange perd son sens, qui est « il reste quelque chose à faire ici ».
 
@@ -823,7 +828,7 @@ Justification de l'ordre : pendant un service, accepter sans placer laisse une r
 
 **L'allergie n'est pas une note.** C'est la seule information de la fiche dont l'oubli a une conséquence physique. Épinglée sous le nom, en corail, jamais repliée, jamais mélangée à « anniversaire » ou « près de la fenêtre ». Elle vient de la fiche **client** et suit le client à toutes ses réservations, y compris celles saisies par quelqu'un qui ne le connaît pas.
 
-**Le bouton « No-show » n'existe pas trop tôt.** Il n'apparaît qu'une fois l'heure dépassée de `retard_grace`. Avant, il n'a pas de sens et ne peut produire qu'une erreur coûteuse : un no-show injustement inscrit reste dans l'historique d'un client fidèle. Sa confirmation nomme la conséquence : « 2ᵉ no-show pour ce client ».
+**Le bouton « No-show » n'existe pas trop tôt.** Il n'apparaît qu'une fois l'heure dépassée de `retard_grace`. Avant, il n'a pas de sens et ne peut produire qu'une erreur coûteuse : un no-show injustement inscrit reste dans l'historique d'un client fidèle. Le bandeau qui suit nomme la conséquence : « 2ᵉ no-show pour ce client ».
 
 **Modifier peut casser le placement.** Passer une réservation de 4 à 6 couverts sur une table de 4 rend l'affectation invalide. Le panneau ne déplace rien tout seul et ne libère rien en silence : il garde la table, affiche « la table 12 ne suffit plus », et propose de replacer. Un logiciel qui déplace une table sans qu'on le lui demande finit par être contourné.
 
@@ -850,11 +855,11 @@ Toucher une réservation ouvre la fiche **à la place de la colonne**, et allume
 
 Mais l'un des deux **sort du logiciel** — accepter envoie un message à un vrai client, et un lâcher mal visé est un courriel qu'on ne rattrape pas. La protection retenue n'est **pas** une popup :
 
-> **L'envoi est différé de 8 secondes**, et un bandeau propose « Annuler ». La table est réservée immédiatement, la fiche passe « confirmée », seul le message attend son tour.
+> **L'action part tout de suite, et un bandeau propose « Annuler » pendant 8 secondes.** « Annuler » défait l'action : la fiche revient à son état d'avant, les compteurs du client aussi.
 
 Une popup demande « es-tu sûr ? » à quelqu'un qui vient d'agir et qui répond oui par réflexe. L'annulation différée intervient au moment où l'on *voit* le résultat — donc au moment où l'on repère l'erreur. Elle rattrape aussi ce qu'une popup ne rattrape pas : la mauvaise table, la mauvaise ligne.
 
-**Ce bandeau sert à tous les gestes conséquents** : accepter, refuser, marquer un no-show, y compris depuis la colonne Action de la liste.
+**Ce bandeau sert à tous les gestes** : accepter, refuser, arrivée, libérer, no-show, annuler, rouvrir, créer, modifier — y compris depuis la colonne Action de la liste. Pour une création ou une modification, « Annuler » rouvre le formulaire avec la saisie. Une action défaite ne laisse aucune trace au journal. Les messages aux clients n'existent pas encore ; ils passeront par une file d'envoi différé côté serveur, qui ne part qu'à la fin du délai.
 
 La popup de raison sur les tables `~✓` (§5.8) reste, elle : elle n'interroge pas, elle **informe** d'une chose qu'on ne peut pas voir.
 
@@ -949,6 +954,8 @@ Il n'y a **pas** de champ « préférences ». Le commentaire appartient à la r
 
 Un **trait fin marque le passage au passé** : sans lui, une réservation à venir et une réservation terminée se ressemblent trop. Chaque ligne porte date · couverts · table · badge de statut (§6.2).
 
+Toucher une ligne ouvre la fiche de cette réservation (§7.6). La fiche porte aussi « Nouvelle réservation » : le formulaire s'ouvre, l'identité déjà remplie.
+
 ### 7.6 La navigation entre les deux fiches
 
 La fiche client et la fiche réservation **se remplacent l'une l'autre dans un panneau unique**. Jamais deux panneaux à l'écran.
@@ -1028,6 +1035,8 @@ Un formulaire rangé dans l'ordre de la base de données — client d'abord, ré
 
 Il n'y a **pas d'assistant en deux étapes** pour autant : un seul formulaire, où la réponse de disponibilité arrive d'elle-même dès que les couverts et la date sont saisis. L'ordre de la conversation est respecté sans imposer un bouton « Suivant » à un utilisateur qui tape vite.
 
+Le nom n'est jamais une clé : un prénom suffit, et deux « Julien » à deux numéros différents font deux fiches.
+
 ### 8.3 La bande d'heures est le cœur du formulaire
 
 Un formulaire qui se contente d'enregistrer est un carnet en papier avec des écrans en plus. **Ce qui justifie son existence, c'est qu'il répond.** Dès que couverts et date sont saisis, chaque créneau du service se colore — avant même qu'on ait touché au nom.
@@ -1048,11 +1057,17 @@ C'est **le vocabulaire du §5.8 réutilisé tel quel** : vert plein / ambre poin
 
 Le restaurateur connaît sa salle mieux que le logiciel : il sait que la 7 part toujours tôt le samedi. **Un logiciel qui dit non se fait contourner — et il se fait contourner sur papier**, c'est-à-dire hors de toute vue d'ensemble. Autant garder la réservation dedans, même signalée.
 
+Seuls un jour passé, un jour fermé ou une heure hors des services sont refusés : ce n'est pas une question de place, le restaurant n'est pas ouvert.
+
+**Un doublon est refusé, lui aussi.** Un client ne tient pas deux tables à la fois : si sa fiche a déjà une réservation active (à répondre, confirmée ou assise) qui chevauche le créneau, la création, la modification ou la réouverture est refusée. Le formulaire renvoie vers la réservation existante. Bout à bout, ou le midi et le soir, c'est permis ; un client de passage n'est jamais concerné.
+
 La **liste d'attente** serait la vraie réponse à « complet », mais elle est au niveau 2 du cahier (volet G). Le formulaire est dessiné pour l'accueillir plus tard sans bouger : un troisième bouton à côté de « Créer ».
 
 ### 8.5 Le client se reconnaît au numéro, pendant l'appel
 
 Dès que le numéro correspond (§7.2), la fiche s'attache et **l'allergie s'affiche dans le formulaire**. C'est tout le rendement du §7 : l'information ne sert pas à consulter après coup, elle sert à parler mieux *maintenant* — « on note toujours les fruits à coque, c'est bien ça ? »
+
+Sans attendre le numéro entier, **les fiches connues se proposent** dès quatre chiffres, ou deux lettres du nom : un client qui ne donne que « Marchand » se retrouve quand même. En choisir une l'attache comme si le numéro avait été tapé. Seules les fiches qui ont un numéro sont proposées : la réservation l'exige.
 
 Le ratio `2 / 41` apparaît au même moment, et c'est le seul moment où il sert : pendant qu'on décide d'accepter un samedi 20:00. Lu le lendemain, il ne change plus rien.
 
@@ -1083,7 +1098,11 @@ Au moment où l'on touche **« Créer et placer »**, le formulaire se ferme et 
 
 **La durée** est affichée, pré-remplie depuis `rotation_defaut`, et modifiable. Un groupe de 8 pour un anniversaire ne tient pas en 1 h 45 ; si on ne peut pas le dire, le plan ment pour toute la soirée.
 
-**La confirmation part en différé.** La case est cochée d'office si un e-mail est connu, et l'envoi suit la règle du §6.7 : 8 secondes, bandeau « Annuler ». Une confirmation partie avec la mauvaise date se rattrape mal, et c'est justement au moment où l'on *voit* la réservation apparaître qu'on repère la faute de frappe.
+**La confirmation part en différé.** La case est cochée d'office si un e-mail est connu. Comme tout geste, la création se défait 8 secondes (§6.7) ; le message, lui, ne partira qu'à la fin du délai.
+
+### 8.8 Modifier une réservation
+
+Le même panneau, pré-rempli : couverts, date, heure, durée, commentaire, salle souhaitée. L'identité ne se modifie pas ici — elle appartient à la fiche client. Une réservation assise garde sa date et son heure ; une réservation close ne se modifie plus, on la rouvre d'abord. Si un autre poste a changé la réservation pendant la saisie, l'enregistrement est refusé et le formulaire propose de recharger.
 
 ---
 
@@ -1519,8 +1538,6 @@ Le reste ne bouge pas, et c'est voulu : **les tables non libérées apparaissent
 | Agenda : hauteur | Au-delà d'une vingtaine de tables, les lignes ne tiennent plus dans un écran. Défilement vertical présumé, non conçu |
 | Téléphone | Hors périmètre. La bascule du rail en barre basse est prévue dans la structure, pas dessinée |
 | Placer depuis l'écran Réservations | « Placer » bascule vers la vue Plan au bon service. Le retour vers la liste après placement n'est pas conçu |
-| File d'envoi différé | Le bandeau de 8 s suppose une file de messages annulable côté serveur. Comportement si l'application est fermée pendant le délai : non tranché |
-| Modification d'une réservation | §6.6 dit que le panneau signale l'affectation devenue invalide. L'écran de modification lui-même n'est pas dessiné |
 | Import de clients | Un restaurateur qui arrive avec un fichier existant contourne la règle « le téléphone est la clé » : l'écran d'import et sa déduplication ne sont pas conçus |
 | Calcul de la bande d'heures | §8.3 suppose de tester chaque créneau contre l'occupation et les rapprochements possibles. Le coût de ce calcul à chaque frappe n'est pas évalué |
 | Pas des créneaux | La bande affiche des demi-heures. Un service qui travaille au quart d'heure la rendrait deux fois plus longue : non tranché |

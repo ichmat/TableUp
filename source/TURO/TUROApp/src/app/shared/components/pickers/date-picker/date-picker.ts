@@ -7,6 +7,7 @@ import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
 type CalendarDay = {
   date: Date;
   class: string;
+  disabled: boolean;
 };
 
 type Column = 'month' | 'year';
@@ -19,6 +20,8 @@ type Column = 'month' | 'year';
 export class DatePicker implements AfterViewInit {
 
   idFor = input.required<string>();
+  /** Un jour que le parent refuse : grisé, barré, jamais choisi (le formulaire de réservation grise les jours fermés) */
+  isDisabled = input<(date: Date) => boolean>(() => false);
   validate = output<Date>();
 
   isHidden = true;
@@ -84,13 +87,16 @@ export class DatePicker implements AfterViewInit {
     const days: CalendarDay[] = [];
     for(let i = 0; i < 42; i++){
       const date = new Date(month.getFullYear(), month.getMonth(), 1 - offset + i);
+      const disabled = this.isDisabled()(date);
       days.push({
         date,
+        disabled,
         class: [
           'h-8 leading-8 rounded-md cursor-pointer hover:bg-interactive',
           date.getMonth() !== month.getMonth() ? 'text-text-muted' : '',
           sameTime(date, today) ? 'font-black inset-ring-2 inset-ring-text-muted' : '',
           sameTime(date, selected) ? 'bg-text-muted shadow-md' : '',
+          disabled ? 'opacity-40 line-through cursor-not-allowed hover:bg-transparent' : '',
         ].join(' '),
       });
     }
@@ -116,6 +122,12 @@ export class DatePicker implements AfterViewInit {
   protected setDate(date: Date){
     this.currentDate.set(startOfDay(date));
     this.displayedMonth.set(startOfMonth(date));
+  }
+
+  protected pickDay(date: Date){
+    if(!this.isDisabled()(date)){
+      this.setDate(date);
+    }
   }
 
   protected setToToday() {
@@ -160,6 +172,9 @@ export class DatePicker implements AfterViewInit {
   protected onValidate(){
     if(this.view() === 'months'){
       this.view.set('days');
+      return;
+    }
+    if(this.isDisabled()(this.currentDate())){
       return;
     }
     this.validate.emit(new Date(this.currentDate()));

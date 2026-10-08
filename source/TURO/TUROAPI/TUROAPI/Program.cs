@@ -104,6 +104,9 @@ namespace TUROAPI
                 .AddJsonProtocol(options =>
                     options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
             builder.Services.AddSingleton<ChangeNotifier>();
+            // L'état d'avant des écritures de réservation, le temps du bandeau « Annuler »
+            builder.Services.AddMemoryCache();
+            builder.Services.AddSingleton<ReservationUndo>();
 
             builder.Logging.ClearProviders();
             builder.Services.AddHttpContextAccessor();

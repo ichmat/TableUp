@@ -119,6 +119,21 @@ export class ClientService {
         return result.value?.items.find((item) => item.id !== exceptId) ?? null;
     }
 
+    /** Le client qui porte exactement ce numéro (§8.5) : la reconnaissance du formulaire de réservation */
+    async findExactPhone(phone: string): Promise<ClientListItem | null> {
+        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL, { params: { phone, pageSize: 1 } }));
+        return result.value?.items[0] ?? null;
+    }
+
+    /**
+     * Les fiches qui répondent à un morceau de numéro ou de nom, pendant qu'on prend une réservation.
+     * Sans numéro, une fiche n'est pas proposée : la réservation l'exige, et en saisir un créerait une autre fiche
+     */
+    async suggest(search: string): Promise<ClientListItem[]> {
+        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL, { params: { search, pageSize: 5 } }));
+        return (result.value?.items ?? []).filter((item) => item.phone !== null);
+    }
+
     exportCsv(): Promise<ApiResult<CsvFile>> {
         return toApiResult(this._http.get(`${CLIENTS_URL}/export`, { observe: 'response', responseType: 'blob' }).pipe(
             map((response) => ({

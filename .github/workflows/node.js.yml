@@ -3,19 +3,24 @@
 
 name: Node.js CI
 
+# Lancé uniquement par dotnet.yml (job « node »), après le succès du build .NET
 on:
-  push:
-    branches: [ "master" , "dev" ]
-  pull_request:
-    branches: [ "master" , "dev" ]
+  workflow_call:
 
 jobs:
   build:
 
     runs-on: self-hosted
+    env:
+      NG_BUILD_MAX_WORKERS: 1
+      NODE_OPTIONS: --max-old-space-size=3072
+      # esbuild est un binaire Go : NODE_OPTIONS ne le limite pas
+      GOMAXPROCS: 1
+      GOMEMLIMIT: 2GiB
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        # Angular 22 n'est pas supporté sur Node 18/20
+        node-version: [22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
@@ -25,10 +30,10 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        working-directory: source/TURO/TUROApp
+        cache-dependency-path: source/TURO/TUROApp/package-lock.json
     - run: npm ci
       working-directory: source/TURO/TUROApp
     - run: npm run build --if-present
       working-directory: source/TURO/TUROApp
-    - run: npm test
+    - run: npm test -- --no-watch --browsers=ChromeHeadless
       working-directory: source/TURO/TUROApp

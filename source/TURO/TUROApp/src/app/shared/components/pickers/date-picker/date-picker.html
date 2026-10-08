@@ -33,7 +33,7 @@
                 (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel()"
                 class="grid grid-cols-7 gap-y-0.5 text-center touch-none">
                 @for (day of days(); track $index) {
-                    <p (click)="setDate(day.date)" [class]="day.class">{{ day.date.getDate() }}</p>
+                    <p (click)="pickDay(day.date)" [class]="day.class" [attr.data-disabled-day]="day.disabled ? '' : null">{{ day.date.getDate() }}</p>
                 }
             </div>
         </div>

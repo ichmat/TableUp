@@ -48,6 +48,8 @@ namespace TUROAPI.Test
         [DataRow("api/restaurant/floor-plan")]
         [DataRow("api/clients")]
         [DataRow("api/clients/export")]
+        [DataRow("api/reservations")]
+        [DataRow("api/reservations?period=Past")]
         public async Task Staff_reads_what_the_service_needs(string path)
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();
@@ -80,6 +82,19 @@ namespace TUROAPI.Test
 
             ClientResponse created = await ClientApi.CreateAsync(staff, ClientApi.Request(allergies: "Arachide", notes: "Habituée"));
             await ApiAssert.OkAsync<ClientResponse>(await ClientApi.PutAsync(staff, created.Id, ClientApi.Request(allergies: "Arachide, lait")));
+        }
+
+        [TestMethod]
+        public async Task Staff_books_and_handles_reservations()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddServiceAsync(restaurant.Id, DayOfWeek.Saturday, 19, 23);
+
+            ReservationActionResponse created = await ReservationApi.CreateAsync(staff, ReservationApi.Request());
+            await ApiAssert.OkAsync<ReservationActionResponse>(await ReservationApi.PutAsync(staff, created.Reservation.Id, ReservationApi.Request(covers: 5)));
+            ReservationActionResponse cancelled = await ReservationApi.DoAsync(staff, created.Reservation.Id, "cancel");
+            await ApiAssert.OkAsync<ReservationResponse>(await ReservationApi.UndoAsync(staff, created.Reservation.Id, cancelled.EventId!.Value));
         }
     }
 }

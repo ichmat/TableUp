@@ -60,6 +60,13 @@ namespace TUROAPI.Models
         // Closed by the opening of the next service
         public bool AutoClosed { get; set; }
 
+        // Trie la file des demandes (« la plus ancienne depuis 4 h ») ; posée par l'API
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Jeton de concurrence : la colonne système xmin de PostgreSQL, qui change à chaque écriture de la ligne
+        [Timestamp]
+        public uint Version { get; set; }
+
         public List<Assignment> Assignments { get; set; } = [];
         public List<EventLog> Events { get; set; } = [];
     }

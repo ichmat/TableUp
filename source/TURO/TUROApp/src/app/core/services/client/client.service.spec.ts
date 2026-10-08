@@ -13,7 +13,7 @@ const DETAIL: ClientDetail = {
   mergeCandidates: [], history: [], version: 1,
 };
 const item = (id: string, name: string): ClientListItem => ({
-  id, name, phone: '0612345678', tags: [], hasAllergy: false, visitCount: 0, noShowCount: 0, atRisk: false, lastServiceDay: null,
+  id, name, phone: '0612345678', tags: [], hasAllergy: false, allergies: null, visitCount: 0, noShowCount: 0, atRisk: false, lastServiceDay: null,
 });
 
 describe('fileNameOf', () => {
@@ -30,7 +30,7 @@ describe('ClientService', () => {
 
   // Le GET de la liste ; `findByPhone` demande `pageSize=5`, ce qui le distingue
   const listCall = (): TestRequest =>
-    http.expectOne((r) => r.url === '/api/clients' && r.method === 'GET' && r.params.get('pageSize') !== '5');
+    http.expectOne((r) => r.url === '/api/clients' && r.method === 'GET' && r.params.get('pageSize') !== '5' && !r.params.has('phone'));
   const settle = async () => {
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -173,5 +173,23 @@ describe('ClientService', () => {
       .flush({ ...PAGE, items: [item('c1', 'Moi'), item('c2', 'Sophie Marchand')] });
 
     expect((await owner)?.id).toBe('c2');
+  });
+
+  it('should recognize a whole number, never a piece of one', async () => {
+    listCall().flush(PAGE);
+    const owner = service.findExactPhone('06 12 34 56 78');
+    http.expectOne((r) => r.url === '/api/clients' && r.params.get('phone') === '06 12 34 56 78' && r.params.get('pageSize') === '1')
+      .flush({ ...PAGE, items: [item('c2', 'Sophie Marchand')] });
+
+    expect((await owner)?.id).toBe('c2');
+  });
+
+  it('should suggest the clients matching a piece of a number or a name, only those who can be called back', async () => {
+    listCall().flush(PAGE);
+    const found = service.suggest('march');
+    http.expectOne((r) => r.url === '/api/clients' && r.params.get('search') === 'march' && r.params.get('pageSize') === '5')
+      .flush({ ...PAGE, items: [item('c2', 'Sophie Marchand'), { ...item('c3', 'Marchal'), phone: null }] });
+
+    expect((await found).map((c) => c.id)).toEqual(['c2']);
   });
 });

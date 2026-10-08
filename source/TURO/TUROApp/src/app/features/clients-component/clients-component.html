@@ -3,12 +3,18 @@
 
     @if (panelOpen()) {
         <aside class="w-[322px] shrink-0 h-full bg-surface rounded-xl shadow-xl overflow-y-auto">
-            @if (mode() === 'create') {
+            @if (reservationForm(); as reservationMode) {
+                <app-reservation-form [mode]="reservationMode" (saved)="onReservationSaved($event)" (cancelled)="reservationForm.set(null)" />
+            } @else if (mode() === 'create') {
                 <app-client-form (saved)="onSaved($event)" (cancelled)="close()" (openClient)="open($event)" />
             } @else if (mode() === 'edit' && detail()) {
                 <app-client-form [client]="detail()" (saved)="onSaved($event)" (cancelled)="mode.set('view')" (openClient)="open($event)" />
+            } @else if (reservationId()) {
+                <app-reservation-sheet [origin]="detail()?.name ?? null" (back)="closeReservation()" (closed)="close()"
+                    (openClient)="closeReservation()" (edit)="startReservationEdit($event)" />
             } @else {
-                <app-client-sheet (edit)="startEdit()" (closed)="close()" />
+                <app-client-sheet [client]="detail()" [failed]="detailFailed()" (edit)="startEdit()" (closed)="close()"
+                    (openReservation)="openReservation($event)" (newReservation)="startReservation()" />
             }
         </aside>
     }
