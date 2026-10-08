@@ -183,4 +183,13 @@ describe('ClientService', () => {
 
     expect((await owner)?.id).toBe('c2');
   });
+
+  it('should suggest the clients matching a piece of a number or a name, only those who can be called back', async () => {
+    listCall().flush(PAGE);
+    const found = service.suggest('march');
+    http.expectOne((r) => r.url === '/api/clients' && r.params.get('search') === 'march' && r.params.get('pageSize') === '5')
+      .flush({ ...PAGE, items: [item('c2', 'Sophie Marchand'), { ...item('c3', 'Marchal'), phone: null }] });
+
+    expect((await found).map((c) => c.id)).toEqual(['c2']);
+  });
 });

@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, linkedSignal, output, resource, signal, untracked } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, input, linkedSignal, output, resource, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { form, FormField, maxLength, validate } from '@angular/forms/signals';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -21,13 +22,18 @@ import { initialDraft, ReservationDraft, ReservationFormMode, ReservationSaved, 
 const L = RESERVATION_LIMITS;
 const LOOKUP_DELAY_MS = 300;
 const MAX_PHONE = 30;
+/** Assez pour que les propositions servent à quelque chose, sans liste de tout le fichier */
+const MIN_LOOKUP_DIGITS = 4;
+const MIN_LOOKUP_LETTERS = 2;
+
+const digitsOf = (phone: string) => phone.replace(/\D/g, '');
 
 /**
  * Le formulaire « + » (§8) : l'ordre de l'appel (FORM-01), une bande d'heures plutôt qu'un menu (§8.3),
  * le client reconnu au numéro pendant qu'on parle (FORM-10). La bande reste neutre jusqu'au moteur de disponibilité
  */
 @Component({
-  imports: [FormField, Input, Button, DateInput],
+  imports: [FormField, Input, Button, DateInput, NgTemplateOutlet],
   selector: 'app-reservation-form',
   templateUrl: './reservation-form.html',
 })
@@ -75,6 +81,13 @@ export class ReservationForm {
   protected moreCovers = linkedSignal({ source: this.mode, computation: () => untracked(() => this._draft().covers > 6) });
 
   protected known = signal<ClientListItem | null>(null);
+  /** Les fiches qui répondent à ce qu'on tape, sous le champ qu'on tape */
+  protected suggestions = signal<ClientListItem[]>([]);
+  protected lookupField = signal<'phone' | 'name' | null>(null);
+  private _lookupTimer: ReturnType<typeof setTimeout> | undefined;
+  // Un champ à la fois : taper le numéro ne doit pas relancer la recherche sur le nom, qui l'annulerait
+  private _phone = computed(() => this._draft().phone);
+  private _name = computed(() => this._draft().name);
   protected needsName = computed(() => !this.isEdit() && this.known() === null);
   protected submitted = signal(false);
   protected isSaving = signal(false);
@@ -123,8 +136,13 @@ export class ReservationForm {
     // FORM-10 : dès que le numéro est complet, la fiche s'attache, et avec elle l'allergie et le ratio
     effect((onCleanup) => {
       const phone = this._draft().phone;
-      if (this.isEdit() || phone.replace(/\D/g, '').length < 10) {
+      if (this.isEdit() || digitsOf(phone).length < 10) {
         this.known.set(null);
+        return;
+      }
+      // Une fiche choisie dans les propositions est déjà la bonne
+      const chosen = untracked(this.known);
+      if (chosen?.phone && digitsOf(chosen.phone) === digitsOf(phone)) {
         return;
       }
       const timer = setTimeout(async () => {
@@ -135,6 +153,47 @@ export class ReservationForm {
       }, LOOKUP_DELAY_MS);
       onCleanup(() => clearTimeout(timer));
     });
+    // Un morceau de numéro ou de nom suffit à proposer les fiches connues : le dernier champ touché décide
+    effect(() => {
+      const phone = this._phone();
+      untracked(() => this.lookFor('phone', phone));
+    });
+    effect(() => {
+      const name = this._name();
+      untracked(() => this.lookFor('name', name));
+    });
+    inject(DestroyRef).onDestroy(() => clearTimeout(this._lookupTimer));
+  }
+
+  private lookFor(field: 'phone' | 'name', value: string) {
+    clearTimeout(this._lookupTimer);
+    const search = value.trim();
+    // Un numéro entier se reconnaît tout seul (FORM-10) ; un nom ne contient pas de chiffres
+    const enough = field === 'phone'
+      ? digitsOf(search).length >= MIN_LOOKUP_DIGITS && digitsOf(search).length < 10
+      : search.length >= MIN_LOOKUP_LETTERS && !/\d/.test(search);
+    if (this.isEdit() || this.known() !== null || !enough) {
+      if (this.lookupField() === field || this.known() !== null) {
+        this.suggestions.set([]);
+        this.lookupField.set(null);
+      }
+      return;
+    }
+    this._lookupTimer = setTimeout(async () => {
+      const found = await this._clients.suggest(search);
+      if (this._draft()[field].trim() === search && this.known() === null) {
+        this.suggestions.set(found);
+        this.lookupField.set(found.length > 0 ? field : null);
+      }
+    }, LOOKUP_DELAY_MS);
+  }
+
+  /** La fiche choisie s'attache comme si le numéro avait été tapé en entier */
+  protected choose(client: ClientListItem) {
+    this.known.set(client);
+    this.suggestions.set([]);
+    this.lookupField.set(null);
+    this._draft.update((draft) => ({ ...draft, phone: formatPhone(client.phone ?? ''), name: client.name }));
   }
 
   protected setCovers(covers: number) {

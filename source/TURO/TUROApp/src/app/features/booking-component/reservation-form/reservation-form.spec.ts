@@ -53,8 +53,9 @@ describe('ReservationForm', () => {
       create: jasmine.createSpy('create'), update: jasmine.createSpy('update'),
       detail: signal<ReservationDetail | null>(null),
     };
-    clients = jasmine.createSpyObj<ClientService>('ClientService', ['findExactPhone']);
+    clients = jasmine.createSpyObj<ClientService>('ClientService', ['findExactPhone', 'suggest']);
     clients.findExactPhone.and.resolveTo(null);
+    clients.suggest.and.resolveTo([]);
     modal = jasmine.createSpyObj<ModalService>('ModalService', ['infoModal', 'confirmModal']);
     modal.infoModal.and.resolveTo();
     await TestBed.configureTestingModule({
@@ -117,6 +118,59 @@ describe('ReservationForm', () => {
     expect(card.textContent).toContain('2 / 41');
     expect(card.textContent).toContain('Fruits à coque');
     expect(element().querySelector('[data-field="identity"] input')).toBeNull();
+  }));
+
+  it('should suggest known clients while the number is typed, and attach the one chosen', fakeAsync(() => {
+    clients.suggest.and.resolveTo([{ ...SOPHIE, phone: '0612345678' }]);
+    fixture = TestBed.createComponent(ReservationForm);
+    fixture.componentRef.setInput('mode', { kind: 'create' });
+    fixture.detectChanges();
+    flushMicrotasks();
+
+    type('phone', '06 1');
+    tick(300);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(clients.suggest).not.toHaveBeenCalled();
+
+    type('phone', '06 12');
+    tick(300);
+    flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(clients.suggest).toHaveBeenCalledOnceWith('06 12');
+    const offer = element().querySelector('[data-field="phone"] [data-suggestion]') as HTMLButtonElement;
+    expect(offer.textContent).toContain('Sophie Marchand');
+    expect(offer.textContent).toContain('06 12 34 56 78');
+
+    offer.click();
+    fixture.detectChanges();
+    expect((element().querySelector('[data-field="phone"] input') as HTMLInputElement).value).toBe('06 12 34 56 78');
+    expect(element().querySelector('[data-known]')!.textContent).toContain('Sophie Marchand');
+    expect(element().querySelector('[data-suggestion]')).toBeNull();
+    tick(300);
+    flushMicrotasks();
+  }));
+
+  it('should suggest known clients from a piece of their name', fakeAsync(() => {
+    clients.suggest.and.resolveTo([{ ...SOPHIE, phone: '0612345678' }]);
+    fixture = TestBed.createComponent(ReservationForm);
+    fixture.componentRef.setInput('mode', { kind: 'create' });
+    fixture.detectChanges();
+    flushMicrotasks();
+
+    type('identity', 'mar');
+    tick(300);
+    flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(clients.suggest).toHaveBeenCalledOnceWith('mar');
+    (element().querySelector('[data-field="identity"] [data-suggestion]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect((element().querySelector('[data-field="phone"] input') as HTMLInputElement).value).toBe('06 12 34 56 78');
+    expect(element().querySelector('[data-known]')!.textContent).toContain('Sophie Marchand');
+    tick(300);
+    flushMicrotasks();
   }));
 
   it('should send nothing without a time, a number and, for an unknown caller, a name', async () => {

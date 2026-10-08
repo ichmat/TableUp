@@ -65,6 +65,9 @@
         <section data-field="phone" class="flex flex-col gap-1">
             <p class="text-xs font-bold text-text-muted">4 · TÉLÉPHONE</p>
             <app-input type="tel" inputClass="w-full" [formField]="reservationForm.phone" />
+            @if (lookupField() === 'phone') {
+                <ng-container [ngTemplateOutlet]="offers" />
+            }
             @if (submitted()) {
                 @for (error of reservationForm.phone().errors(); track $index) {
                     <p class="text-sm text-red-700">{{ error.message }}</p>
@@ -89,6 +92,9 @@
             <section data-field="identity" class="flex flex-col gap-1">
                 <p class="text-xs font-bold text-text-muted">NOM</p>
                 <app-input inputClass="w-full" [formField]="reservationForm.name" />
+                @if (lookupField() === 'name') {
+                    <ng-container [ngTemplateOutlet]="offers" />
+                }
                 @if (submitted()) {
                     @for (error of reservationForm.name().errors(); track $index) {
                         <p class="text-sm text-red-700">{{ error.message }}</p>
@@ -154,3 +160,19 @@
         }
     </div>
 </div>
+
+<!-- FORM-10 : les fiches connues, proposées dès un morceau de numéro ou de nom ; en choisir une l'attache -->
+<ng-template #offers>
+    <div data-suggestions class="flex flex-col rounded-lg border-2 border-border-soft bg-surface overflow-hidden">
+        <p class="text-xs font-bold text-text-muted px-2 pt-1">Clients connus</p>
+        @for (client of suggestions(); track client.id) {
+            <button type="button" data-suggestion class="flex flex-row items-center gap-2 px-2 py-1.5 text-left cursor-pointer hover:bg-app" (click)="choose(client)">
+                <span class="font-bold grow min-w-0 truncate">{{ client.name }}</span>
+                @if (client.hasAllergy) {
+                    <span class="text-[0.65rem] font-bold px-1.5 rounded bg-coral-soft text-coral-ink">ALLERGIE</span>
+                }
+                <span class="text-sm text-text-muted tabular-nums">{{ formatPhone(client.phone ?? '') }}</span>
+            </button>
+        }
+    </div>
+</ng-template>

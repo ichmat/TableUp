@@ -1067,6 +1067,8 @@ La **liste d'attente** serait la vraie réponse à « complet », mais elle est 
 
 Dès que le numéro correspond (§7.2), la fiche s'attache et **l'allergie s'affiche dans le formulaire**. C'est tout le rendement du §7 : l'information ne sert pas à consulter après coup, elle sert à parler mieux *maintenant* — « on note toujours les fruits à coque, c'est bien ça ? »
 
+Sans attendre le numéro entier, **les fiches connues se proposent** dès quatre chiffres, ou deux lettres du nom : un client qui ne donne que « Marchand » se retrouve quand même. En choisir une l'attache comme si le numéro avait été tapé. Seules les fiches qui ont un numéro sont proposées : la réservation l'exige.
+
 Le ratio `2 / 41` apparaît au même moment, et c'est le seul moment où il sert : pendant qu'on décide d'accepter un samedi 20:00. Lu le lendemain, il ne change plus rien.
 
 **Nom et téléphone sont obligatoires** pour une réservation à venir. Sans numéro, ni le rappel J-1 (volet D) ni un simple changement d'horaire ne sont possibles. L'e-mail reste facultatif, mais il conditionne la confirmation automatique.
