@@ -4,10 +4,11 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { NavComponent } from './features/nav-component/nav-component';
 import { ModalManager } from "./shared/components/modals/modal-manager/modal-manager";
+import { UndoBanner } from './shared/components/undo-banner/undo-banner';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NavComponent, ModalManager],
+  imports: [RouterOutlet, NavComponent, ModalManager, UndoBanner],
   templateUrl: './app.component.html',
 })
 export class AppComponent {

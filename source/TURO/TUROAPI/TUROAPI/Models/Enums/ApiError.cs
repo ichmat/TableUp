@@ -35,5 +35,13 @@ namespace TUROAPI.Models.Enums
         ClientPhoneTaken = 11,
         [ApiErrorInfo(HttpStatusCode.Conflict, "This client was changed on another device since it was opened.")]
         ClientChanged = 12,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "This reservation was changed on another device.")]
+        ReservationChanged = 13,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "{0}")]
+        ReservationActionNotAllowed = 14,
+        [ApiErrorInfo(HttpStatusCode.BadRequest, "The restaurant is not open at this time: {0}")]
+        OutsideService = 15,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "This action can no longer be undone.")]
+        UndoExpired = 16,
     }
 }

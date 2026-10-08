@@ -14,6 +14,10 @@ export enum ApiError{
     InvalidRequest = 'InvalidRequest',
     ClientPhoneTaken = 'ClientPhoneTaken',
     ClientChanged = 'ClientChanged',
+    ReservationChanged = 'ReservationChanged',
+    ReservationActionNotAllowed = 'ReservationActionNotAllowed',
+    OutsideService = 'OutsideService',
+    UndoExpired = 'UndoExpired',
 }
 
 export interface ApiErrorResponse{

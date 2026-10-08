@@ -28,12 +28,13 @@ describe('ClientSheet', () => {
   const element = () => fixture.nativeElement as HTMLElement;
   const text = () => element().textContent!.replace(/\s+/g, ' ');
   const button = (label: string) => Array.from(element().querySelectorAll('button')).find((b) => b.textContent!.includes(label))!;
+  const setClient = (client: ClientDetail) => fixture.componentRef.setInput('client', client);
 
   beforeEach(async () => {
     detail.set(SOPHIE);
     isAdmin.set(true);
     clients = jasmine.createSpyObj<ClientService>('ClientService', ['update', 'merge', 'anonymize'],
-      { detail, detailFailed: signal(false) });
+      {});
     modal = jasmine.createSpyObj<ModalService>('ModalService', ['infoModal', 'confirmModal']);
     modal.infoModal.and.resolveTo();
 
@@ -48,6 +49,7 @@ describe('ClientSheet', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(ClientSheet);
+    fixture.componentRef.setInput('client', detail());
     fixture.detectChanges();
   });
 
@@ -62,7 +64,7 @@ describe('ClientSheet', () => {
   });
 
   it('should say when no allergy is known, and hide empty notes', () => {
-    detail.set({ ...SOPHIE, allergies: null, internalNotes: null });
+    setClient({ ...SOPHIE, allergies: null, internalNotes: null });
     fixture.detectChanges();
 
     expect(text()).toContain('Aucune allergie connue');
@@ -79,14 +81,14 @@ describe('ClientSheet', () => {
   });
 
   it('should draw no rule when every reservation is past', () => {
-    detail.set({ ...SOPHIE, history: [at('p1', -10), at('p2', -20)] });
+    setClient({ ...SOPHIE, history: [at('p1', -10), at('p2', -20)] });
     fixture.detectChanges();
 
     expect(element().querySelector('[data-past-separator]')).toBeNull();
   });
 
   it('should show ten reservations, then offer the others', () => {
-    detail.set({ ...SOPHIE, history: Array.from({ length: 13 }, (_, i) => at(`p${i}`, -1 - i)) });
+    setClient({ ...SOPHIE, history: Array.from({ length: 13 }, (_, i) => at(`p${i}`, -1 - i)) });
     fixture.detectChanges();
 
     expect(element().querySelectorAll('[data-history-row]').length).toBe(10);
@@ -96,7 +98,7 @@ describe('ClientSheet', () => {
   });
 
   it('should hide merge and delete from the service staff', () => {
-    detail.set({ ...SOPHIE, mergeCandidates: [{ id: 'c2', name: 'S. Marchand', phone: '0711223344', sharedKey: 'Email' }] });
+    setClient({ ...SOPHIE, mergeCandidates: [{ id: 'c2', name: 'S. Marchand', phone: '0711223344', sharedKey: 'Email' }] });
     fixture.detectChanges();
     expect(text()).toContain('Même e-mail que S. Marchand');
     expect(text()).toContain('Supprimer le client');
@@ -108,7 +110,7 @@ describe('ClientSheet', () => {
   });
 
   it('should merge only after a confirmation naming the other client', async () => {
-    detail.set({ ...SOPHIE, mergeCandidates: [{ id: 'c2', name: 'S. Marchand', phone: null, sharedKey: 'Phone' }] });
+    setClient({ ...SOPHIE, mergeCandidates: [{ id: 'c2', name: 'S. Marchand', phone: null, sharedKey: 'Phone' }] });
     fixture.detectChanges();
     modal.confirmModal.and.resolveTo(true);
     clients.merge.and.resolveTo({ value: SOPHIE, error: null });
@@ -143,5 +145,39 @@ describe('ClientSheet', () => {
     expect(modal.confirmModal.calls.mostRecent().args[1]).toContain('Client supprimé');
     expect(clients.anonymize).toHaveBeenCalledOnceWith('c1');
     expect(closed).toBe(1);
+  });
+  it('should open a reservation of the history', () => {
+    const opened = jasmine.createSpy('openReservation');
+    fixture.componentInstance.openReservation.subscribe(opened);
+
+    (element().querySelector('[data-history-row="p1"]') as HTMLElement).click();
+
+    expect(opened).toHaveBeenCalledOnceWith('p1');
+  });
+
+  it('should offer a new reservation for this client', () => {
+    const asked = jasmine.createSpy('newReservation');
+    fixture.componentInstance.newReservation.subscribe(asked);
+
+    button('Nouvelle réservation').click();
+
+    expect(asked).toHaveBeenCalled();
+  });
+
+  it('should only read the client away from the clients screen, and offer to go there', () => {
+    const goTo = jasmine.createSpy('openInClients');
+    fixture.componentInstance.openInClients.subscribe(goTo);
+    setClient({ ...SOPHIE, mergeCandidates: [{ id: 'c2', name: 'S. Marchand', phone: null, sharedKey: 'Phone' }] });
+    fixture.componentRef.setInput('readOnly', true);
+    fixture.componentRef.setInput('origin', 'Réservation de jeudi 20:00');
+    fixture.detectChanges();
+
+    expect(text()).toContain('← Réservation de jeudi 20:00');
+    expect(text()).not.toContain('Modifier');
+    expect(text()).not.toContain('Supprimer le client');
+    expect(text()).not.toContain('+ tag');
+    expect(element().querySelector('[data-block="merge"]')).toBeNull();
+    button('Ouvrir dans Clients').click();
+    expect(goTo).toHaveBeenCalled();
   });
 });

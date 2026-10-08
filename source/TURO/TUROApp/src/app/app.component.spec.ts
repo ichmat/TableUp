@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { AppComponent } from './app.component';
+import { UndoService } from './core/services/undo/undo.service';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -10,10 +11,13 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter([
-        { path: '', component: EmptyPage },
-        { path: 'plein-ecran', component: EmptyPage, data: { fullScreen: true } },
-      ])],
+      providers: [
+        provideRouter([
+          { path: '', component: EmptyPage },
+          { path: 'plein-ecran', component: EmptyPage, data: { fullScreen: true } },
+        ]),
+        { provide: UndoService, useValue: { state: signal(null) } },
+      ],
     }).compileComponents();
   });
 

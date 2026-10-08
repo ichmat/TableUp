@@ -1,0 +1,107 @@
+@if (reservation(); as r) {
+    <div class="flex flex-col gap-4 p-3 text-text">
+        <!-- 1. IDENTITÉ -->
+        <section data-block="identity" class="flex flex-col gap-1">
+            @if (origin(); as from) {
+                <button type="button" class="text-sm text-text-muted cursor-pointer self-start" (click)="back.emit()">← {{ from }}</button>
+            }
+            <div class="flex flex-row items-start gap-2">
+                <p class="font-bold text-xl grow">{{ guestName(r.client) }}</p>
+                <button type="button" aria-label="Fermer la fiche" class="text-text-muted cursor-pointer px-2" (click)="closed.emit()">✕</button>
+            </div>
+            <p class="text-sm">{{ subtitle() }}</p>
+            <div class="flex flex-row flex-wrap items-center gap-1">
+                <span [class]="'text-[0.65rem] font-bold px-1.5 rounded ' + statusStyle[r.status].className">{{ statusStyle[r.status].label }}</span>
+                <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ sourceLabel[r.source] }}</span>
+                @for (tag of r.client?.tags ?? []; track tag) {
+                    <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ tagLabel[tag] }}</span>
+                }
+            </div>
+        </section>
+
+        <!-- 2. ALLERGIE : épinglée, en toutes lettres, jamais repliée (§6.6) -->
+        @if (r.client?.allergies; as allergies) {
+            <section data-block="allergy" class="rounded-lg bg-coral-soft text-coral-ink p-2">
+                <p class="text-xs font-bold">ALLERGIE</p>
+                <p class="text-sm font-bold whitespace-pre-line">{{ allergies }}</p>
+                <p class="text-xs">fiche client</p>
+            </section>
+        }
+
+        <!-- 3. BANDEAU CLIENT -->
+        @if (r.client; as client) {
+            <section data-block="client" class="flex flex-col gap-1 rounded-lg bg-app p-2">
+                <p class="text-sm tabular-nums">{{ clientBand() }}</p>
+                <button type="button" class="text-sm font-bold underline cursor-pointer self-start" (click)="showClient()">Fiche client</button>
+            </section>
+        } @else {
+            <p class="text-sm text-text-muted">Client de passage</p>
+        }
+
+        <!-- 4. DÉTAILS -->
+        <section data-block="details" class="flex flex-col gap-1 text-sm">
+            <p class="text-xs font-bold text-text-muted">DÉTAILS</p>
+            @if (r.note) { <p>« {{ r.note }} »</p> }
+            <p>Salle souhaitée : {{ r.preferredZoneName ?? 'indifférent' }}</p>
+            <p>Durée : {{ formatDuration(r.duration) }}</p>
+            <p>Table : {{ r.place?.name ?? 'non placée' }}</p>
+            @if (r.placeTooSmall) {
+                <!-- FICHE-06 : rien n'est déplacé ni libéré en silence -->
+                <p class="font-bold text-coral-ink">La table {{ r.place?.name }} ne suffit plus</p>
+            }
+        </section>
+
+        <!-- 5. JOURNAL -->
+        <section data-block="journal" class="flex flex-col gap-1">
+            <p class="text-xs font-bold text-text-muted">JOURNAL</p>
+            @for (line of journal(); track $index) {
+                <p class="text-xs">{{ line }}</p>
+            }
+        </section>
+
+        <!-- 6. ACTIONS : une seule principale, aux positions fixes (FICHE-03) -->
+        <section data-block="actions" class="flex flex-col gap-2">
+            @switch (primary()) {
+                @case ('acceptAndPlace') {
+                    <app-button text="Accepter et placer à une table" buttonClass="w-full" [disabled]="isBusy()" (click)="acceptAndPlace()" />
+                    <app-button text="Accepter" type="Secondary" buttonClass="w-full" [disabled]="isBusy()" (click)="run('accept')" />
+                    <button type="button" class="text-sm text-coral-ink underline cursor-pointer self-start" [disabled]="isBusy()" (click)="run('refuse')">Refuser</button>
+                }
+                @case ('place') {
+                    <app-button text="Placer à une table" buttonClass="w-full" (click)="place()" />
+                }
+                @case ('arrive') {
+                    <!-- Encre, pas orange : l'orange est réservé à ce qui n'est pas encore fait (FICHE-02) -->
+                    <app-button text="Marquer l'arrivée" buttonClass="w-full bg-slate text-surface" [disabled]="isBusy()" (click)="run('arrive')" />
+                }
+                @case ('release') {
+                    <app-button text="Libérer la table" buttonClass="w-full bg-slate text-surface" [disabled]="isBusy()" (click)="run('release')" />
+                }
+            }
+            <div class="flex flex-row flex-wrap items-center gap-3 text-sm">
+                @if (isClosed()) {
+                    <button type="button" class="text-text-muted underline cursor-pointer" [disabled]="isBusy()" (click)="run('reopen')">Rouvrir</button>
+                } @else {
+                    <button type="button" class="text-text-muted underline cursor-pointer" (click)="edit.emit(r)">Modifier</button>
+                    @if (canNoShow()) {
+                        <button type="button" class="text-coral-ink underline cursor-pointer" [disabled]="isBusy()" (click)="run('no-show')">No-show</button>
+                    }
+                    @if (r.status === 'Pending' || r.status === 'Confirmed') {
+                        <button type="button" class="text-text-muted underline cursor-pointer" (click)="cancelOpen.set(!cancelOpen())">Annuler la réservation</button>
+                    }
+                }
+            </div>
+            @if (cancelOpen()) {
+                <div data-cancel class="flex flex-row flex-wrap gap-2">
+                    <app-button text="Le client annule" type="Secondary" buttonClass="h-9 min-w-0 px-3" (click)="cancel('Client')" />
+                    <app-button text="Le restaurant annule" type="Secondary" buttonClass="h-9 min-w-0 px-3" (click)="cancel('Restaurant')" />
+                    <button type="button" class="text-sm text-text-muted underline cursor-pointer" (click)="cancelOpen.set(false)">Retour</button>
+                </div>
+            }
+        </section>
+    </div>
+} @else if (failed()) {
+    <p class="p-3 text-sm text-coral-ink">La fiche n'a pas pu être chargée.</p>
+} @else {
+    <p class="p-3 text-sm text-text-muted">Chargement de la fiche…</p>
+}

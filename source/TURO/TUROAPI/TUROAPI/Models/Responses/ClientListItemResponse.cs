@@ -10,6 +10,8 @@ namespace TUROAPI.Models.Responses
         public string? Phone { get; set; }
         public List<ClientTag> Tags { get; set; } = [];
         public bool HasAllergy { get; set; }
+        /// <summary>Le texte, pour la carte du formulaire de réservation (§8.5)</summary>
+        public string? Allergies { get; set; }
         public int VisitCount { get; set; }
         public int NoShowCount { get; set; }
         public bool AtRisk { get; set; }

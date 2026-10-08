@@ -1,0 +1,129 @@
+<div class="flex flex-col h-full bg-surface rounded-xl shadow-xl p-3 gap-3 text-text overflow-hidden">
+    <div class="flex flex-row flex-wrap items-center gap-2">
+        <p class="font-bold text-lg mr-2">Réservations</p>
+        <app-input inputClass="w-72" placeholder="Rechercher un nom, un numéro…" [value]="searchText()" (valueChange)="onSearch($event)" />
+        <app-button text="+ Nouvelle" (click)="create.emit()" />
+    </div>
+
+    <div class="flex flex-row flex-wrap items-center gap-2 text-sm">
+        @for (period of periods; track period.value) {
+            <button type="button" [attr.data-period]="period.value" [class]="chipClass(query().period === period.value)"
+                (click)="setPeriod(period.value)">{{ period.label }}</button>
+        }
+        <span class="w-px h-5 bg-border mx-1"></span>
+        <select data-filter="status" class="px-3 py-1 rounded-full border-2 border-border-soft bg-surface cursor-pointer"
+            [value]="query().status ?? ''" (change)="setStatus($any($event.target).value)">
+            <option value="">Statut : tous</option>
+            @for (status of statuses; track status) {
+                <option [value]="status">{{ statusLabel[status] }}</option>
+            }
+        </select>
+        <select data-filter="source" class="px-3 py-1 rounded-full border-2 border-border-soft bg-surface cursor-pointer"
+            [value]="query().source ?? ''" (change)="setSource($any($event.target).value)">
+            <option value="">Source : toutes</option>
+            @for (source of sources; track source) {
+                <option [value]="source">{{ sourceChoice[source] }}</option>
+            }
+        </select>
+        <select data-filter="zone" class="px-3 py-1 rounded-full border-2 border-border-soft bg-surface cursor-pointer"
+            [value]="query().zoneId ?? ''" (change)="setZone($any($event.target).value)">
+            <option value="">Salle : toutes</option>
+            @for (zone of zones(); track zone.id) {
+                <option [value]="zone.id">{{ zone.name }}</option>
+            }
+        </select>
+    </div>
+
+    <!-- Un bandeau, pas un onglet : il faut penser à l'ignorer, et il disparaît seul (§6.1) -->
+    @if (banner(); as text) {
+        <div data-pending class="flex flex-row items-center gap-3 rounded-lg bg-violet-soft text-violet px-3 py-2">
+            <p class="text-sm font-bold grow">{{ text }}</p>
+            <button type="button" class="text-sm font-bold underline cursor-pointer" (click)="showRequests()">Les traiter</button>
+        </div>
+    }
+
+    @if (listFailed()) {
+        <p class="text-sm text-coral-ink">La liste des réservations n'a pas pu être chargée.</p>
+    }
+
+    <div class="grow overflow-y-auto">
+        @if (page(); as current) {
+            @if (current.days.length === 0) {
+                <p class="text-sm text-text-muted p-3">Aucune réservation sur cette période.</p>
+            }
+            @for (day of current.days; track day.serviceDay) {
+                <section [attr.data-day]="day.serviceDay">
+                    <p class="text-xs font-bold text-text-muted px-2 pt-3 pb-1">{{ dayHeader(day) }}</p>
+                    @for (item of day.items; track item.id) {
+                        <div [attr.data-reservation]="item.id" [class]="rowClass(item)" (click)="opened.emit(item.id)">
+                            <span class="w-12 shrink-0 font-bold tabular-nums">{{ time(item) }}</span>
+                            <span class="grow min-w-0 truncate">
+                                <b>{{ guestName(item.client) }}</b> · {{ item.covers }} pers.@if (item.note) { · « {{ item.note }} »}
+                            </span>
+                            <span class="flex flex-row items-center gap-1 shrink-0">
+                                @for (mark of marks(item.client); track $index) {
+                                    @switch (mark.kind) {
+                                        @case ('allergy') {
+                                            <!-- UI-04 : la couleur porte l'alerte, le dessin (un couvert) porte le sujet -->
+                                            <span data-mark="allergy" title="Allergie" class="inline-flex size-5 items-center justify-center rounded-full bg-coral text-surface">
+                                                <svg viewBox="0 0 24 24" class="size-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                                    <path d="M7 3v7M5 3v4a2 2 0 0 0 4 0V3M7 10v11M16 3c-1.7 1.2-2.5 3.5-2.5 7H16v11" />
+                                                </svg>
+                                            </span>
+                                        }
+                                        @case ('tag') {
+                                            <span data-mark="tag" class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ $any(mark).label }}</span>
+                                        }
+                                        @case ('first') {
+                                            <span data-mark="first" class="text-[0.65rem] font-bold px-1.5 rounded bg-app text-text-muted">1re visite</span>
+                                        }
+                                        @case ('risk') {
+                                            <!-- Contour : un antécédent du client, pas le résultat de cette réservation (§6.2) -->
+                                            <span data-mark="risk" class="text-[0.65rem] font-bold px-1.5 rounded border border-coral text-coral">{{ $any(mark).label }}</span>
+                                        }
+                                    }
+                                }
+                                <span data-source class="text-[0.65rem] font-bold px-1.5 rounded bg-app text-text-muted">{{ sourceLabel[item.source] }}</span>
+                            </span>
+                            <span class="w-14 shrink-0 text-center">{{ item.placeName ?? '—' }}</span>
+                            <span class="w-24 shrink-0 text-center"><span data-status [class]="statusClass(item)">{{ statusStyle[item.status].label }}</span></span>
+                            <!-- Jamais absente : la grille ne bouge pas d'une ligne à l'autre (§6.4) -->
+                            <span data-action class="w-24 shrink-0 flex flex-row justify-end gap-1" (click)="$event.stopPropagation()">
+                                @switch (quickAction(item)) {
+                                    @case ('answer') {
+                                        <!-- ACT-02 : dessinés et teintés, jamais des emojis -->
+                                        <button type="button" data-accept aria-label="Accepter" [disabled]="busyId() !== null"
+                                            class="inline-flex size-8 items-center justify-center rounded-full bg-fit-soft text-fit cursor-pointer" (click)="act(item, 'accept')">
+                                            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                                        </button>
+                                        <button type="button" data-refuse aria-label="Refuser" [disabled]="busyId() !== null"
+                                            class="inline-flex size-8 items-center justify-center rounded-full bg-coral-soft text-coral cursor-pointer" (click)="act(item, 'refuse')">
+                                            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                        </button>
+                                    }
+                                    @case ('place') {
+                                        <!-- La seule action orange de la colonne : la seule qui ouvre un ailleurs -->
+                                        <button type="button" data-place class="px-3 h-8 rounded-lg bg-interactive text-surface font-bold cursor-pointer" (click)="place(item)">Placer</button>
+                                    }
+                                    @case ('arrive') {
+                                        <button type="button" data-arrive [disabled]="busyId() !== null" class="px-3 h-8 rounded-lg bg-app font-bold cursor-pointer" (click)="act(item, 'arrive')">Arrivée</button>
+                                    }
+                                    @case ('release') {
+                                        <button type="button" data-release [disabled]="busyId() !== null" class="px-3 h-8 rounded-lg bg-app font-bold cursor-pointer" (click)="act(item, 'release')">Libérer</button>
+                                    }
+                                }
+                            </span>
+                        </div>
+                    }
+                </section>
+            }
+            @if (current.hasMore) {
+                <div class="flex justify-center p-3">
+                    <app-button data-show-more text="Afficher plus" type="Secondary" (click)="showMore()" />
+                </div>
+            }
+        } @else if (!listFailed()) {
+            <p class="text-sm text-text-muted p-3">Chargement des réservations…</p>
+        }
+    </div>
+</div>

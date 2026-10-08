@@ -1,0 +1,156 @@
+<div class="flex flex-col gap-4 p-3 text-text">
+    <div class="flex flex-row items-start gap-2">
+        <p class="font-bold text-xl grow">{{ isEdit() ? 'Modifier la réservation' : 'Nouvelle réservation' }}</p>
+        <button type="button" aria-label="Fermer le formulaire" class="text-text-muted cursor-pointer px-2" (click)="cancelled.emit()">✕</button>
+    </div>
+
+    <!-- 1. COUVERTS -->
+    <section data-field="covers" class="flex flex-col gap-1">
+        <p class="text-xs font-bold text-text-muted">1 · COUVERTS</p>
+        <div class="flex flex-row flex-wrap items-center gap-1">
+            @for (n of coverChoices; track n) {
+                <button type="button" [attr.data-covers]="n" [class]="chipClass(!moreCovers() && draft().covers === n)" (click)="moreCovers.set(false); setCovers(n)">{{ n }}</button>
+            }
+            <button type="button" data-more-covers [class]="chipClass(moreCovers())" (click)="openMoreCovers()">+</button>
+            @if (moreCovers()) {
+                <input type="number" data-covers-input min="1" [max]="limits.maxCovers" [value]="draft().covers"
+                    class="w-16 rounded-lg border-2 border-border-soft px-2 py-1" (input)="setCovers(+$any($event.target).value)" />
+            }
+        </div>
+    </section>
+
+    <!-- 2. DATE -->
+    <section data-field="date" class="flex flex-col gap-1">
+        <p class="text-xs font-bold text-text-muted">2 · DATE</p>
+        <app-date-input [value]="draft().serviceDay" (valueChange)="setDay($event)" [isDisabled]="isDisabledDay" [disabled]="isSeated()" />
+    </section>
+
+    <!-- 3. HEURE : une bande, pas un menu déroulant (§8.3) -->
+    <section data-field="time" class="flex flex-col gap-1">
+        <p class="text-xs font-bold text-text-muted">3 · HEURE — POUR {{ draft().covers }} COUVERT{{ draft().covers > 1 ? 'S' : '' }}</p>
+        @if (offGrid()) {
+            <div class="flex flex-row">
+                <button type="button" [attr.data-slot]="draft().time" [class]="chipClass(true)">{{ hhmm(draft().time!) }}</button>
+            </div>
+        }
+        @for (window of bands(); track window.opening) {
+            <p class="text-xs text-text-muted">{{ hhmm(window.opening) }} – {{ hhmm(window.closing) }}</p>
+            <div class="flex flex-row flex-wrap gap-1">
+                @for (slot of window.slots; track slot) {
+                    <button type="button" [attr.data-slot]="slot" [disabled]="isSeated()" [class]="chipClass(draft().time === slot)"
+                        (click)="setTime(slot)">{{ hhmm(slot) }}</button>
+                }
+            </div>
+        }
+        @if (windows.hasValue() && bands().length === 0) {
+            <p data-closed class="text-sm text-text-muted">Le restaurant est fermé ce jour-là.</p>
+        }
+        @if (submitted()) {
+            @for (error of reservationForm.time().errors(); track $index) {
+                <p class="text-sm text-red-700">{{ error.message }}</p>
+            }
+        }
+    </section>
+
+    <!-- 4. IDENTITÉ -->
+    @if (editing(); as r) {
+        <section data-field="identity" class="flex flex-col rounded-lg bg-app p-2 text-sm">
+            <p class="font-bold">{{ r.client?.name ?? 'Client de passage' }}</p>
+            @if (r.client?.phone) {
+                <p class="tabular-nums">{{ formatPhone(r.client!.phone!) }}</p>
+            }
+            <p class="text-xs text-text-muted">L'identité se modifie depuis la fiche client.</p>
+        </section>
+    } @else {
+        <section data-field="phone" class="flex flex-col gap-1">
+            <p class="text-xs font-bold text-text-muted">4 · TÉLÉPHONE</p>
+            <app-input type="tel" inputClass="w-full" [formField]="reservationForm.phone" />
+            @if (submitted()) {
+                @for (error of reservationForm.phone().errors(); track $index) {
+                    <p class="text-sm text-red-700">{{ error.message }}</p>
+                }
+            }
+        </section>
+        @if (known(); as client) {
+            <!-- FORM-10, FORM-11 : la fiche s'attache, l'allergie et le ratio arrivent pendant l'appel -->
+            <section data-field="identity" data-known class="flex flex-col gap-1 rounded-lg bg-app p-2">
+                <div class="flex flex-row flex-wrap items-center gap-2">
+                    <p class="font-bold grow">{{ client.name }}</p>
+                    @for (tag of client.tags; track tag) {
+                        <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-surface text-text-muted">{{ tagLabel[tag] }}</span>
+                    }
+                    <span data-ratio [class]="ratioClass(client)">{{ client.noShowCount }} / {{ client.visitCount }}</span>
+                </div>
+                @if (client.allergies) {
+                    <div class="rounded bg-coral-soft text-coral-ink p-1.5 text-sm"><b>ALLERGIE</b> {{ client.allergies }}</div>
+                }
+            </section>
+        } @else {
+            <section data-field="identity" class="flex flex-col gap-1">
+                <p class="text-xs font-bold text-text-muted">NOM</p>
+                <app-input inputClass="w-full" [formField]="reservationForm.name" />
+                @if (submitted()) {
+                    @for (error of reservationForm.name().errors(); track $index) {
+                        <p class="text-sm text-red-700">{{ error.message }}</p>
+                    }
+                }
+                <p class="text-xs font-bold text-text-muted">E-MAIL · facultatif</p>
+                <app-input type="email" inputClass="w-full" [formField]="reservationForm.email" />
+                @for (error of reservationForm.email().errors(); track $index) {
+                    <p class="text-sm text-red-700">{{ error.message }}</p>
+                }
+            </section>
+        }
+    }
+
+    <!-- 5. COMMENTAIRE -->
+    <section data-field="note" class="flex flex-col gap-1">
+        <p class="text-xs font-bold text-text-muted">COMMENTAIRE · facultatif</p>
+        <textarea [formField]="reservationForm.note" rows="2" placeholder="« Anniversaire », « pas près de l'entrée »…"
+            class="rounded-lg border-4 border-border-soft bg-surface p-2 text-sm outline-none focus:border-interactive"></textarea>
+        @for (error of reservationForm.note().errors(); track $index) {
+            <p class="text-sm text-red-700">{{ error.message }}</p>
+        }
+    </section>
+
+    <!-- 6. DURÉE : un groupe de 8 ne tient pas en 1 h 45 (§8.7) -->
+    <section data-field="duration" class="flex flex-row items-center gap-2">
+        <p class="text-xs font-bold text-text-muted grow">DURÉE</p>
+        <button type="button" aria-label="Réduire la durée" [class]="chipClass(false)" (click)="changeDuration(-limits.durationStep)">−</button>
+        <span data-duration class="w-16 text-center font-bold">{{ formatDuration(duration()) }}</span>
+        <button type="button" aria-label="Allonger la durée" [class]="chipClass(false)" (click)="changeDuration(limits.durationStep)">+</button>
+    </section>
+
+    <!-- 7. SALLE SOUHAITÉE : une préférence, jamais une promesse -->
+    <section data-field="zone" class="flex flex-col gap-1">
+        <p class="text-xs font-bold text-text-muted">SALLE SOUHAITÉE</p>
+        <div class="flex flex-row flex-wrap gap-1">
+            <button type="button" data-zone="" [class]="chipClass(draft().preferredZoneId === null)" (click)="setZone(null)">Indifférent</button>
+            @for (zone of zones(); track zone.id) {
+                <button type="button" [attr.data-zone]="zone.id" [class]="chipClass(draft().preferredZoneId === zone.id)" (click)="setZone(zone.id)">{{ zone.name }}</button>
+            }
+        </div>
+    </section>
+
+    <!-- 8. SOURCE : quatre boutons, un seul allumé (SRC-02) -->
+    @if (!isEdit()) {
+        <section data-field="source" class="flex flex-col gap-1">
+            <p class="text-xs font-bold text-text-muted">SOURCE</p>
+            <div class="flex flex-row flex-wrap gap-1">
+                @for (source of sources; track source) {
+                    <button type="button" [attr.data-source]="source" [class]="chipClass(draft().source === source)" (click)="setSource(source)">{{ sourceLabel[source] }}</button>
+                }
+            </div>
+        </section>
+    }
+
+    <div class="flex flex-row flex-wrap gap-2">
+        <app-button text="Annuler" type="Tertiary" (click)="cancelled.emit()" />
+        @if (isEdit()) {
+            <app-button text="Enregistrer" [disabled]="isSaving()" (click)="!isSaving() && save(false)" />
+        } @else {
+            <app-button text="Créer" type="Secondary" [disabled]="isSaving()" (click)="!isSaving() && save(false)" />
+            <app-button text="Créer et placer" [disabled]="isSaving()" (click)="!isSaving() && save(true)" />
+        }
+    </div>
+</div>

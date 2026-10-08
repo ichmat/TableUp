@@ -203,6 +203,7 @@ namespace TUROAPI.Models.Wrapper
                 Phone = ContactList.Split(client.Phone).FirstOrDefault(),
                 Tags = client.Tags,
                 HasAllergy = !string.IsNullOrWhiteSpace(client.Allergies),
+                Allergies = client.Allergies,
                 VisitCount = client.VisitCount,
                 NoShowCount = client.NoShowCount,
                 AtRisk = ClientCounters.IsAtRisk(client),
@@ -248,6 +249,109 @@ namespace TUROAPI.Models.Wrapper
                             .FirstOrDefault(),
                     })
                     .ToList(),
+            };
+        }
+
+        /// <summary>L'affectation la plus récente : un déplacement en ajoute une, c'est la dernière qui compte</summary>
+        public static Assignment? LatestAssignment(this Reservation reservation) =>
+            reservation.Assignments.OrderByDescending(a => a.AssignedAt).FirstOrDefault();
+
+        /// <summary>
+        /// <paramref name="reservation"/> doit avoir son client, sa salle souhaitée, ses affectations (table, combinaison)
+        /// et son journal (auteur) chargés
+        /// </summary>
+        public static ReservationResponse ToResponse(this Reservation reservation, int lateGrace, DateOnly? lastVisitDay)
+        {
+            Assignment? assignment = reservation.LatestAssignment();
+            ReservationPlaceResponse? place = assignment == null ? null : new ReservationPlaceResponse
+            {
+                Name = assignment.Table?.Name ?? assignment.Combination?.Name ?? string.Empty,
+                Capacity = assignment.Table?.Capacity ?? assignment.Combination?.Capacity ?? 0,
+            };
+            Client? client = reservation.Client;
+            return new ReservationResponse
+            {
+                Id = reservation.Id,
+                Start = reservation.Start,
+                ServiceDay = reservation.ServiceDay,
+                Covers = reservation.Covers,
+                Duration = reservation.Duration,
+                Status = reservation.Status,
+                Source = reservation.Source,
+                Note = reservation.Note,
+                PreferredZoneId = reservation.PreferredZoneId,
+                PreferredZoneName = reservation.PreferredZone?.Name,
+                CreatedAt = reservation.CreatedAt,
+                CancelledBy = reservation.CancelledBy,
+                Version = reservation.Version,
+                Place = place,
+                PlaceTooSmall = place != null && reservation.Covers > place.Capacity,
+                NoShowFrom = reservation.Start.AddMinutes(lateGrace),
+                Client = client == null ? null : new ReservationClientResponse
+                {
+                    Id = client.Id,
+                    Name = client.Name,
+                    Phone = ContactList.Split(client.Phone).FirstOrDefault(),
+                    Allergies = client.Allergies,
+                    Tags = client.Tags,
+                    VisitCount = client.VisitCount,
+                    NoShowCount = client.NoShowCount,
+                    AtRisk = ClientCounters.IsAtRisk(client),
+                    LastVisitDay = lastVisitDay,
+                },
+                Events = reservation.Events
+                    .OrderBy(e => e.Timestamp)
+                    .Select(e => new ReservationEventResponse
+                    {
+                        Id = e.Id,
+                        Timestamp = e.Timestamp,
+                        Type = e.Type,
+                        AuthorLogin = e.Author?.Login,
+                        Details = e.Details,
+                    })
+                    .ToList(),
+            };
+        }
+
+        /// <summary><paramref name="reservation"/> doit avoir son client et ses affectations (table, combinaison) chargés</summary>
+        public static ReservationListItemResponse ToListItem(this Reservation reservation, int lateGrace)
+        {
+            Assignment? assignment = reservation.LatestAssignment();
+            Client? client = reservation.Client;
+            return new ReservationListItemResponse
+            {
+                Id = reservation.Id,
+                Start = reservation.Start,
+                ServiceDay = reservation.ServiceDay,
+                Covers = reservation.Covers,
+                Status = reservation.Status,
+                Source = reservation.Source,
+                Note = reservation.Note,
+                PlaceName = assignment?.Table?.Name ?? assignment?.Combination?.Name,
+                NoShowFrom = reservation.Start.AddMinutes(lateGrace),
+                Client = client == null ? null : new ReservationListClientResponse
+                {
+                    Id = client.Id,
+                    Name = client.Name,
+                    Phone = ContactList.Split(client.Phone).FirstOrDefault(),
+                    Tags = client.Tags,
+                    HasAllergy = !string.IsNullOrWhiteSpace(client.Allergies),
+                    VisitCount = client.VisitCount,
+                    NoShowCount = client.NoShowCount,
+                    AtRisk = ClientCounters.IsAtRisk(client),
+                },
+            };
+        }
+
+        public static ServiceWindowResponse ToResponse(this ReservationClock.Window window)
+        {
+            return new ServiceWindowResponse
+            {
+                Opening = window.Opening,
+                Closing = window.Closing,
+                SlotStep = window.SlotStep,
+                Duration = window.Duration,
+                Slots = ReservationClock.Slots(window),
             };
         }
     }

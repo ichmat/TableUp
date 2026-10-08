@@ -88,7 +88,7 @@ describe('ClientForm', () => {
     fixture.componentRef.setInput('client', SOPHIE);
     fixture.detectChanges();
     clients.update.and.resolveTo({ value: null, error: 'This phone number already belongs to Paul.', code: ApiError.ClientPhoneTaken });
-    clients.findByPhone.and.resolveTo({ id: 'c2', name: 'Paul Lefebvre', phone: '0612345678', tags: [], hasAllergy: false,
+    clients.findByPhone.and.resolveTo({ id: 'c2', name: 'Paul Lefebvre', phone: '0612345678', tags: [], hasAllergy: false, allergies: null,
       visitCount: 0, noShowCount: 0, atRisk: false, lastServiceDay: null });
     modal.confirmModal.and.resolveTo(true);
     const opened: string[] = [];

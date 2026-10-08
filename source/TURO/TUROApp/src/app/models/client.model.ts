@@ -26,6 +26,8 @@ export interface ClientListItem {
     phone: string | null,
     tags: ClientTag[],
     hasAllergy: boolean,
+    /** Le texte, pour la carte du formulaire de réservation (§8.5) */
+    allergies: string | null,
     visitCount: number,
     noShowCount: number,
     /** Calculé par l'API (CLI-05) : le front ne recalcule jamais le seuil */
