@@ -14,6 +14,9 @@ jobs:
     env:
       NG_BUILD_MAX_WORKERS: 1
       NODE_OPTIONS: --max-old-space-size=3072
+      # esbuild est un binaire Go : NODE_OPTIONS ne le limite pas
+      GOMAXPROCS: 1
+      GOMEMLIMIT: 2GiB
     strategy:
       matrix:
         # Angular 22 n'est pas supporté sur Node 18/20
