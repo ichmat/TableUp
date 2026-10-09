@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiError, ReservationDetail } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
-import { UndoService } from '../../core/services/undo/undo.service';
+import { UndoService, ReservationUndoOffer } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
 import { ReservationActions } from './reservation-actions';
@@ -18,7 +18,7 @@ describe('ReservationActions', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    reservations = jasmine.createSpyObj<ReservationService>('ReservationService', ['act', 'cancel']);
+    reservations = jasmine.createSpyObj<ReservationService>('ReservationService', ['act', 'cancel', 'place']);
     undo = jasmine.createSpyObj<UndoService>('UndoService', ['offer']);
     modal = jasmine.createSpyObj<ModalService>('ModalService', ['infoModal']);
     modal.infoModal.and.resolveTo();
@@ -47,6 +47,14 @@ describe('ReservationActions', () => {
     expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Moreau acceptée', reservationId: 'r1', eventId: 'e1' });
   });
 
+  it('should explain in French a gesture another device already made', async () => {
+    reservations.act.and.resolveTo({ value: null, error: 'NoShow is not possible on a NoShow reservation.', code: ApiError.ReservationActionNotAllowed });
+
+    expect(await actions.run('r1', 'no-show')).toBeNull();
+    expect(modal.infoModal).toHaveBeenCalledOnceWith('Action impossible',
+      "Ce geste n'est pas possible sur cette réservation dans son état actuel : elle a peut-être changé sur un autre poste.");
+  });
+
   it('should show a refusal and offer nothing', async () => {
     reservations.act.and.resolveTo({ value: null, error: 'NoShow is not possible on a Pending reservation.' });
 
@@ -72,6 +80,24 @@ describe('ReservationActions', () => {
     expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Réservation annulée', reservationId: 'r1', eventId: 'e2' });
   });
 
+  it('should place on a table and offer to undo, or offer nothing when refused', async () => {
+    const placed = { ...AFTER, place: { name: '5', capacity: 4 }, events: [{ id: 'e3', timestamp: '2026-08-20T18:31:00Z', type: 'Placement', authorLogin: 'camille', details: '5' }] } as ReservationDetail;
+    reservations.place.and.resolveTo({ value: { reservation: placed, eventId: 'e3' }, error: null });
+
+    const result = await actions.placeOn('r1', { tableId: 't5' }, false);
+
+    expect(result.error).toBeNull();
+    expect(reservations.place).toHaveBeenCalledOnceWith('r1', { tableId: 't5' });
+    expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Moreau placée · 5', reservationId: 'r1', eventId: 'e3' });
+
+    undo.offer.calls.reset();
+    reservations.place.and.resolveTo({ value: null, error: 'Table 5 is no longer free for this reservation.', code: ApiError.PlacementUnavailable });
+    const refused = await actions.placeOn('r1', { tableId: 't5' }, false);
+    expect(refused.error !== null && refused.code).toBe(ApiError.PlacementUnavailable);
+    expect(undo.offer).not.toHaveBeenCalled();
+    expect(modal.infoModal).not.toHaveBeenCalled();
+  });
+
   it('should send « Placer » to the floor plan, on the right day', () => {
     actions.place('2026-08-20', 'r1');
 
@@ -83,7 +109,7 @@ describe('ReservationActions', () => {
 
     actions.saved({ result: { reservation: created, eventId: 'e1' }, draft, mode: 'create', thenPlace: true });
 
-    const offer = undo.offer.calls.mostRecent().args[0];
+    const offer = undo.offer.calls.mostRecent().args[0] as ReservationUndoOffer;
     expect(offer.message).toBe('Réservation créée · Moreau, jeu. 20 août 20:30');
     expect(router.navigate).toHaveBeenCalledOnceWith(['/service'], { queryParams: { day: '2026-08-20', place: 'r1' } });
     expect(actions.reopened()).toBeNull();
@@ -102,7 +128,7 @@ describe('ReservationActions', () => {
     expect(undo.offer).not.toHaveBeenCalled();
 
     actions.saved({ result: { reservation: { ...AFTER, events: [] }, eventId: 'e3' }, draft, mode: 'edit', thenPlace: false });
-    undo.offer.calls.mostRecent().args[0].onUndone!(restored);
+    (undo.offer.calls.mostRecent().args[0] as ReservationUndoOffer).onUndone!(restored);
     expect(actions.reopened()).toEqual({ kind: 'edit', reservation: restored, draft });
   });
 });

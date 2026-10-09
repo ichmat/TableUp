@@ -62,6 +62,19 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task With_phone_keeps_only_the_clients_who_can_be_called_back()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0612345678");
+            await ClientApi.AddAsync(restaurant.Id, "Marchal", phone: null);
+
+            // Filtré par l'API et non après coup : une page de suggestions reste pleine
+            CollectionAssert.AreEqual(new[] { "Sophie Marchand" }, Names(await ClientApi.ListAsync(staff, "?search=march&withPhone=true")));
+            Assert.AreEqual(2, (await ClientApi.ListAsync(staff, "?search=march")).Total);
+        }
+
+        [TestMethod]
         public async Task Search_treats_percent_and_underscore_literally()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();

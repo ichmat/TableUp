@@ -1,8 +1,11 @@
 import { inject, Service, signal } from '@angular/core';
 import { ApiError, RESERVATION_LIMITS, ReservationDetail } from '../../../models';
 import { ReservationService } from '../reservation/reservation.service';
+import { ApiResult } from '../api-result';
+import { apiErrorText } from '../../../shared/utils/api-error-text';
 
-export interface UndoOffer {
+/** Un geste sur une réservation : l'API défait la ligne de journal qu'il a écrite */
+export interface ReservationUndoOffer {
     /** Ce qui vient d'être fait, et sa conséquence : « No-show noté · 2ᵉ pour ce client » */
     message: string,
     reservationId: string,
@@ -12,11 +15,23 @@ export interface UndoOffer {
     onUndone?: (restored: ReservationDetail | null) => void,
 }
 
+/** Tout autre geste (« Nettoyée ») : il porte son propre appel d'annulation */
+export interface ActionUndoOffer {
+    message: string,
+    run: () => Promise<ApiResult<unknown>>,
+    /** Le message quand l'API répond que c'est trop tard */
+    tooLate: string,
+}
+
+export type UndoOffer = ReservationUndoOffer | ActionUndoOffer;
+
 export type UndoBannerState =
     | { kind: 'offer', offer: UndoOffer, secondsLeft: number }
     | { kind: 'failed', message: string };
 
 export const UNDO_TOO_LATE = 'Trop tard : la réservation a changé entre-temps';
+/** Rétablir la réservation reprendrait un créneau que le même client tient déjà ailleurs */
+export const UNDO_DOUBLE_BOOKING = "Impossible d'annuler : ce client a déjà une autre réservation à ce moment-là";
 
 const FAILED_MS = 4_000;
 
@@ -51,13 +66,27 @@ export class UndoService {
             return;
         }
         this.dismiss();
-        const result = await this._reservations.undo(state.offer.reservationId, state.offer.eventId);
+        const offer = state.offer;
+        if ('run' in offer) {
+            const result = await offer.run();
+            if (result.error !== null) {
+                this.fail(result.code === ApiError.UndoExpired ? offer.tooLate : apiErrorText(result));
+            }
+            return;
+        }
+        const result = await this._reservations.undo(offer.reservationId, offer.eventId);
         if (result.error === null) {
-            state.offer.onUndone?.(result.value);
+            offer.onUndone?.(result.value);
             return;
         }
         const tooLate = result.code === ApiError.UndoExpired || result.code === ApiError.ReservationChanged;
-        this._state.set({ kind: 'failed', message: tooLate ? UNDO_TOO_LATE : result.error });
+        this.fail(tooLate ? UNDO_TOO_LATE
+            : result.code === ApiError.ClientAlreadyBooked ? UNDO_DOUBLE_BOOKING
+            : apiErrorText(result));
+    }
+
+    private fail(message: string) {
+        this._state.set({ kind: 'failed', message });
         this._timer = setTimeout(() => this.dismiss(), FAILED_MS);
     }
 

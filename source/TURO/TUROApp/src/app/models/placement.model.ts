@@ -19,6 +19,8 @@ export interface PlacementSettingsRequest {
     seatTolerance: number,
     lateGrace: number,
     suggestCombinations: boolean,
+    /** « Libérer » passe la table « à nettoyer » */
+    trackTableCleaning: boolean,
 }
 
 /** PUT /api/restaurant/settings/booking-window */
@@ -41,3 +43,67 @@ export const PLACEMENT_LIMITS = {
     minHorizon: 1,
     maxHorizon: 365,
 } as const;
+
+/** §3.5 : le verdict d'une table ou d'une combinaison pour une réservation */
+export type PlacementLevel = 'Excluded' | 'Perfect' | 'WithReserve' | 'NotAdvised';
+
+export type PlacementReasonKind = 'ExtraSeats' | 'BeyondTolerance' | 'NeedsCleaning' | 'OtherZone' | 'NextSoon' | 'Glued';
+
+/** Une raison et ses données, rédigée par `placement-reasons.ts` ; seuls les champs de son `kind` sont remplis */
+export interface PlacementReason {
+    kind: PlacementReasonKind,
+    count?: number | null,
+    tolerance?: number | null,
+    noneLeftOfCapacity?: boolean | null,
+    since?: string | null,
+    guest?: string | null,
+    leftAt?: string | null,
+    requestedZone?: string | null,
+    note?: string | null,
+    start?: string | null,
+    margin?: number | null,
+    defaultRotation?: number | null,
+    combination?: string | null,
+    with?: string[] | null,
+}
+
+/** « Ensuite 22:30 · marge 30 min » */
+export interface PlacementNext {
+    start: string,
+    margin: number,
+    guest: string | null,
+}
+
+export interface PlacementEntity {
+    tableId: string | null,
+    combinationId: string | null,
+    zoneId: string,
+    name: string,
+    capacity: number,
+    level: PlacementLevel,
+    reasons: PlacementReason[],
+    next: PlacementNext | null,
+}
+
+/** GET /api/service/placement/{id} */
+export interface Placement {
+    reservationId: string,
+    guestName: string | null,
+    /** L'intervalle testé, ISO 8601 UTC */
+    start: string,
+    end: string,
+    covers: number,
+    note: string | null,
+    preferredZoneId: string | null,
+    entities: PlacementEntity[],
+}
+
+/** POST /api/reservations/{id}/place */
+export type PlaceTarget = { tableId: string } | { combinationId: string };
+
+/** Ce que le canevas dessine d'une entité pendant un placement */
+export interface PlacementMark {
+    level: PlacementLevel,
+    /** « Ensuite 22:30 · marge 30 min » */
+    next: string | null,
+}

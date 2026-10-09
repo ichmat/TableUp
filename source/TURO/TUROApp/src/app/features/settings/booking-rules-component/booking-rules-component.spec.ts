@@ -8,7 +8,7 @@ import { BookingRulesComponent } from './booking-rules-component';
 // Pas d'import depuis un autre .spec.ts : ses describe seraient enregistrés une seconde fois
 const RESTAURANT: Restaurant = {
   id: 'r', name: 'Chez nous', timeZone: 'Europe/Paris', defaultRotation: 105, seatTolerance: 2, lateGrace: 15,
-  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: true,
+  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: true, trackTableCleaning: false,
   minBookingNoticeMinutes: 60, bookingHorizonDays: 60, zones: [], services: [], cancellationConditions: [], users: [],
 };
 

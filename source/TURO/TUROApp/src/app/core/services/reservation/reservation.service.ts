@@ -2,7 +2,7 @@ import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import {
     CancelledBy, ClientDetail, DataScope, RESERVATION_LIMITS, ReservationActionResult, ReservationDetail, ReservationGesture,
-    ReservationPage, ReservationQuery, ReservationRequest, ServiceWindow,
+    PlaceTarget, ReservationPage, ReservationQuery, ReservationRequest, ServiceWindow,
 } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -123,6 +123,11 @@ export class ReservationService {
 
     act(id: string, gesture: ReservationGesture): Promise<ApiResult<ReservationActionResult>> {
         return this.thenRefresh(toApiResult(this._http.post<ReservationActionResult>(`${RESERVATIONS_URL}/${id}/${gesture}`, null)));
+    }
+
+    /** §5.8 : placer, accepter en déposant, changer de table */
+    place(id: string, target: PlaceTarget): Promise<ApiResult<ReservationActionResult>> {
+        return this.thenRefresh(toApiResult(this._http.post<ReservationActionResult>(`${RESERVATIONS_URL}/${id}/place`, target)));
     }
 
     cancel(id: string, by: CancelledBy): Promise<ApiResult<ReservationActionResult>> {

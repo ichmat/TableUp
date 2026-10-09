@@ -8,7 +8,8 @@ namespace TUROAPI.Services
     {
         Creation,
         Modification,
-        Transition
+        Transition,
+        Placement
     }
 
     /// <summary>Les champs qu'une transition touche</summary>
@@ -55,6 +56,10 @@ namespace TUROAPI.Services
         public ReservationValues? ValuesBefore { get; init; }
         /// <summary>La fiche née avec la réservation, supprimée avec elle si rien d'autre ne s'y rattache</summary>
         public Guid? CreatedClientId { get; init; }
+        /// <summary>L'affectation créée par un placement : défaire la retire, la précédente redevient la plus récente</summary>
+        public Guid? AssignmentId { get; init; }
+        /// <summary>La ligne « acceptée » d'une demande déposée sur une table, effacée avec celle du placement</summary>
+        public Guid? AcceptanceEventId { get; init; }
     }
 
     /// <summary>

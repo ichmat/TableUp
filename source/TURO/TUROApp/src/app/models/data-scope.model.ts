@@ -10,4 +10,6 @@ export enum DataScope {
     Clients = 'Clients',
     /** GET /api/reservations (liste et fiche) */
     Reservations = 'Reservations',
+    /** GET /api/service (l'écran Service) */
+    Service = 'Service',
 }

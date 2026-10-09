@@ -19,6 +19,10 @@ export enum ApiError{
     OutsideService = 'OutsideService',
     UndoExpired = 'UndoExpired',
     ClientAlreadyBooked = 'ClientAlreadyBooked',
+    TableCleaningDisabled = 'TableCleaningDisabled',
+    TableAlreadyClean = 'TableAlreadyClean',
+    PlacementUnavailable = 'PlacementUnavailable',
+    TableBookedLater = 'TableBookedLater',
 }
 
 export interface ApiErrorResponse{

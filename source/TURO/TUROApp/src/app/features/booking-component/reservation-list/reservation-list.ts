@@ -5,13 +5,13 @@ import {
 } from '../../../models';
 import { ReservationService } from '../../../core/services/reservation/reservation.service';
 import { RestaurantService } from '../../../core/services/restaurant/restaurant-service';
+import { ClosureService } from '../../../core/services/closure/closure.service';
 import { Button } from '../../../shared/components/button/button';
 import { Input } from '../../../shared/components/inputs/input/input';
 import { RESERVATION_STATUS_STYLE } from '../../../shared/components/constants/reservation-status-style';
-import { todayIn } from '../../../shared/utils/calendar-date';
 import { timeIn } from '../../../shared/utils/time-of-day';
 import { ReservationActions } from '../reservation-actions';
-import { dayHeader, guestName, marks, pendingBanner, quickAction, STATUS_FILTER_LABEL } from '../reservation-display';
+import { currentServiceDay, dayHeader, guestName, marks, pendingBanner, quickAction, STATUS_FILTER_LABEL } from '../reservation-display';
 
 const SEARCH_DELAY_MS = 300;
 const CLOCK_MS = 60_000;
@@ -25,6 +25,7 @@ const CLOCK_MS = 60_000;
 export class ReservationList implements OnDestroy {
   private _reservations = inject(ReservationService);
   private _restaurant = inject(RestaurantService);
+  private _closures = inject(ClosureService);
   private _actions = inject(ReservationActions);
 
   selectedId = input<string | null>(null);
@@ -66,7 +67,7 @@ export class ReservationList implements OnDestroy {
   });
 
   protected dayHeader(day: ReservationDay): string {
-    return dayHeader(day, todayIn(this._timeZone()));
+    return dayHeader(day, currentServiceDay(this._timeZone(), this._restaurant.model()?.services ?? [], this._closures.closures()));
   }
 
   protected time(item: ReservationListItem): string {

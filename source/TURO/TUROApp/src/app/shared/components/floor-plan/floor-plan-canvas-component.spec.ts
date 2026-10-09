@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlanTable, Zone } from '../../../models';
+import { PlacementMark, PlanCombination, PlanTable, TableMark, Zone } from '../../../models';
 import { FloorPlanCanvasComponent, PlanPointerEvent } from './floor-plan-canvas-component';
 
 const ZONE: Zone = { id: 'z', restaurantId: 'r', name: 'Salle', order: 0, width: 8, height: 5.5 };
@@ -105,6 +105,22 @@ describe('FloorPlanCanvasComponent', () => {
     expect(host.textContent).toContain('BAR');
   });
 
+  it('should set walls and pillars apart from the slate in service, and keep the editor as it is', () => {
+    fixture.componentRef.setInput('decors', [
+      { id: 'wall', zoneId: 'z', type: 'Wall', label: null, x: 0, y: 0, width: 8, height: 0.15, rotation: 0 },
+      { id: 'door', zoneId: 'z', type: 'Door', label: null, x: 2, y: 0, width: 0.9, height: 0.1, rotation: 0 },
+    ]);
+    fixture.detectChanges();
+    const shape = (id: string) => host.querySelector(`[data-decor-id="${id}"] rect`)!.getAttribute('class')!;
+    expect(shape('wall')).toContain('fill-slate');
+
+    fixture.componentRef.setInput('theme', 'slate');
+    fixture.detectChanges();
+    expect(shape('wall')).toContain('fill-plan-decor');
+    expect(shape('wall')).toContain('stroke-chalk');
+    expect(shape('door')).toContain('stroke-chalk');
+  });
+
   it('should not start a table drag with the second finger of a pinch', () => {
     const pressed: unknown[] = [];
     let pinches = 0;
@@ -191,5 +207,99 @@ describe('FloorPlanCanvasComponent', () => {
 
     expect(pressed.length).toBe(1);
     expect(pressed[0].item.id).toBe('a');
+  });
+
+  describe('in service', () => {
+    const marks = (mark: Partial<TableMark>): Record<string, TableMark> =>
+      ({ [RECT.id]: { status: 'Free', late: false, label: null, allergy: false, ...mark } });
+    const element = () => fixture.nativeElement as HTMLElement;
+    const shape = () => element().querySelector(`[data-table-id="${RECT.id}"] rect:not([data-late]), [data-table-id="${RECT.id}"] ellipse:not([data-late])`)!;
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('theme', 'slate');
+      fixture.componentRef.setInput('tables', [RECT]);
+    });
+
+    it('should draw the room as a slate', () => {
+      fixture.detectChanges();
+      expect(element().querySelector('[data-room]')!.getAttribute('class')).toContain('fill-slate');
+    });
+
+    it('should colour each table by its status, the outline dashed only when it is to clean', () => {
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'Reserved' }));
+      fixture.detectChanges();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-reserved-line');
+      expect(shape().getAttribute('stroke-dasharray')).toBeNull();
+
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'ToClean' }));
+      fixture.detectChanges();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-clean-line');
+      expect(shape().getAttribute('stroke-dasharray')).not.toBeNull();
+    });
+
+    it('should ring a late table, write its guest and pin its allergy', () => {
+      fixture.componentRef.setInput('tableMarks', marks({ status: 'Reserved', late: true, label: 'Moreau · 20:00', allergy: true }));
+      fixture.detectChanges();
+
+      expect(element().querySelector('[data-late]')).not.toBeNull();
+      expect(element().querySelector('[data-allergy]')).not.toBeNull();
+      expect(element().querySelector('[data-label]')!.textContent).toContain('Moreau · 20:00');
+    });
+
+    it('should draw nothing of the kind on a free table', () => {
+      fixture.componentRef.setInput('tableMarks', marks({}));
+      fixture.detectChanges();
+
+      expect(element().querySelector('[data-late]')).toBeNull();
+      expect(element().querySelector('[data-allergy]')).toBeNull();
+      expect(element().querySelector('[data-label]')).toBeNull();
+      expect(shape().getAttribute('class')).toContain('stroke-plan-free-line');
+    });
+  });
+});
+
+const TABLE_AT = (id: string, x: number): PlanTable => ({ id, zoneId: 'z', name: id, capacity: 4, shape: 'Square', x, y: 1, width: 0.8, height: 0.8, rotation: 0 } as PlanTable);
+
+describe('FloorPlanCanvasComponent placement marks', () => {
+  let fixture: ComponentFixture<FloorPlanCanvasComponent>;
+  const el = () => fixture.nativeElement as HTMLElement;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(FloorPlanCanvasComponent);
+    fixture.componentRef.setInput('zone', { id: 'z', width: 8, height: 6 });
+    fixture.componentRef.setInput('tables', [TABLE_AT('t5', 1), TABLE_AT('t6', 2.5), TABLE_AT('t7', 4)]);
+  });
+
+  it('should draw nothing of placement without marks', () => {
+    fixture.detectChanges();
+    expect(el().querySelector('[data-halo]')).toBeNull();
+    expect(el().querySelector('[data-table-id="t5"]')!.getAttribute('class')).not.toContain('opacity-26');
+  });
+
+  it('should draw a halo and a badge per level, dim the excluded and write what comes next', () => {
+    const marks: Record<string, PlacementMark> = {
+      t5: { level: 'Perfect', next: 'Ensuite 22:30 · marge 30 min' },
+      t6: { level: 'NotAdvised', next: null },
+      t7: { level: 'Excluded', next: null },
+    };
+    fixture.componentRef.setInput('placementMarks', marks);
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-table-id="t5"] [data-halo]')!.getAttribute('class')).toContain('stroke-place-perfect');
+    expect(el().querySelector('[data-table-id="t5"] [data-badge]')!.textContent).toContain('✓');
+    expect(el().querySelector('[data-table-id="t5"] [data-next]')!.textContent).toContain('Ensuite 22:30');
+    expect(el().querySelector('[data-table-id="t6"] [data-halo]')!.getAttribute('stroke-dasharray')).not.toBeNull();
+    expect(el().querySelector('[data-table-id="t6"] [data-badge]')!.textContent).toContain('!');
+    expect(el().querySelector('[data-table-id="t7"]')!.getAttribute('class')).toContain('opacity-26');
+    expect(el().querySelector('[data-table-id="t7"] [data-halo]')).toBeNull();
+  });
+
+  it('should draw one halo around an active combination', () => {
+    const combination = { id: 'c1', zoneId: 'z', name: '5-6', capacity: 8, tableIds: ['t5', 't6'], isActive: true } as PlanCombination;
+    fixture.componentRef.setInput('combinations', [combination]);
+    fixture.componentRef.setInput('placementMarks', { c1: { level: 'WithReserve', next: null }, t5: { level: 'Excluded', next: null }, t6: { level: 'Excluded', next: null } });
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-combination-halo="c1"]')!.getAttribute('class')).toContain('stroke-place-reserve');
   });
 });

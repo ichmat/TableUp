@@ -45,5 +45,13 @@ namespace TUROAPI.Models.Enums
         UndoExpired = 16,
         [ApiErrorInfo(HttpStatusCode.Conflict, "{0} already has a reservation at {1} on {2}.")]
         ClientAlreadyBooked = 17,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table cleaning is not tracked in this restaurant.")]
+        TableCleaningDisabled = 18,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is already clean.")]
+        TableAlreadyClean = 19,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is no longer free for this reservation.")]
+        PlacementUnavailable = 20,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is booked at {1}.")]
+        TableBookedLater = 21,
     }
 }

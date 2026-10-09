@@ -1,1 +1,90 @@
-<p>service-component works!</p>
+<div class="relative flex flex-col h-full gap-2 text-text">
+    @if (snapshot(); as s) {
+        <app-service-header [snapshot]="s" [timeZone]="timeZone()" [hasServices]="hasServices()"
+            (chosen)="choose($event)" (today)="backToToday()" (create)="startCreate()" />
+        @if (s.slots.length > 0) {
+            <app-service-timeline [slots]="s.slots" [activeIndex]="activeIndex()" [tableCount]="tableCount()" (picked)="pickSlot($event)" />
+        }
+        @if (failed()) {
+            <!-- L'instantané d'avant reste affiché : le dire, plutôt que de le faire passer pour l'état présent -->
+            <p data-reload-failed class="rounded-lg bg-coral-soft px-3 py-2 text-sm font-bold text-coral-ink">
+                Le service n'a pas pu être rechargé : les tables affichées datent du dernier chargement.
+            </p>
+        }
+        <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [canEdit]="isAdmin()" [levels]="zoneLevels()" (selected)="zoneId.set($event)" />
+
+        <div class="flex flex-row grow min-h-0 gap-2">
+            <div #planArea class="relative grow min-w-0 flex flex-col gap-2">
+                @if (zone(); as z) {
+                    <app-floor-plan-canvas class="grow min-h-0 rounded-xl" theme="slate" [showGrid]="false"
+                        [zone]="z" [tables]="z.tables" [decors]="z.decors" [combinations]="z.combinations"
+                        [tableMarks]="marks()" [selectedIds]="selectedTableIds()" [placementMarks]="placementMarks()"
+                        (tablePointerDown)="onTable($event)" (combinationPointerDown)="onCombination($event)" (backgroundClick)="closeAll()" />
+                } @else {
+                    <p class="grow rounded-xl bg-slate p-6 text-plan-free-text">
+                        Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.
+                    </p>
+                }
+                <app-plan-legend [trackCleaning]="s.trackTableCleaning" />
+
+                @if (seatBubble(); as b) {
+                    <div data-seat-bubble class="absolute z-10 flex w-64 flex-col gap-2 rounded-xl bg-surface p-3 shadow-2xl"
+                        [style.left.px]="b.x" [style.top.px]="b.y">
+                        <p class="text-sm font-bold">Table {{ b.name }} · Asseoir maintenant</p>
+                        @if (b.later !== null && !b.confirmed) {
+                            <!-- La table attend quelqu'un pendant le repas : rien ne part sans l'accord du restaurateur -->
+                            <p class="text-sm font-bold text-coral-ink">{{ b.later }}</p>
+                            <app-button text="Asseoir quand même" (click)="seatBubble.set({ ...b, confirmed: true })" />
+                        } @else {
+                            <p class="text-xs text-text-muted">Combien de couverts ?</p>
+                            <div class="flex flex-row flex-wrap gap-1">
+                                @for (n of coverChoices(); track n) {
+                                    <button type="button" [attr.data-seat-covers]="n" class="min-w-9 px-3 py-1 rounded-lg border-2 border-border-soft cursor-pointer hover:bg-app tabular-nums" (click)="seat(n)">{{ n }}</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                @if (bubble(); as b) {
+                    <div data-clean-bubble class="absolute z-10 flex flex-col gap-2 rounded-xl bg-surface p-3 shadow-2xl"
+                        [style.left.px]="b.x" [style.top.px]="b.y">
+                        <p class="text-sm font-bold">Table {{ b.name }} · à nettoyer</p>
+                        <app-button text="Nettoyée" (click)="clean()" />
+                    </div>
+                }
+            </div>
+
+            <!-- La fiche remplace la colonne et le plan se recompose (§6.7) -->
+            @if (top(); as entry) {
+                <aside class="w-[308px] shrink-0 h-full bg-surface rounded-xl shadow-xl overflow-y-auto">
+                    @if (entry.kind === 'reservation') {
+                        <app-reservation-sheet [placeHere]="true" [origin]="origin()" (placeRequested)="startPlacing($event)"
+                            (back)="back()" (closed)="close()" (openClient)="openClient($event)" (edit)="startEdit($event)" />
+                    } @else {
+                        <app-client-sheet [client]="client()" [failed]="clientFailed()" [readOnly]="true" [origin]="origin()"
+                            (back)="back()" (closed)="close()" (openReservation)="openReservation($event)" (openInClients)="openInClients(entry.id)" />
+                    }
+                </aside>
+            } @else {
+                <app-to-place-column [toPlace]="s.toPlace" [pending]="s.pending" [timeZone]="timeZone()" (opened)="startPlacing($event)" (pressed)="onPillPressed($event)" />
+            }
+        </div>
+    } @else if (failed()) {
+        <p class="text-sm text-coral-ink p-3">Le service n'a pas pu être chargé.</p>
+    } @else {
+        <p class="text-sm text-text-muted p-3">Chargement du service…</p>
+    }
+
+    @if (ghost(); as g) {
+        <!-- Le fantôme suit le doigt sans jamais être la cible du lâcher -->
+        <div data-ghost class="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-full rounded-lg bg-surface px-2 py-1 text-sm font-bold shadow-xl"
+            [style.left.px]="g.x" [style.top.px]="g.y - 8">{{ g.label }}</div>
+    }
+
+    @if (form(); as mode) {
+        <!-- Le formulaire survole, il ne désigne rien sur le plan (PLACE-11) -->
+        <aside data-form class="absolute right-0 top-0 z-20 h-full w-[322px] bg-surface rounded-xl shadow-2xl overflow-y-auto">
+            <app-reservation-form [mode]="mode" (saved)="onSaved($event)" (cancelled)="form.set(null)" />
+        </aside>
+    }
+</div>

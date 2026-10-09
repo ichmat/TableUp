@@ -95,8 +95,11 @@ describe('ReservationSheet', () => {
 
   it('should offer « No-show » only once the late grace has passed', () => {
     expect(buttons()).not.toContain('No-show');
+    const links = buttons();
 
     show(SHEET({ noShowFrom: new Date(Date.now() - 60_000).toISOString() }));
+    // Il s'ajoute en dernier : « Annuler la réservation » ne se décale pas sous le doigt
+    expect(buttons()).toEqual([...links, 'No-show']);
     button('No-show').click();
 
     expect(actions.run).toHaveBeenCalledOnceWith('r1', 'no-show');
@@ -111,13 +114,43 @@ describe('ReservationSheet', () => {
     expect(actions.cancel).toHaveBeenCalledOnceWith('r1', 'Restaurant');
   });
 
-  it('should accept then go and place', async () => {
-    show(SHEET({ status: 'Pending' }));
+  it('should open the Service screen elsewhere, without accepting a request first', () => {
+    show(SHEET({ status: 'Pending', place: null }));
     button('Accepter et placer à une table').click();
-    await fixture.whenStable();
 
-    expect(actions.run).toHaveBeenCalledOnceWith('r1', 'accept');
+    expect(actions.run).not.toHaveBeenCalled();
     expect(actions.place).toHaveBeenCalledOnceWith('2026-08-20', 'r1');
+  });
+
+  it('should offer « Changer de table » for a placed or seated reservation, before « No-show »', () => {
+    show(SHEET({ status: 'Confirmed', place: { name: '5', capacity: 4 }, noShowFrom: new Date(Date.now() - 60_000).toISOString() }));
+    const links = buttons();
+    expect(links).toContain('Changer de table');
+    expect(links.indexOf('Changer de table')).toBeGreaterThan(links.indexOf('Annuler la réservation'));
+    expect(links.indexOf('Changer de table')).toBeLessThan(links.indexOf('No-show'));
+
+    show(SHEET({ status: 'Seated', place: { name: '5', capacity: 4 } }));
+    expect(buttons()).toContain('Changer de table');
+
+    show(SHEET({ status: 'Confirmed', place: null }));
+    expect(buttons()).not.toContain('Changer de table');
+  });
+
+  it('should ask the Service screen to place, instead of navigating, when it is there', () => {
+    const requested: string[] = [];
+    fixture.componentRef.setInput('placeHere', true);
+    fixture.componentInstance.placeRequested.subscribe((id: string) => requested.push(id));
+
+    show(SHEET({ status: 'Confirmed', place: null }));
+    button('Placer à une table').click();
+    show(SHEET({ status: 'Pending', place: null }));
+    button('Accepter et placer à une table').click();
+    show(SHEET({ status: 'Seated', place: { name: '5', capacity: 4 } }));
+    button('Changer de table').click();
+
+    expect(requested).toEqual(['r1', 'r1', 'r1']);
+    expect(actions.place).not.toHaveBeenCalled();
+    expect(actions.run).not.toHaveBeenCalled();
   });
 
   it('should keep the table and say it is too small', () => {

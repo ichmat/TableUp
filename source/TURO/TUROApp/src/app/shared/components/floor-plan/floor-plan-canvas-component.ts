@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, signal, untracked, viewChild } from '@angular/core';
-import { DecorType, PlanCombination, PlanDecor, PlanTable, Zone } from '../../../models';
+import { DecorType, PlacementLevel, PlacementMark, PlanCombination, PlanDecor, PlanTable, TableMark, Zone } from '../../../models';
+import { TABLE_STATUS_STYLE } from '../constants/table-status-style';
 import { fitView, panBy, PlanView, toViewBox, zoomAt, ZOOM_STEP } from './floor-plan-view';
 
 const GRID_STEP = 0.25;
@@ -47,7 +48,57 @@ const DECOR_NAMES: Record<DecorType, string> = {
   host: { class: 'block relative overflow-hidden' },
 })
 export class FloorPlanCanvasComponent implements OnDestroy {
-  zone = input.required<Zone>();
+  /** La salle : seules son identité et ses dimensions comptent (l'éditeur passe une `Zone`, le service une `ServiceZone`) */
+  zone = input.required<Pick<Zone, 'id' | 'width' | 'height'>>();
+  /** `slate` : l'ardoise du service (§2.1) ; `light` : l'éditeur */
+  theme = input<'light' | 'slate'>('light');
+  /** En service : le statut et les marques de chaque table (§5.6). Sans elles, rendu de l'éditeur */
+  tableMarks = input<Readonly<Record<string, TableMark>> | null>(null);
+
+  protected markOf(table: PlanTable): TableMark | null {
+    return this.tableMarks()?.[table.id] ?? null;
+  }
+
+  /** Pendant un placement (§5.8) : le niveau de chaque table et combinaison. `null` : aucun placement en cours */
+  placementMarks = input<Readonly<Record<string, PlacementMark>> | null>(null);
+
+  protected placementOf(id: string): PlacementMark | null {
+    return this.placementMarks()?.[id] ?? null;
+  }
+
+  /** Une entité écartée — ou absente des verdicts — tombe à 26 % (§3.5) */
+  protected dimmed(id: string): boolean {
+    const marks = this.placementMarks();
+    return marks !== null && (marks[id]?.level ?? 'Excluded') === 'Excluded';
+  }
+
+  /** Le halo porte la compatibilité ; le contour reste au statut (§2.4) */
+  protected haloClass(level: PlacementLevel): string {
+    return level === 'Perfect' ? 'stroke-place-perfect' : level === 'WithReserve' ? 'stroke-place-reserve' : 'stroke-place-advised';
+  }
+
+  protected badgeClass(level: PlacementLevel): string {
+    return level === 'Perfect' ? 'fill-place-perfect' : level === 'WithReserve' ? 'fill-place-reserve' : 'fill-place-advised';
+  }
+
+  protected badgeText(level: PlacementLevel): string {
+    return level === 'Perfect' ? '✓' : level === 'WithReserve' ? '~✓' : '!';
+  }
+
+  protected roomClass(): string {
+    return this.theme() === 'slate' ? 'fill-slate stroke-slate-border' : 'fill-surface stroke-chalk';
+  }
+
+  /** Les numéros de table à la craie en service (§2.5) */
+  protected nameClass(table: PlanTable): string {
+    const mark = this.markOf(table);
+    return mark === null ? 'fill-text font-bold' : `${TABLE_STATUS_STYLE[mark.status].text} font-caveat font-bold`;
+  }
+
+  protected dashOf(table: PlanTable): string | null {
+    const mark = this.markOf(table);
+    return mark !== null && TABLE_STATUS_STYLE[mark.status].dashed ? '5 3' : null;
+  }
   tables = input<readonly PlanTable[]>([]);
   selectedIds = input<readonly string[]>([]);
   /** Tables à marquer : dans l'éditeur, celles qui empêchent la publication */
@@ -84,6 +135,29 @@ export class FloorPlanCanvasComponent implements OnDestroy {
       const bottom = Math.max(...boxes.map((box) => box.y + box.height));
       const label = `${combination.name} · ${combination.capacity}p`;
       return [{ combination, label, x: round((left + right) / 2), y: round((top + bottom) / 2), width: label.length * 0.1 + 0.3 }];
+    });
+  });
+
+  /** L'enveloppe d'une combinaison active, autour de laquelle se dessine son halo */
+  protected combinationHalos = computed(() => {
+    const marks = this.placementMarks();
+    if (marks === null) {
+      return [];
+    }
+    return this.pills().flatMap(({ combination }) => {
+      const mark = marks[combination.id];
+      if (!mark || mark.level === 'Excluded') {
+        return [];
+      }
+      const boxes = this.tables().filter((t) => combination.tableIds.includes(t.id)).map(boxOf);
+      const margin = 0.1;
+      const x = Math.min(...boxes.map((b) => b.x)) - margin;
+      const y = Math.min(...boxes.map((b) => b.y)) - margin;
+      return [{
+        id: combination.id, mark, x: round(x), y: round(y),
+        width: round(Math.max(...boxes.map((b) => b.x + b.width)) + margin - x),
+        height: round(Math.max(...boxes.map((b) => b.y + b.height)) + margin - y),
+      }];
     });
   });
 
@@ -215,7 +289,16 @@ export class FloorPlanCanvasComponent implements OnDestroy {
     if (this.selectedIds().includes(decor.id)) {
       return 'stroke-interactive';
     }
-    return this.flaggedIds().includes(decor.id) ? 'stroke-red-700' : 'stroke-slate';
+    if (this.flaggedIds().includes(decor.id)) {
+      return 'stroke-red-700';
+    }
+    // Sur l'ardoise du service, un contour ardoise disparaîtrait dans le sol
+    return this.theme() === 'slate' ? 'stroke-chalk' : 'stroke-slate';
+  }
+
+  /** Murs et piliers : pleins d'ardoise dans l'éditeur, plus clairs que le sol en service */
+  protected solidFill(): string {
+    return this.theme() === 'slate' ? 'fill-plan-decor' : 'fill-slate';
   }
 
   protected onSvgPointerDown(event: PointerEvent) {
@@ -301,13 +384,15 @@ export class FloorPlanCanvasComponent implements OnDestroy {
   }
 
   protected tableClass(table: PlanTable): string {
+    const mark = this.markOf(table);
     if (this.selectedIds().includes(table.id)) {
-      return 'fill-surface stroke-interactive';
+      // En service, la table garde le fond de son statut : seul le contour orange dit qu'elle est désignée
+      return mark === null ? 'fill-surface stroke-interactive' : `${TABLE_STATUS_STYLE[mark.status].shape.split(' ')[0]} stroke-interactive`;
     }
     if (this.flaggedIds().includes(table.id)) {
       return 'fill-surface stroke-red-700';
     }
-    return 'fill-app stroke-slate';
+    return mark === null ? 'fill-app stroke-slate' : TABLE_STATUS_STYLE[mark.status].shape;
   }
 
   protected strokeWidth(table: PlanTable): number {

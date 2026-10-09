@@ -1,0 +1,38 @@
+<div [class]="barClass()">
+    <span data-clock class="text-2xl font-bold tabular-nums">{{ clock() }}</span>
+    <p data-status class="italic text-text-muted">
+        {{ status().text }}@if (status().highlight; as highlight) { — <span class="text-interactive font-bold not-italic">{{ highlight }}</span>}
+    </p>
+
+    <div class="ml-auto flex flex-row items-center gap-2">
+        @if (snapshot().allergies.length > 0) {
+            <span class="relative">
+                <button type="button" data-allergies class="flex flex-row items-center gap-1 px-3 py-1 rounded-full bg-coral text-surface font-bold cursor-pointer"
+                    (click)="allergiesOpen.set(true)">
+                    <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <path d="M7 3v7M5 3v4a2 2 0 0 0 4 0V3M7 10v11M16 3c-1.7 1.2-2.5 3.5-2.5 7H16v11" />
+                    </svg>
+                    Allergies · {{ snapshot().allergies.length }}
+                </button>
+                @if (allergiesOpen()) {
+                    <app-allergy-window [allergies]="snapshot().allergies" [timeZone]="timeZone()" (closed)="allergiesOpen.set(false)" />
+                }
+            </span>
+        }
+        @if (!snapshot().isDefault) {
+            <button type="button" data-today class="px-3 py-1 rounded-full border-2 border-interactive text-interactive font-bold cursor-pointer"
+                (click)="today.emit()">Aujourd'hui</button>
+        }
+        <span class="relative">
+            <button type="button" data-date class="px-3 py-1 rounded-lg font-bold cursor-pointer hover:bg-app" (click)="pickerOpen.set(true)">{{ date() }}</button>
+            @if (pickerOpen()) {
+                <app-service-picker [day]="snapshot().day" (chosen)="choose($event)" (closed)="pickerOpen.set(false)" />
+            }
+        </span>
+        @if (snapshot().service; as service) {
+            <span data-covers class="px-3 py-1 rounded-full bg-app font-bold tabular-nums">{{ service.expectedCovers }}/{{ service.capacity }} couverts</span>
+        }
+        <button type="button" data-create aria-label="Nouvelle réservation"
+            class="h-9 px-4 rounded-full bg-interactive text-surface font-bold cursor-pointer" (click)="create.emit()">+ Réservation</button>
+    </div>
+</div>

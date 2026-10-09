@@ -99,6 +99,7 @@ namespace TUROAPI.Test
             using HttpClient staff = restaurant.StaffClient();
             (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T12", 4), ("T13", 4));
             Guid combination = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[0].Id, tables[1].Id);
+            await ReservationApi.TrackCleaningAsync(restaurant.Id);
             Client roux = await ClientApi.AddAsync(restaurant.Id, "Roux", phone: "0611111111", visits: 4);
             Reservation group = await restaurant.AddReservationAsync(Dates.Today, 20, covers: 8, status: ReservationStatus.Seated, clientId: roux.Id);
             await ReservationApi.AssignAsync(group.Id, combinationId: combination);
@@ -106,6 +107,7 @@ namespace TUROAPI.Test
 
             ReservationActionResponse released = await ReservationApi.DoAsync(staff, group.Id, "release");
             ReservationActionResponse noShow = await ReservationApi.DoAsync(staff, late.Id, "no-show");
+            Assert.IsTrue(await TestApi.WithDbAsync(db => db.Tables.Where(t => t.ZoneId == zoneId).AnyAsync(t => t.NeedsCleaningSince != null)));
             ReservationResponse seatedAgain = await ApiAssert.OkAsync<ReservationResponse>(
                 await ReservationApi.UndoAsync(staff, group.Id, released.EventId!.Value));
             ReservationResponse confirmedAgain = await ApiAssert.OkAsync<ReservationResponse>(
@@ -193,7 +195,8 @@ namespace TUROAPI.Test
 
             for (int round = 0; round < 5; round++)
             {
-                Reservation late = await restaurant.AddReservationAsync(Dates.Today.AddDays(-1), 20, clientId: roux.Id);
+                // Un jour par tour : rétablies, les réservations de Roux se chevaucheraient d'un tour à l'autre
+                Reservation late = await restaurant.AddReservationAsync(Dates.Today.AddDays(-1 - round), 20, clientId: roux.Id);
                 ReservationActionResponse noShow = await ReservationApi.DoAsync(staff, late.Id, "no-show");
 
                 HttpResponseMessage[] responses = await AllAtOnceAsync([
@@ -224,6 +227,47 @@ namespace TUROAPI.Test
             Assert.AreEqual(3, responses.Count(r => r.StatusCode == HttpStatusCode.Conflict));
             // 3 + 1 − 1 : le compteur n'est rendu qu'une fois
             Assert.AreEqual(3, (await ClientApi.StoredAsync(roux.Id))!.NoShowCount);
+        }
+
+        [TestMethod]
+        public async Task An_undo_that_would_double_book_the_client_is_refused()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddServiceAsync(restaurant.Id, DayOfWeek.Saturday, 19, 23);
+            ReservationResponse first = (await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120))).Reservation;
+            ReservationActionResponse cancelled = await ReservationApi.DoAsync(staff, first.Id, "cancel");
+            // Le créneau libéré est repris par le même client, sur une autre réservation
+            ReservationResponse second = (await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120))).Reservation;
+
+            await ApiAssert.ErrorAsync(await ReservationApi.UndoAsync(staff, first.Id, cancelled.EventId!.Value),
+                HttpStatusCode.Conflict, "ClientAlreadyBooked");
+            Assert.AreEqual(ReservationStatus.Cancelled, (await ReservationApi.StoredAsync(first.Id)).Status);
+
+            // Même chose pour une modification défaite qui ramènerait la réservation sur un créneau repris entre-temps
+            ReservationActionResponse moved = await ApiAssert.OkAsync<ReservationActionResponse>(
+                await ReservationApi.PutAsync(staff, second.Id, ReservationApi.Request(hour: 22, duration: 60)));
+            await ReservationApi.CreateAsync(staff, ReservationApi.Request(hour: 20, duration: 120));
+            await ApiAssert.ErrorAsync(await ReservationApi.UndoAsync(staff, second.Id, moved.EventId!.Value),
+                HttpStatusCode.Conflict, "ClientAlreadyBooked");
+            ServiceApi.AssertSameInstant(moved.Reservation.Start, (await ReservationApi.StoredAsync(second.Id)).Start);
+        }
+
+        [TestMethod]
+        public async Task An_undo_that_keeps_the_slot_is_not_checked_for_double_booking()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            Client roux = await ClientApi.AddAsync(restaurant.Id, "Roux", phone: "0611111111");
+            // Deux réservations qui se chevauchaient déjà avant la règle : défaire un geste qui garde le créneau reste possible
+            Reservation booked = await restaurant.AddReservationAsync(Dates.Today, 20, clientId: roux.Id);
+            await restaurant.AddReservationAsync(Dates.Today, 20, clientId: roux.Id);
+            (_, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T4", 4));
+            await ReservationApi.AssignAsync(booked.Id, tableId: tables[0].Id);
+
+            ReservationActionResponse seated = await ReservationApi.DoAsync(staff, booked.Id, "arrive");
+
+            Assert.AreEqual(HttpStatusCode.OK, (await ReservationApi.UndoAsync(staff, booked.Id, seated.EventId!.Value)).StatusCode);
         }
     }
 }

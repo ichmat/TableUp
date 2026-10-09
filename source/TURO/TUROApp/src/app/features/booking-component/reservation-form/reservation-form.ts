@@ -13,18 +13,21 @@ import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
 import { Input } from '../../../shared/components/inputs/input/input';
 import { DateInput } from '../../../shared/components/inputs/date-input/date-input';
-import { todayIn, toIsoDate } from '../../../shared/utils/calendar-date';
+import { toIsoDate } from '../../../shared/utils/calendar-date';
 import { formatDuration } from '../../../shared/utils/time-of-day';
 import { formatPhone } from '../../../shared/utils/phone';
-import { isBookableDay } from '../reservation-display';
+import { currentServiceDay, isBookableDay } from '../reservation-display';
 import { initialDraft, ReservationDraft, ReservationFormMode, ReservationSaved, toRequest } from '../reservation-draft';
+import { apiErrorText } from '../../../shared/utils/api-error-text';
 
 const L = RESERVATION_LIMITS;
 const LOOKUP_DELAY_MS = 300;
+/** Les propositions attendent une pause dans la frappe : elles ne clignotent pas à chaque touche */
+export const SUGGEST_DELAY_MS = 2_000;
 const MAX_PHONE = 30;
 /** Assez pour que les propositions servent à quelque chose, sans liste de tout le fichier */
-const MIN_LOOKUP_DIGITS = 4;
-const MIN_LOOKUP_LETTERS = 2;
+const MIN_LOOKUP_DIGITS = 3;
+const MIN_LOOKUP_LETTERS = 3;
 
 const digitsOf = (phone: string) => phone.replace(/\D/g, '');
 
@@ -57,7 +60,9 @@ export class ReservationForm {
   protected readonly formatPhone = formatPhone;
 
   private _timeZone = computed(() => this._restaurant.model()?.timeZone ?? 'Europe/Paris');
-  private _today = computed(() => todayIn(this._timeZone()));
+  // Le jour du service en cours : à 00:20, le dîner de la veille qui passe minuit (l'API applique la même règle)
+  private _today = computed(() =>
+    currentServiceDay(this._timeZone(), this._restaurant.model()?.services ?? [], this._closures.closures()));
   protected zones = computed(() => this._restaurant.model()?.zones ?? []);
   protected editing = computed(() => {
     const mode = this.mode();
@@ -84,6 +89,9 @@ export class ReservationForm {
   /** Les fiches qui répondent à ce qu'on tape, sous le champ qu'on tape */
   protected suggestions = signal<ClientListItem[]>([]);
   protected lookupField = signal<'phone' | 'name' | null>(null);
+  /** Le champ dont les propositions arrivent ; `keystroke` relance la jauge à chaque touche */
+  protected pendingLookup = signal<{ field: 'phone' | 'name', keystroke: number } | null>(null);
+  protected readonly suggestDelay = SUGGEST_DELAY_MS;
   private _lookupTimer: ReturnType<typeof setTimeout> | undefined;
   // Un champ à la fois : taper le numéro ne doit pas relancer la recherche sur le nom, qui l'annulerait
   private _phone = computed(() => this._draft().phone);
@@ -177,15 +185,35 @@ export class ReservationForm {
         this.suggestions.set([]);
         this.lookupField.set(null);
       }
+      if (this.pendingLookup()?.field === field || this.known() !== null) {
+        this.pendingLookup.set(null);
+      }
       return;
     }
+    // La liste d'avant ne répond plus à ce qu'on tape : elle part, la jauge annonce la suivante
+    this.suggestions.set([]);
+    this.lookupField.set(null);
+    this.pendingLookup.set({ field, keystroke: (this.pendingLookup()?.keystroke ?? 0) + 1 });
     this._lookupTimer = setTimeout(async () => {
       const found = await this._clients.suggest(search);
       if (this._draft()[field].trim() === search && this.known() === null) {
+        this.pendingLookup.set(null);
         this.suggestions.set(found);
         this.lookupField.set(found.length > 0 ? field : null);
       }
-    }, LOOKUP_DELAY_MS);
+    }, SUGGEST_DELAY_MS);
+  }
+
+  /** Quitter le champ, ou Échap, referme sa liste : elle couvrirait le champ suivant */
+  protected dismissOffers(field: 'phone' | 'name') {
+    if (this.pendingLookup()?.field === field) {
+      clearTimeout(this._lookupTimer);
+      this.pendingLookup.set(null);
+    }
+    if (this.lookupField() === field) {
+      this.suggestions.set([]);
+      this.lookupField.set(null);
+    }
   }
 
   /** La fiche choisie s'attache comme si le numéro avait été tapé en entier */
@@ -193,6 +221,7 @@ export class ReservationForm {
     this.known.set(client);
     this.suggestions.set([]);
     this.lookupField.set(null);
+    this.pendingLookup.set(null);
     this._draft.update((draft) => ({ ...draft, phone: formatPhone(client.phone ?? ''), name: client.name }));
   }
 
@@ -278,12 +307,14 @@ export class ReservationForm {
       return;
     }
     if (result.code === ApiError.ClientAlreadyBooked) {
-      // Un client ne tient pas deux tables à la fois : on renvoie vers la réservation qui existe déjà
-      const name = this.known()?.name ?? (draft.name.trim() || 'Ce client');
-      await this._modal.infoModal('Déjà réservé',
-        `${name} a déjà une réservation sur ce créneau. Ouvrez-la depuis la liste pour la modifier plutôt que d'en créer une deuxième.`);
+      // Un client ne tient pas deux tables à la fois : à la création, on renvoie vers celle qui existe déjà ;
+      // en modification, c'est le nouvel horaire qui tombe sur une autre de ses réservations
+      const name = editing?.client?.name ?? this.known()?.name ?? (draft.name.trim() || 'Ce client');
+      await this._modal.infoModal('Déjà réservé', editing
+        ? `${name} a déjà une autre réservation à ce moment-là. Choisissez une autre heure, ou modifiez d'abord l'autre réservation.`
+        : `${name} a déjà une réservation sur ce créneau. Ouvrez-la depuis la liste pour la modifier plutôt que d'en créer une deuxième.`);
       return;
     }
-    await this._modal.infoModal('Erreur', result.error);
+    await this._modal.infoModal('Erreur', apiErrorText(result));
   }
 }

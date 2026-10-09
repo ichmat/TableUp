@@ -52,6 +52,7 @@ namespace TUROAPI.Test
             using HttpClient staff = restaurant.StaffClient();
             (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T12", 4), ("T13", 4), ("T14", 4));
             Guid combination = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[0].Id, tables[1].Id);
+            await ReservationApi.TrackCleaningAsync(restaurant.Id);
             Reservation group = await restaurant.AddReservationAsync(Dates.Today, 20, covers: 8, status: ReservationStatus.Seated);
             await ReservationApi.AssignAsync(group.Id, combinationId: combination);
 
@@ -64,6 +65,20 @@ namespace TUROAPI.Test
             Assert.IsNotNull(cleaning["T12"]);
             Assert.IsNotNull(cleaning["T13"]);
             Assert.IsNull(cleaning["T14"]);
+        }
+
+        [TestMethod]
+        public async Task Release_leaves_the_table_free_when_cleaning_is_not_tracked()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            (_, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T1", 4));
+            Reservation seated = await restaurant.AddReservationAsync(Dates.Today, 20, status: ReservationStatus.Seated);
+            await ReservationApi.AssignAsync(seated.Id, tableId: tables[0].Id);
+
+            await ReservationApi.DoAsync(staff, seated.Id, "release");
+
+            Assert.IsNull(await TestApi.WithDbAsync(db => db.Tables.Where(t => t.Id == tables[0].Id).Select(t => t.NeedsCleaningSince).SingleAsync()));
         }
 
         [TestMethod]

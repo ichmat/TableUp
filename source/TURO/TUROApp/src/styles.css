@@ -46,6 +46,8 @@
   /* Plan (ardoise) */
   --color-slate: #2E2A26;
   --color-slate-border: #241F1B;
+  /* Murs et piliers sur l'ardoise : assez clairs pour se détacher du sol, sans voler la vedette aux tables */
+  --color-plan-decor: #5C534B;
   /* Craie */
   --color-chalk: #B6AC9C;
   /* Corail — fermeture exceptionnelle, conflit avec des réservations */
@@ -74,6 +76,32 @@
   --color-fit-reserve: #A4A83C;
   --color-fit-reserve-soft: #F6F5DF;
   --color-fit-reserve-ink: #6C7320;
+
+  /* Statuts de table sur l'ardoise (§2.3) : couleur ET forme du contour, jamais l'orange */
+  --color-plan-free: rgb(255 255 255 / 0.05);
+  --color-plan-free-line: #6A6055;
+  --color-plan-free-text: #C9BFB0;
+  --color-plan-reserved: rgb(120 190 230 / 0.16);
+  --color-plan-reserved-line: #6FA8CC;
+  --color-plan-reserved-text: #A8D5F0;
+  --color-plan-occupied: rgb(230 120 95 / 0.2);
+  --color-plan-occupied-line: #D9765C;
+  --color-plan-occupied-text: #F2A48E;
+  --color-plan-clean: rgb(230 200 90 / 0.14);
+  --color-plan-clean-line: #C9AC52;
+  --color-plan-clean-text: #E3CE86;
+  --color-plan-late: #D9765C;
+  /* Aide au placement (§2.4) : n'existe que pendant un placement, jamais un statut, jamais l'orange */
+  --color-place-perfect: #5FBF7A;
+  --color-place-reserve: #B3BE4E;
+  --color-place-advised: #D9765C;
+
+  /* La jauge des propositions de clients : elle se remplit pendant l'attente (durée posée par le composant) */
+  --animate-fill: fill linear forwards;
+  @keyframes fill {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
 }
 
 /* Hachures (PAR-02, PAR-03) : un état se lit aussi par sa forme, jamais par la seule teinte */
@@ -87,4 +115,10 @@
 
 *{
   font-family: "Exo 2";
+}
+
+/* §5.2 : pendant un glisser de placement, le rail ne s'ouvre pas sous le doigt */
+body.placement-dragging app-nav-component,
+body.placement-dragging nav {
+  pointer-events: none;
 }

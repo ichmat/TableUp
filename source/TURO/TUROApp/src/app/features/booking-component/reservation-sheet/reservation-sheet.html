@@ -63,7 +63,7 @@
         <section data-block="actions" class="flex flex-col gap-2">
             @switch (primary()) {
                 @case ('acceptAndPlace') {
-                    <app-button text="Accepter et placer à une table" buttonClass="w-full" [disabled]="isBusy()" (click)="acceptAndPlace()" />
+                    <app-button text="Accepter et placer à une table" buttonClass="w-full" [disabled]="isBusy()" (click)="place()" />
                     <app-button text="Accepter" type="Secondary" buttonClass="w-full" [disabled]="isBusy()" (click)="run('accept')" />
                     <button type="button" class="text-sm text-coral-ink underline cursor-pointer self-start" [disabled]="isBusy()" (click)="run('refuse')">Refuser</button>
                 }
@@ -83,11 +83,15 @@
                     <button type="button" class="text-text-muted underline cursor-pointer" [disabled]="isBusy()" (click)="run('reopen')">Rouvrir</button>
                 } @else {
                     <button type="button" class="text-text-muted underline cursor-pointer" (click)="edit.emit(r)">Modifier</button>
-                    @if (canNoShow()) {
-                        <button type="button" class="text-coral-ink underline cursor-pointer" [disabled]="isBusy()" (click)="run('no-show')">No-show</button>
-                    }
+                    <!-- « No-show » vient en dernier : quand il apparaît, les autres liens ne bougent pas -->
                     @if (r.status === 'Pending' || r.status === 'Confirmed') {
                         <button type="button" class="text-text-muted underline cursor-pointer" (click)="cancelOpen.set(!cancelOpen())">Annuler la réservation</button>
+                    }
+                    @if (canMove()) {
+                        <button type="button" class="text-text-muted underline cursor-pointer" (click)="place()">Changer de table</button>
+                    }
+                    @if (canNoShow()) {
+                        <button type="button" class="text-coral-ink underline cursor-pointer" [disabled]="isBusy()" (click)="run('no-show')">No-show</button>
                     }
                 }
             </div>
