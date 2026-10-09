@@ -32,6 +32,6 @@ jobs:
       run: dotnet test source/TURO/TUROAPI/TUROAPI.slnx --no-build -c Release --verbosity normal
 
   node:
-    needs: build
+    needs: build-and-test
     if: always()
     uses: ./.github/workflows/node.js.yml
