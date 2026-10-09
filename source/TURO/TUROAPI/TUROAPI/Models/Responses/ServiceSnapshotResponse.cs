@@ -32,6 +32,8 @@ namespace TUROAPI.Models.Responses
         public int ExpectedCovers { get; set; }
         /// <summary>Places des tables actives, toutes salles</summary>
         public int Capacity { get; set; }
+        /// <summary>La durée d'un repas de cette plage, en minutes : la bulle du walk-in s'en sert avant l'appel</summary>
+        public int DefaultDuration { get; set; }
     }
 
     public class ServiceWindowStateResponse

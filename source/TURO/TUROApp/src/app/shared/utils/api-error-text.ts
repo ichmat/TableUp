@@ -9,6 +9,8 @@ const FRENCH: Partial<Record<ApiError, string>> = {
   [ApiError.ReservationChanged]: 'La réservation a été modifiée sur un autre poste.',
   [ApiError.OutsideService]: "Le restaurant n'est pas ouvert à ce moment-là : jour passé, jour fermé ou heure hors service.",
   [ApiError.TableAlreadyClean]: 'Cette table est déjà propre.',
+  [ApiError.PlacementUnavailable]: "Cette table n'est plus libre pour cette réservation : elle vient d'être prise sur un autre poste.",
+  [ApiError.TableBookedLater]: 'Cette table est réservée plus tard, pendant la durée du repas.',
   [ApiError.TableCleaningDisabled]: 'Le suivi du nettoyage est désactivé dans Paramètres › Placement.',
 };
 

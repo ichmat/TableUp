@@ -125,6 +125,27 @@ describe('ServiceViewService', () => {
     await settle();
   });
 
+  it('should ask the API for the halos, and seat a walk-in then reload', async () => {
+    service.setQuery({ day: null, opening: null, focus: null });
+    TestBed.tick();
+    snapshotCall().flush(serviceSnapshot());
+    await settle();
+
+    const placement = service.placement('r1');
+    http.expectOne((r) => r.url === '/api/service/placement/r1' && r.method === 'GET').flush({ reservationId: 'r1', entities: [] });
+    expect((await placement).value?.reservationId).toBe('r1');
+
+    const seated = service.seat('t5', 3, true);
+    const seat = http.expectOne('/api/service/tables/t5/seat');
+    expect(seat.request.method).toBe('POST');
+    expect(seat.request.body).toEqual({ covers: 3, acceptBookedLater: true });
+    seat.flush({ reservation: { id: 'w1' }, eventId: 'e1' }, { status: 201, statusText: 'Created' });
+    expect((await seated).value?.eventId).toBe('e1');
+    TestBed.tick();
+    snapshotCall().flush(serviceSnapshot());
+    await settle();
+  });
+
   it('should tell a reload failed, and whether the service asked no longer exists, keeping the last snapshot', async () => {
     service.setQuery({ day: '2026-10-10', opening: '19:00', focus: null });
     TestBed.tick();

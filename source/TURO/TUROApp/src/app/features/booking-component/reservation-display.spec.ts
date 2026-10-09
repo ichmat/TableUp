@@ -1,7 +1,7 @@
 import { ExceptionalClosure, ReservationDay, ReservationDetail, ReservationEvent, ReservationListClient, RestaurantService } from '../../models';
 import {
   createdMessage, dayHeader, gestureMessage, currentServiceDay, guestName, isBookableDay, isServiceDay, journalLine, marks, modifiedMessage, ordinal, originLabel,
-  pendingBanner, primaryAction, quickAction, sheetSubtitle,
+  pendingBanner, placedMessage, primaryAction, quickAction, sheetSubtitle,
 } from './reservation-display';
 
 const DAY = (change: Partial<ReservationDay> = {}): ReservationDay => ({ serviceDay: '2026-08-20', covers: 48, toPlace: 3, items: [], ...change });
@@ -81,6 +81,15 @@ describe('reservation display', () => {
     expect(createdMessage(DETAIL(), 'Europe/Paris')).toBe('Réservation créée · Moreau, jeu. 20 août 20:30');
     const modification: ReservationEvent = { id: 'e2', timestamp: '2026-08-15T09:00:00Z', type: 'Modification', authorLogin: 'camille', details: '20:00 → 20:30' };
     expect(modifiedMessage(DETAIL({ events: [modification] }))).toBe('Modifiée · 20:00 → 20:30');
+  });
+
+  it('should say a placement, an accept-and-place and a move', () => {
+    const line = (type: ReservationEvent['type'], details: string): ReservationEvent => ({ id: 'e9', timestamp: '2026-08-20T18:31:00Z', type, authorLogin: 'camille', details });
+    const placed = DETAIL({ place: { name: '5', capacity: 4 }, events: [line('Placement', '5')] });
+
+    expect(placedMessage(placed, false)).toBe('Moreau placée · 5');
+    expect(placedMessage(placed, true)).toBe('Moreau acceptée et placée · 5');
+    expect(placedMessage(DETAIL({ place: { name: '7', capacity: 4 }, events: [line('Move', '5 → 7')] }), false)).toBe('Moreau déplacée · 5 → 7');
   });
 
   it('should write a journal line with its time, its event and its author, or the system', () => {

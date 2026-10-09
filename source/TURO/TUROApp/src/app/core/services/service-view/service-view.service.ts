@@ -1,6 +1,6 @@
 import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
-import { DataScope, ServiceQuery, ServiceSnapshot, TableCleaned } from '../../../models';
+import { DataScope, Placement, ReservationActionResult, ServiceQuery, ServiceSnapshot, TableCleaned } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
@@ -84,6 +84,16 @@ export class ServiceViewService {
 
   undoClean(tableId: string, since: string): Promise<ApiResult<null>> {
     return this.thenReload(toApiResult(this._http.post<null>(`${SERVICE_URL}/tables/${tableId}/clean/undo`, { since })));
+  }
+
+  /** Les halos d'une réservation (§3.5) : l'API seule juge */
+  placement(reservationId: string): Promise<ApiResult<Placement>> {
+    return toApiResult(this._http.get<Placement>(`${SERVICE_URL}/placement/${reservationId}`));
+  }
+
+  /** WALK-01 : « Asseoir maintenant » */
+  seat(tableId: string, covers: number, acceptBookedLater: boolean): Promise<ApiResult<ReservationActionResult>> {
+    return this.thenReload(toApiResult(this._http.post<ReservationActionResult>(`${SERVICE_URL}/tables/${tableId}/seat`, { covers, acceptBookedLater })));
   }
 
   /** L'écran montre le résultat sans attendre la notification SignalR */

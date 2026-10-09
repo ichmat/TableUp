@@ -89,6 +89,10 @@
   --color-plan-clean-line: #C9AC52;
   --color-plan-clean-text: #E3CE86;
   --color-plan-late: #D9765C;
+  /* Aide au placement (§2.4) : n'existe que pendant un placement, jamais un statut, jamais l'orange */
+  --color-place-perfect: #5FBF7A;
+  --color-place-reserve: #B3BE4E;
+  --color-place-advised: #D9765C;
 
   /* La jauge des propositions de clients : elle se remplit pendant l'attente (durée posée par le composant) */
   --animate-fill: fill linear forwards;
@@ -109,4 +113,10 @@
 
 *{
   font-family: "Exo 2";
+}
+
+/* §5.2 : pendant un glisser de placement, le rail ne s'ouvre pas sous le doigt */
+body.placement-dragging app-nav-component,
+body.placement-dragging nav {
+  pointer-events: none;
 }

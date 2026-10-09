@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, ElementRef, input, linkedSignal, OnDestroy, output, signal, untracked, viewChild } from '@angular/core';
-import { DecorType, PlanCombination, PlanDecor, PlanTable, TableMark, Zone } from '../../../models';
+import { DecorType, PlacementLevel, PlacementMark, PlanCombination, PlanDecor, PlanTable, TableMark, Zone } from '../../../models';
 import { TABLE_STATUS_STYLE } from '../constants/table-status-style';
 import { fitView, panBy, PlanView, toViewBox, zoomAt, ZOOM_STEP } from './floor-plan-view';
 
@@ -59,6 +59,32 @@ export class FloorPlanCanvasComponent implements OnDestroy {
     return this.tableMarks()?.[table.id] ?? null;
   }
 
+  /** Pendant un placement (§5.8) : le niveau de chaque table et combinaison. `null` : aucun placement en cours */
+  placementMarks = input<Readonly<Record<string, PlacementMark>> | null>(null);
+
+  protected placementOf(id: string): PlacementMark | null {
+    return this.placementMarks()?.[id] ?? null;
+  }
+
+  /** Une entité écartée — ou absente des verdicts — tombe à 26 % (§3.5) */
+  protected dimmed(id: string): boolean {
+    const marks = this.placementMarks();
+    return marks !== null && (marks[id]?.level ?? 'Excluded') === 'Excluded';
+  }
+
+  /** Le halo porte la compatibilité ; le contour reste au statut (§2.4) */
+  protected haloClass(level: PlacementLevel): string {
+    return level === 'Perfect' ? 'stroke-place-perfect' : level === 'WithReserve' ? 'stroke-place-reserve' : 'stroke-place-advised';
+  }
+
+  protected badgeClass(level: PlacementLevel): string {
+    return level === 'Perfect' ? 'fill-place-perfect' : level === 'WithReserve' ? 'fill-place-reserve' : 'fill-place-advised';
+  }
+
+  protected badgeText(level: PlacementLevel): string {
+    return level === 'Perfect' ? '✓' : level === 'WithReserve' ? '~✓' : '!';
+  }
+
   protected roomClass(): string {
     return this.theme() === 'slate' ? 'fill-slate stroke-slate-border' : 'fill-surface stroke-chalk';
   }
@@ -109,6 +135,29 @@ export class FloorPlanCanvasComponent implements OnDestroy {
       const bottom = Math.max(...boxes.map((box) => box.y + box.height));
       const label = `${combination.name} · ${combination.capacity}p`;
       return [{ combination, label, x: round((left + right) / 2), y: round((top + bottom) / 2), width: label.length * 0.1 + 0.3 }];
+    });
+  });
+
+  /** L'enveloppe d'une combinaison active, autour de laquelle se dessine son halo */
+  protected combinationHalos = computed(() => {
+    const marks = this.placementMarks();
+    if (marks === null) {
+      return [];
+    }
+    return this.pills().flatMap(({ combination }) => {
+      const mark = marks[combination.id];
+      if (!mark || mark.level === 'Excluded') {
+        return [];
+      }
+      const boxes = this.tables().filter((t) => combination.tableIds.includes(t.id)).map(boxOf);
+      const margin = 0.1;
+      const x = Math.min(...boxes.map((b) => b.x)) - margin;
+      const y = Math.min(...boxes.map((b) => b.y)) - margin;
+      return [{
+        id: combination.id, mark, x: round(x), y: round(y),
+        width: round(Math.max(...boxes.map((b) => b.x + b.width)) + margin - x),
+        height: round(Math.max(...boxes.map((b) => b.y + b.height)) + margin - y),
+      }];
     });
   });
 

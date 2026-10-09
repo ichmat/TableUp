@@ -16,6 +16,8 @@ export class ToPlaceColumn {
   pending = input.required<ServiceReservation[]>();
   timeZone = input.required<string>();
   opened = output<string>();
+  /** Un appui sur une pastille : l'écran en fait un glisser au-delà du seuil (§5.8) */
+  pressed = output<{ id: string, label: string, event: PointerEvent }>();
 
   protected collapsed = signal(false);
   protected readonly sourceLabel = SOURCE_LABEL;

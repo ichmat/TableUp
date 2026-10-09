@@ -49,5 +49,9 @@ namespace TUROAPI.Models.Enums
         TableCleaningDisabled = 18,
         [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is already clean.")]
         TableAlreadyClean = 19,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is no longer free for this reservation.")]
+        PlacementUnavailable = 20,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is booked at {1}.")]
+        TableBookedLater = 21,
     }
 }

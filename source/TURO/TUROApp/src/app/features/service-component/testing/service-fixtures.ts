@@ -35,7 +35,7 @@ export function slotsOf(times: string[]): ServiceSlot[] {
 export function serviceSnapshot(change: Partial<ServiceSnapshot> = {}): ServiceSnapshot {
   return {
     day: SERVICE_DAY, now: utc('20:07'), trackTableCleaning: false, lateGrace: 15, isDefault: true,
-    service: { opening: '19:00:00', closing: '23:00:00', slotStep: 30, state: 'InProgress', expectedCovers: 32, capacity: 48 },
+    service: { opening: '19:00:00', closing: '23:00:00', slotStep: 30, state: 'InProgress', expectedCovers: 32, capacity: 48, defaultDuration: 120 },
     windows: [{ opening: '19:00:00', closing: '23:00:00', state: 'InProgress', expectedCovers: 32 }],
     slots: slotsOf(['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30']),
     zones: [serviceZone()], toPlace: [], pending: [], allergies: [],

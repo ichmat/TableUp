@@ -21,6 +21,8 @@ export enum ApiError{
     ClientAlreadyBooked = 'ClientAlreadyBooked',
     TableCleaningDisabled = 'TableCleaningDisabled',
     TableAlreadyClean = 'TableAlreadyClean',
+    PlacementUnavailable = 'PlacementUnavailable',
+    TableBookedLater = 'TableBookedLater',
 }
 
 export interface ApiErrorResponse{

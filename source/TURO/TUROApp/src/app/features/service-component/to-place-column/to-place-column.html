@@ -24,7 +24,8 @@
 
 <ng-template #pill let-item let-request="request">
     <button type="button" [attr.data-pill]="item.id" (click)="opened.emit(item.id)"
-        [class]="'flex flex-col items-start gap-0.5 rounded-lg border-2 px-2 py-1 text-left cursor-pointer hover:bg-app ' + (request ? 'border-violet' : 'border-border-soft')">
+        (pointerdown)="pressed.emit({ id: item.id, label: guestName(item.client) + ' · ' + item.covers + 'p', event: $event })"
+        [class]="'flex flex-col items-start gap-0.5 rounded-lg border-2 px-2 py-1 text-left cursor-pointer touch-none hover:bg-app ' + (request ? 'border-violet' : 'border-border-soft')">
         <span class="font-bold truncate w-full">{{ guestName(item.client) }}</span>
         <span class="tabular-nums">{{ item.covers }}p · {{ time(item) }}</span>
         <span class="flex flex-row flex-wrap items-center gap-1">

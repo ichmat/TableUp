@@ -1,7 +1,9 @@
 import { Component, computed, effect, ElementRef, inject, linkedSignal, NgZone, OnDestroy, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PlanTable, ReservationDetail, ServiceSnapshot } from '../../models';
+import {
+  ApiError, Placement, PlacementEntity, PlacementLevel, PlacementMark, PlanCombination, PlanTable, ReservationDetail, ServiceSnapshot,
+} from '../../models';
 import { ServiceViewService } from '../../core/services/service-view/service-view.service';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
@@ -19,11 +21,14 @@ import { ReservationFormMode, ReservationSaved } from '../booking-component/rese
 import { backTo, openFrom, PanelEntry } from '../booking-component/panel-stack';
 import { ServiceChoice, ServiceHeader } from './service-header/service-header';
 import { ServiceTimeline } from './service-timeline/service-timeline';
-import { ZoneTabs } from './zone-tabs/zone-tabs';
+import { bestLevel, ZoneTabs } from './zone-tabs/zone-tabs';
 import { PlanLegend } from './plan-legend/plan-legend';
 import { ToPlaceColumn } from './to-place-column/to-place-column';
 import { defaultSlot, slotIndexAt, tableMarks, tableStatusAt, zoneCount } from './table-status';
 import { apiErrorText } from '../../shared/utils/api-error-text';
+import { entityId, nextText, reasonsMessage, targetOf } from './placement-reasons';
+import { DropTarget, PlacementDrag } from './placement-drag';
+import { bookedLater, bookedLaterText } from './walk-in';
 
 export const TABLE_UNDO_TOO_LATE = 'Trop tard : la table a changé entre-temps';
 
@@ -35,6 +40,18 @@ interface CleanBubble {
   name: string,
   x: number,
   y: number,
+}
+
+/** La bulle d'une table libre maintenant : asseoir un client de passage (WALK-01) */
+interface SeatBubble {
+  tableId: string,
+  name: string,
+  capacity: number,
+  x: number,
+  y: number,
+  /** « Réservée à 21:00 · Legrand · 4 p — 1 h devant vous » : il faut l'accord du restaurateur */
+  later: string | null,
+  confirmed: boolean,
 }
 
 /** Où commence une réservation du service, quel que soit l'endroit où elle apparaît */
@@ -52,6 +69,13 @@ function startOf(id: string, snapshot: ServiceSnapshot): string | null {
     }
   }
   return null;
+}
+
+/** Une réservation que le plan peut placer : à placer, demandée, ou déjà sur une table sans être finie */
+function isPlaceable(id: string, snapshot: ServiceSnapshot): boolean {
+  return [...snapshot.toPlace, ...snapshot.pending].some((r) => r.id === id)
+    || snapshot.zones.some((zone) => zone.tables.some((table) =>
+      table.occupations.some((o) => o.reservationId === id && (o.status === 'Confirmed' || o.status === 'Seated'))));
 }
 
 /**
@@ -175,7 +199,48 @@ export class ServiceComponent implements OnDestroy {
   /** Le formulaire survole le plan (PLACE-11) */
   protected form = signal<ReservationFormMode | null>(null);
   protected bubble = signal<CleanBubble | null>(null);
+  /** WALK-01 : la bulle « Asseoir maintenant » ; `later` : la table attend quelqu'un pendant le repas */
+  protected seatBubble = signal<SeatBubble | null>(null);
+  protected coverChoices = computed(() => Array.from({ length: this.seatBubble()?.capacity ?? 0 }, (_, i) => i + 1));
   private _planArea = viewChild<ElementRef<HTMLElement>>('planArea');
+
+  // ---- Le placement (§5.8) : les halos viennent de l'API, le plan est l'objet de l'action ----
+
+  placing = signal<{ reservationId: string, placement: Placement | null } | null>(null);
+  /** Le dernier GET des halos : une réponse plus ancienne, arrivée en retard, est ignorée */
+  private _placementRequest = 0;
+  private _placementLoad: Promise<void> = Promise.resolve();
+  private _dropping = false;
+
+  /** Le glisser (§5.8) : une pastille vers une table, ou l'occupation d'une table vers une autre */
+  readonly drag = new PlacementDrag();
+  protected ghost = this.drag.ghost;
+
+  /** Les marques du canevas : tables et combinaisons */
+  protected placementMarks = computed<Record<string, PlacementMark> | null>(() => {
+    const placement = this.placing()?.placement;
+    if (!placement) {
+      return null;
+    }
+    const marks: Record<string, PlacementMark> = {};
+    for (const entity of placement.entities) {
+      marks[entityId(entity)] = { level: entity.level, next: entity.next === null || entity.level === 'Excluded' ? null : nextText(entity.next, this.timeZone()) };
+    }
+    return marks;
+  });
+
+  /** §5.5 : chaque onglet porte le meilleur niveau de sa salle */
+  protected zoneLevels = computed<Record<string, PlacementLevel | null> | null>(() => {
+    const placement = this.placing()?.placement;
+    if (!placement) {
+      return null;
+    }
+    const levels: Record<string, PlacementLevel | null> = {};
+    for (const zone of this.snapshot()?.zones ?? []) {
+      levels[zone.id] = bestLevel(placement.entities.filter((e) => e.zoneId === zone.id).map((e) => e.level));
+    }
+    return levels;
+  });
 
   constructor() {
     effect(() => {
@@ -195,6 +260,10 @@ export class ServiceComponent implements OnDestroy {
       untracked(() => {
         if (focus !== null) {
           this.focusOn(focus);
+          // « Placer » depuis Réservations (§6.4) : les halos s'allument, si le plan peut encore la placer
+          if (params.get('place') !== null && isPlaceable(focus, snapshot)) {
+            void this.startPlacing(focus);
+          }
         }
         const opening = snapshot.service?.opening.slice(0, 5) ?? null;
         if (opening !== null && (focus !== null || params.get('day') !== snapshot.day || params.get('opening') !== opening)) {
@@ -206,6 +275,14 @@ export class ServiceComponent implements OnDestroy {
           });
         }
       });
+    });
+
+    // Un rechargement (un collègue a placé ailleurs) refait les halos sans quitter le placement
+    effect(() => {
+      this.snapshot();
+      if (untracked(() => this.placing()?.placement) != null) {
+        untracked(() => { this._placementLoad = this.loadPlacement(); });
+      }
     });
 
     // Le service demandé n'existe plus (ouverture déplacée, jour fermé entre-temps) : on retombe sur le jour
@@ -259,7 +336,11 @@ export class ServiceComponent implements OnDestroy {
 
   /** FRISE-04 : ouvrir une réservation déplace la frise sur son créneau */
   protected focusOn(id: string) {
+    if (this.placing()?.reservationId !== id) {
+      this.stopPlacing();
+    }
     this.bubble.set(null);
+    this.seatBubble.set(null);
     this.stack.set([{ kind: 'reservation', id, label: '' }]);
     this.show();
     const snapshot = this.snapshot();
@@ -269,21 +350,169 @@ export class ServiceComponent implements OnDestroy {
     }
   }
 
+  /** La réservation s'ouvre, la frise saute sur son créneau, puis les halos s'allument */
+  async startPlacing(reservationId: string) {
+    this.bubble.set(null);
+    this.seatBubble.set(null);
+    if (this.top()?.id !== reservationId) {
+      this.focusOn(reservationId);
+    }
+    this.placing.set({ reservationId, placement: null });
+    this._placementLoad = this.loadPlacement();
+    await this._placementLoad;
+  }
+
+  stopPlacing() {
+    this._placementRequest++;
+    this.placing.set(null);
+  }
+
+  /** L'entité sous un toucher ou un lâcher */
+  entityAt(target: { tableId?: string, combinationId?: string }): PlacementEntity | null {
+    const placement = this.placing()?.placement;
+    return placement?.entities.find((e) =>
+      target.tableId !== undefined ? e.tableId === target.tableId : e.combinationId === target.combinationId) ?? null;
+  }
+
+  /** PLACE-06 / PLACE-07 : ✓ place aussitôt ; ~✓ et ! disent toutes leurs raisons d'abord */
+  async drop(entity: PlacementEntity) {
+    const placing = this.placing();
+    const placement = placing?.placement;
+    if (!placing || !placement || entity.level === 'Excluded' || this._dropping) {
+      return;
+    }
+    const guest = placement.guestName ?? 'ce client';
+    if (entity.level !== 'Perfect') {
+      const zoneName = this.snapshot()?.zones.find((z) => z.id === entity.zoneId)?.name ?? '';
+      const message = reasonsMessage(entity, { guest, covers: placement.covers, name: entity.name, capacity: entity.capacity, zoneName, end: placement.end }, this.timeZone());
+      if (!await this._modal.confirmModal(`Placer ${guest} sur ${entity.name} ?`, message, 'Placer', 'Annuler')) {
+        return;
+      }
+    }
+    const wasPending = this.snapshot()?.pending.some((r) => r.id === placing.reservationId) ?? false;
+    this._dropping = true;
+    const result = await this._actions.placeOn(placing.reservationId, targetOf(entity), wasPending);
+    this._dropping = false;
+    if (result.error === null) {
+      this.stopPlacing();
+      return;
+    }
+    if (result.code === ApiError.PlacementUnavailable) {
+      await this._modal.infoModal('Table prise', `La table ${entity.name} n'est plus libre pour cette réservation.`);
+      this._placementLoad = this.loadPlacement();
+      return;
+    }
+    await this._modal.infoModal('Placement impossible', apiErrorText(result));
+  }
+
+  private async loadPlacement() {
+    const placing = this.placing();
+    if (placing === null) {
+      return;
+    }
+    const request = ++this._placementRequest;
+    const result = await this._view.placement(placing.reservationId);
+    if (request !== this._placementRequest || this.placing()?.reservationId !== placing.reservationId) {
+      return;
+    }
+    if (result.error !== null) {
+      this.stopPlacing();
+      await this._modal.infoModal('Placement impossible', apiErrorText(result));
+      return;
+    }
+    this.placing.set({ reservationId: placing.reservationId, placement: result.value });
+  }
+
+  /** En placement, toucher une entité allumée vaut un dépôt ; une écartée ne fait rien */
+  protected async dropOn(target: { tableId?: string, combinationId?: string }) {
+    await this._placementLoad;
+    const entity = this.entityAt(target);
+    if (entity !== null) {
+      await this.drop(entity);
+    }
+  }
+
+  protected onPillPressed(event: { id: string, label: string, event: PointerEvent }) {
+    this.dragToPlace(event.id, event.label, event.event);
+  }
+
+  /** Au-delà du seuil, le plan s'allume ; au lâcher, la table sous le doigt est la cible */
+  private dragToPlace(reservationId: string, label: string, event: PointerEvent) {
+    this.drag.press(event, label, {
+      onStart: () => void this.startPlacing(reservationId),
+      onDrop: (target: DropTarget | null) => {
+        if (target !== null) {
+          void this.dropOn(target);
+        }
+      },
+    });
+  }
+
+  protected onCombination(event: PlanPointerEvent<PlanCombination>) {
+    if (this.placing() !== null) {
+      void this.dropOn({ combinationId: event.item.id });
+    }
+  }
+
   protected onTable(event: PlanPointerEvent<PlanTable>) {
+    if (this.placing() !== null) {
+      void this.dropOn({ tableId: event.item.id });
+      return;
+    }
     const table = this.zone()?.tables.find((t) => t.id === event.item.id);
+    this.seatBubble.set(null);
     if (table === undefined) {
       return;
     }
     const state = tableStatusAt(table, this._activeAt(), new Date(this._now()), this._track());
     if (state.occupation !== null) {
-      this.focusOn(state.occupation.reservationId);
+      const occupation = state.occupation;
+      this.focusOn(occupation.reservationId);
+      // Glisser l'occupation vers une autre table : changer de table (§5.8)
+      if (occupation.status === 'Confirmed' || occupation.status === 'Seated') {
+        this.dragToPlace(occupation.reservationId, `${occupation.guestName ?? 'Passage'} · ${occupation.covers}p`, event.event);
+      }
     } else if (state.status === 'ToClean') {
       const box = this._planArea()?.nativeElement.getBoundingClientRect();
       this.bubble.set({ tableId: table.id, name: table.name, x: event.event.clientX - (box?.left ?? 0), y: event.event.clientY - (box?.top ?? 0) });
     } else {
-      // WALK-01 (« Asseoir maintenant ») arrive avec le placement
       this.bubble.set(null);
+      const snapshot = this.snapshot();
+      const now = new Date(Math.max(this._now(), Date.parse(snapshot?.now ?? '0')));
+      // Libre maintenant, pas seulement au créneau regardé
+      const freeNow = tableStatusAt(table, now, now, this._track()).status === 'Free';
+      if (snapshot?.service?.state === 'InProgress' && freeNow) {
+        const box = this._planArea()?.nativeElement.getBoundingClientRect();
+        const later = bookedLater(table, now, snapshot.service.defaultDuration);
+        this.seatBubble.set({
+          tableId: table.id, name: table.name, capacity: table.capacity,
+          x: event.event.clientX - (box?.left ?? 0), y: event.event.clientY - (box?.top ?? 0),
+          later: later === null ? null : bookedLaterText(later, now, this.timeZone()), confirmed: false,
+        });
+      }
     }
+  }
+
+  protected async seat(covers: number) {
+    const bubble = this.seatBubble();
+    if (bubble === null) {
+      return;
+    }
+    const result = await this._view.seat(bubble.tableId, covers, bubble.later !== null);
+    if (result.error === null) {
+      this.seatBubble.set(null);
+      if (result.value.eventId !== null) {
+        this._undo.offer({ message: `Client de passage assis · ${bubble.name}`, reservationId: result.value.reservation.id, eventId: result.value.eventId });
+      }
+      return;
+    }
+    if (result.code === ApiError.TableBookedLater) {
+      // L'instantané était en retard : on demande l'accord, comme si on l'avait su
+      this.seatBubble.set({ ...bubble, later: apiErrorText(result), confirmed: false });
+      return;
+    }
+    this.seatBubble.set(null);
+    await this._modal.infoModal('Action impossible', apiErrorText(result));
   }
 
   protected async clean() {
@@ -337,6 +566,7 @@ export class ServiceComponent implements OnDestroy {
   }
 
   protected close() {
+    this.stopPlacing();
     this.stack.set([]);
     this._reservations.select(null);
     this._reservations.selectClient(null);
@@ -345,12 +575,17 @@ export class ServiceComponent implements OnDestroy {
   /** Toucher le plan hors d'une table : la bulle et la fiche se ferment */
   protected closeAll() {
     this.bubble.set(null);
+    this.seatBubble.set(null);
     this.close();
   }
 
   protected onEscape() {
-    if (this.bubble() !== null) {
+    if (this.placing() !== null) {
+      this.stopPlacing();
+    } else if (this.bubble() !== null) {
       this.bubble.set(null);
+    } else if (this.seatBubble() !== null) {
+      this.seatBubble.set(null);
     } else if (this.form() !== null) {
       this.form.set(null);
     } else {
@@ -360,6 +595,7 @@ export class ServiceComponent implements OnDestroy {
 
   ngOnDestroy() {
     clearInterval(this._clock);
+    this.drag.cancel();
     this._view.setQuery(null);
   }
 

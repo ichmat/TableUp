@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlanTable, TableMark, Zone } from '../../../models';
+import { PlacementMark, PlanCombination, PlanTable, TableMark, Zone } from '../../../models';
 import { FloorPlanCanvasComponent, PlanPointerEvent } from './floor-plan-canvas-component';
 
 const ZONE: Zone = { id: 'z', restaurantId: 'r', name: 'Salle', order: 0, width: 8, height: 5.5 };
@@ -239,5 +239,51 @@ describe('FloorPlanCanvasComponent', () => {
       expect(element().querySelector('[data-label]')).toBeNull();
       expect(shape().getAttribute('class')).toContain('stroke-plan-free-line');
     });
+  });
+});
+
+const TABLE_AT = (id: string, x: number): PlanTable => ({ id, zoneId: 'z', name: id, capacity: 4, shape: 'Square', x, y: 1, width: 0.8, height: 0.8, rotation: 0 } as PlanTable);
+
+describe('FloorPlanCanvasComponent placement marks', () => {
+  let fixture: ComponentFixture<FloorPlanCanvasComponent>;
+  const el = () => fixture.nativeElement as HTMLElement;
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(FloorPlanCanvasComponent);
+    fixture.componentRef.setInput('zone', { id: 'z', width: 8, height: 6 });
+    fixture.componentRef.setInput('tables', [TABLE_AT('t5', 1), TABLE_AT('t6', 2.5), TABLE_AT('t7', 4)]);
+  });
+
+  it('should draw nothing of placement without marks', () => {
+    fixture.detectChanges();
+    expect(el().querySelector('[data-halo]')).toBeNull();
+    expect(el().querySelector('[data-table-id="t5"]')!.getAttribute('class')).not.toContain('opacity-26');
+  });
+
+  it('should draw a halo and a badge per level, dim the excluded and write what comes next', () => {
+    const marks: Record<string, PlacementMark> = {
+      t5: { level: 'Perfect', next: 'Ensuite 22:30 · marge 30 min' },
+      t6: { level: 'NotAdvised', next: null },
+      t7: { level: 'Excluded', next: null },
+    };
+    fixture.componentRef.setInput('placementMarks', marks);
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-table-id="t5"] [data-halo]')!.getAttribute('class')).toContain('stroke-place-perfect');
+    expect(el().querySelector('[data-table-id="t5"] [data-badge]')!.textContent).toContain('✓');
+    expect(el().querySelector('[data-table-id="t5"] [data-next]')!.textContent).toContain('Ensuite 22:30');
+    expect(el().querySelector('[data-table-id="t6"] [data-halo]')!.getAttribute('stroke-dasharray')).not.toBeNull();
+    expect(el().querySelector('[data-table-id="t6"] [data-badge]')!.textContent).toContain('!');
+    expect(el().querySelector('[data-table-id="t7"]')!.getAttribute('class')).toContain('opacity-26');
+    expect(el().querySelector('[data-table-id="t7"] [data-halo]')).toBeNull();
+  });
+
+  it('should draw one halo around an active combination', () => {
+    const combination = { id: 'c1', zoneId: 'z', name: '5-6', capacity: 8, tableIds: ['t5', 't6'], isActive: true } as PlanCombination;
+    fixture.componentRef.setInput('combinations', [combination]);
+    fixture.componentRef.setInput('placementMarks', { c1: { level: 'WithReserve', next: null }, t5: { level: 'Excluded', next: null }, t6: { level: 'Excluded', next: null } });
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-combination-halo="c1"]')!.getAttribute('class')).toContain('stroke-place-reserve');
   });
 });

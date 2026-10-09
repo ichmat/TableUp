@@ -11,6 +11,10 @@ describe('apiErrorText', () => {
       .toBe("Le restaurant n'est pas ouvert à ce moment-là : jour passé, jour fermé ou heure hors service.");
     expect(apiErrorText({ error: 'Table 6 is already clean.', code: ApiError.TableAlreadyClean }))
       .toBe('Cette table est déjà propre.');
+    expect(apiErrorText({ error: 'Table 5 is no longer free for this reservation.', code: ApiError.PlacementUnavailable }))
+      .toBe("Cette table n'est plus libre pour cette réservation : elle vient d'être prise sur un autre poste.");
+    expect(apiErrorText({ error: 'Table 5 is booked at 21:30.', code: ApiError.TableBookedLater }))
+      .toBe('Cette table est réservée plus tard, pendant la durée du repas.');
   });
 
   it('should keep the message as it came for a code it does not know, or no code at all', () => {

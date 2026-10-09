@@ -129,6 +129,7 @@ namespace TUROAPI.Controllers
                     Opening = chosen.Window.Opening,
                     Closing = chosen.Window.Closing,
                     SlotStep = chosen.Window.SlotStep,
+                    DefaultDuration = chosen.Window.Duration,
                     State = ServiceView.StateOf(ServiceView.BoundsOf(chosen.Day, chosen.Window, timeZone), now),
                     ExpectedCovers = bookings.Where(b => Counted.Contains(b.Reservation.Status)).Sum(b => b.Reservation.Covers),
                     Capacity = zones.SelectMany(z => z.Tables).Where(t => t.IsActive).Sum(t => t.Capacity),
@@ -268,6 +269,79 @@ namespace TUROAPI.Controllers
             await NotifyChangedAsync(DataScope.Service);
             return NoContent();
         }
+
+        /// <summary>
+        /// §3.5 : le verdict de chaque table et de chaque combinaison active pour cette réservation — les halos.
+        /// Calculé ici seulement ; le placement le refait sous verrou
+        /// </summary>
+        [HttpGet("placement/{reservationId:guid}")]
+        [ProducesResponseType<PlacementResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> GetPlacement([FromRoute] Guid reservationId)
+        {
+            Reservation reservation = await context.Reservations
+                .Where(r => r.Id == reservationId && r.RestaurantId == CurrentRestaurantId)
+                .Include(r => r.Client)
+                .Include(r => r.PreferredZone)
+                .AsNoTracking()
+                .FirstOrDefaultAsync()
+                ?? throw new ApiErrorException(ApiError.NotFound, "Reservation not found.");
+            if (!PlacementEngine.Placeable.Contains(reservation.Status))
+            {
+                throw new ApiErrorException(ApiError.ReservationActionNotAllowed, $"a {reservation.Status} reservation cannot be placed.");
+            }
+            Restaurant restaurant = await context.Restaurants.Include(r => r.Services).AsNoTracking().FirstAsync(r => r.Id == CurrentRestaurantId);
+            DateTime now = DateTime.UtcNow;
+            // « Table non nettoyée » ne se dit que pour le service en cours : demain, elle aura été redressée
+            bool forNow = reservation.ServiceDay == await CurrentServiceDayAsync(restaurant, now);
+            PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, reservation.ServiceDay, now);
+            PlacementEngine.Request request = PlacementEngine.RequestOf(reservation, reservation.PreferredZone?.Name, now);
+            List<PlacementEngine.Verdict> verdicts = PlacementEngine.Judge(request, floor.Candidates, floor.Occupations,
+                PlacementEngine.SettingsOf(restaurant) with { TrackCleaning = restaurant.TrackTableCleaning && forNow });
+
+            return Ok(new PlacementResponse
+            {
+                ReservationId = reservation.Id,
+                GuestName = reservation.Client?.Name,
+                Start = request.Start,
+                End = request.End,
+                Covers = reservation.Covers,
+                Note = reservation.Note,
+                PreferredZoneId = reservation.PreferredZoneId,
+                Entities = verdicts.Select(ToEntityResponse).ToList(),
+            });
+        }
+
+        /// <summary>Le jour de service en cours : la veille tant qu'une de ses plages passe minuit et dure encore (§4.3)</summary>
+        private async Task<DateOnly> CurrentServiceDayAsync(Restaurant restaurant, DateTime now)
+        {
+            TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone);
+            DateOnly yesterday = ReservationImpact.Today(timeZone).AddDays(-1);
+            List<Closure> closures = await context.Closures
+                .Where(c => c.RestaurantId == CurrentRestaurantId && c.From <= yesterday && c.To >= yesterday)
+                .AsNoTracking()
+                .ToListAsync();
+            return ServiceView.ServiceDayAt(now, timeZone, ReservationClock.WindowsOf(yesterday, restaurant.Services, closures, restaurant.DefaultRotation));
+        }
+
+        private static PlacementEntityResponse ToEntityResponse(PlacementEngine.Verdict verdict) => new()
+        {
+            TableId = verdict.Candidate.TableId,
+            CombinationId = verdict.Candidate.CombinationId,
+            ZoneId = verdict.Candidate.ZoneId,
+            Name = verdict.Candidate.Name,
+            Capacity = verdict.Candidate.Capacity,
+            Level = verdict.Level,
+            Reasons = verdict.Reasons.Select(r => new PlacementReasonResponse
+            {
+                Kind = r.Kind, Count = r.Count, Tolerance = r.Tolerance, NoneLeftOfCapacity = r.NoneLeftOfCapacity,
+                Since = r.Since, Guest = r.Guest, LeftAt = r.LeftAt, RequestedZone = r.RequestedZone, Note = r.Note,
+                Start = r.Start, Margin = r.Margin, DefaultRotation = r.DefaultRotation, Combination = r.Combination,
+                With = r.With?.ToList(),
+            }).ToList(),
+            Next = verdict.Next == null ? null : new PlacementNextResponse { Start = verdict.Next.Start, Margin = verdict.Next.Margin, Guest = verdict.Next.Guest },
+        };
 
         private static string? PlaceNameOf(Reservation reservation)
         {

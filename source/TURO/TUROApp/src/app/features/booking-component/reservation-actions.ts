@@ -1,12 +1,12 @@
 import { inject, Service, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiError, CancelledBy, ReservationActionResult, ReservationDetail, ReservationGesture } from '../../models';
+import { ApiError, CancelledBy, PlaceTarget, ReservationActionResult, ReservationDetail, ReservationGesture } from '../../models';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { UndoService } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
 import { ApiResult } from '../../core/services/api-result';
-import { createdMessage, gestureMessage, modifiedMessage } from './reservation-display';
+import { createdMessage, gestureMessage, modifiedMessage, placedMessage } from './reservation-display';
 import { ReservationFormMode, ReservationSaved } from './reservation-draft';
 import { apiErrorText } from '../../shared/utils/api-error-text';
 
@@ -41,7 +41,19 @@ export class ReservationActions {
     return this.offerUndo('cancel', await this._reservations.cancel(id, by));
   }
 
-  /** §6.4 : « Placer » ouvre la vue Plan au bon service ; elle s'en servira avec le lot Plan */
+  /**
+   * §5.8 : le dépôt sur une table. Le bandeau propose de défaire ; les refus sont rendus à l'écran Service,
+   * qui sait recalculer les halos (`PlacementUnavailable`)
+   */
+  async placeOn(id: string, target: PlaceTarget, wasPending: boolean): Promise<ApiResult<ReservationActionResult>> {
+    const result = await this._reservations.place(id, target);
+    if (result.error === null && result.value.eventId !== null) {
+      this._undo.offer({ message: placedMessage(result.value.reservation, wasPending), reservationId: id, eventId: result.value.eventId });
+    }
+    return result;
+  }
+
+  /** §6.4 : « Placer » ouvre l'écran Service au bon service, la réservation en cours de placement */
   place(serviceDay: string, id: string) {
     void this._router.navigate(['/service'], { queryParams: { day: serviceDay, place: id } });
   }

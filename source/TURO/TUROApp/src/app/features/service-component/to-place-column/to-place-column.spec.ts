@@ -48,6 +48,21 @@ describe('ToPlaceColumn', () => {
     expect(opened).toHaveBeenCalledOnceWith('chen');
   });
 
+  it('should hand a press on a pill to the screen, for a drag, with the name and covers', () => {
+    const pressed = jasmine.createSpy('pressed');
+    fixture.componentInstance.pressed.subscribe(pressed);
+    const down = new PointerEvent('pointerdown', { clientX: 5, clientY: 6 });
+
+    element().querySelector('[data-pill="moreau"]')!.dispatchEvent(down);
+
+    expect(pressed).toHaveBeenCalledOnceWith({ id: 'moreau', label: 'Moreau · 4p', event: down });
+  });
+
+  it('should keep the finger on a pill for the drag, not hand it to the column scroll', () => {
+    // Sans cela, une tablette lit le geste comme un défilement et annule le glisser (pointercancel)
+    expect(element().querySelector('[data-pill="moreau"]')!.getAttribute('class')).toContain('touch-none');
+  });
+
   it('should fold away and keep the counts in sight', () => {
     (element().querySelector('[data-collapse]') as HTMLButtonElement).click();
     fixture.detectChanges();

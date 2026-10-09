@@ -57,10 +57,25 @@
 
     <!-- LES TABLES : la forme tourne, les libellés restent droits -->
     @for (table of tables(); track table.id) {
-        <g [attr.data-table-id]="table.id" class="cursor-grab"
+        <g [attr.data-table-id]="table.id" [attr.class]="'cursor-grab' + (dimmed(table.id) ? ' opacity-26' : '')"
             [attr.transform]="'translate(' + table.x + ' ' + table.y + ')'"
             (pointerdown)="onTablePointerDown(table, $event)" (pointerenter)="hover(table.id)" (pointerleave)="hover(null)">
             <g [attr.transform]="'rotate(' + table.rotation + ' ' + table.width / 2 + ' ' + table.height / 2 + ')'">
+                @if (placementOf(table.id); as placed) {
+                    @if (placed.level !== 'Excluded') {
+                        <!-- §2.4 : le halo dit la compatibilité, jamais le statut ; ! en pointillé corail -->
+                        @if (table.shape === 'Round') {
+                            <ellipse data-halo [attr.cx]="table.width / 2" [attr.cy]="table.height / 2"
+                                [attr.rx]="table.width / 2 + 0.12" [attr.ry]="table.height / 2 + 0.12"
+                                [attr.class]="'fill-none ' + haloClass(placed.level)" stroke-width="3"
+                                [attr.stroke-dasharray]="placed.level === 'NotAdvised' ? '5 3' : null" vector-effect="non-scaling-stroke" />
+                        } @else {
+                            <rect data-halo x="-0.12" y="-0.12" [attr.width]="table.width + 0.24" [attr.height]="table.height + 0.24" rx="0.12"
+                                [attr.class]="'fill-none ' + haloClass(placed.level)" stroke-width="3"
+                                [attr.stroke-dasharray]="placed.level === 'NotAdvised' ? '5 3' : null" vector-effect="non-scaling-stroke" />
+                        }
+                    }
+                }
                 @if (markOf(table)?.late) {
                     <!-- « En retard » n'est pas un statut : un anneau corail par-dessus le bleu (§2.3) -->
                     @if (table.shape === 'Round') {
@@ -100,6 +115,19 @@
                     </g>
                 }
             }
+            @if (placementOf(table.id); as placed) {
+                @if (placed.level !== 'Excluded') {
+                    <!-- Le badge fait une différence de forme, pas seulement de couleur (daltonisme, plein soleil) -->
+                    <g data-badge class="pointer-events-none">
+                        <circle r="0.16" [attr.class]="'stroke-slate ' + badgeClass(placed.level)" stroke-width="1" vector-effect="non-scaling-stroke" />
+                        <text text-anchor="middle" dominant-baseline="central" font-size="0.15" class="fill-slate font-bold">{{ badgeText(placed.level) }}</text>
+                    </g>
+                    @if (placed.next) {
+                        <text data-next [attr.x]="table.width / 2" [attr.y]="table.height + 0.38" text-anchor="middle" dominant-baseline="central"
+                            font-size="0.14" class="fill-chalk font-caveat pointer-events-none">{{ placed.next }}</text>
+                    }
+                }
+            }
         </g>
     }
 
@@ -110,9 +138,16 @@
             vector-effect="non-scaling-stroke" />
     }
 
+    <!-- Le halo d'une combinaison active : un seul, autour de ses tables -->
+    @for (halo of combinationHalos(); track halo.id) {
+        <rect [attr.data-combination-halo]="halo.id" [attr.x]="halo.x" [attr.y]="halo.y" [attr.width]="halo.width" [attr.height]="halo.height" rx="0.14"
+            [attr.class]="'fill-none pointer-events-none ' + haloClass(halo.mark.level)" stroke-width="3"
+            [attr.stroke-dasharray]="halo.mark.level === 'NotAdvised' ? '5 3' : null" vector-effect="non-scaling-stroke" />
+    }
+
     <!-- LES COMBINAISONS : une pastille violette au centre de leurs tables, qu'on attrape pour les déplacer (EDIT-03) -->
     @for (pill of pills(); track pill.combination.id) {
-        <g [attr.data-combination-id]="pill.combination.id" [attr.class]="'cursor-grab transition-opacity ' + pillOpacity(pill.combination)"
+        <g [attr.data-combination-id]="pill.combination.id" [attr.class]="'cursor-grab transition-opacity ' + (dimmed(pill.combination.id) ? 'opacity-26' : pillOpacity(pill.combination))"
             [attr.transform]="'translate(' + pill.x + ' ' + pill.y + ')'"
             (pointerdown)="onCombinationPointerDown(pill.combination, $event)"
             (pointerenter)="hover(pill.combination.id)" (pointerleave)="hover(null)">

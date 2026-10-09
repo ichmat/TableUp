@@ -129,6 +129,16 @@ export function modifiedMessage(after: ReservationDetail): string {
   return last?.details ? `Modifiée · ${last.details}` : 'Réservation modifiée';
 }
 
+/** « Moreau placée · T5 », « Moreau acceptée et placée · T5 », « Moreau déplacée · 5 → 7 » */
+export function placedMessage(after: ReservationDetail, wasPending: boolean): string {
+  const name = guestName(after.client);
+  const last = after.events.at(-1);
+  if (last?.type === 'Move') {
+    return `${name} déplacée · ${last.details ?? after.place?.name ?? ''}`;
+  }
+  return `${name} ${wasPending ? 'acceptée et placée' : 'placée'} · ${after.place?.name ?? ''}`;
+}
+
 export const EVENT_LABEL: Record<EventType, string> = {
   Creation: 'Création',
   Acceptance: 'Acceptée',

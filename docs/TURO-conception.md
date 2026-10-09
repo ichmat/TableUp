@@ -475,11 +475,15 @@ Pour une réservation donnée et une heure T, chaque entité réservable reçoit
 
 #### `~✓` À réserve — halo vert-jaune, **popup de confirmation**
 
-Possible, mais avec au moins une raison à dire. Côté places : `1 < capacite − couverts ≤ tolerance_places`.
+Possible, mais avec au moins une raison à dire. Côté places : `1 < capacite − couverts ≤ tolerance_places`. Les autres raisons : table à nettoyer (si le suivi est actif, et pour le service en cours seulement : une table sale maintenant ne dit rien d'un placement pour demain, et ce placement ne la nettoie pas), autre zone que celle demandée, **réservée juste après** (moins de 15 min entre la fin prévue et la réservation suivante), **table collée** dans une combinaison active (il faudra les séparer).
+
+À 15 min de marge ou plus, la table reste `✓` et le plan l'écrit sous elle à la craie : « Ensuite 22:30 · marge 30 min ». Ces 15 min sont fixes, pas un réglage. Une combinaison active peut être `✓` : elle est déjà collée.
+
+L'intervalle testé part de **maintenant** quand le début est passé : une réservation de 20:00 qu'on place à 20:30 n'est pas écartée d'une table libérée à 20:12. Une table assise qui déborde déjà se cherche pour le quart d'heure à venir.
 
 #### `!` Déconseillée — toujours plaçable
 
-`capacite − couverts > tolerance_places`. Un soir creux, il n'y a parfois pas d'autre place : rien ne bloque, mais tous les indicateurs disent que c'est du gaspillage. Le dépôt ouvre le popup (« 6 places de trop — au-delà de la tolérance de 2 »). Le rendu sur le plan (halo) sera fixé avec le moteur ; l'aperçu des Paramètres le montre en contour corail pointillé.
+`capacite − couverts > tolerance_places`. Un soir creux, il n'y a parfois pas d'autre place : rien ne bloque, mais tous les indicateurs disent que c'est du gaspillage. Le dépôt ouvre le popup (« 6 places de trop — au-delà de la tolérance de 2 »). Sur le plan : halo corail en pointillé et badge `!` ; l'aperçu des Paramètres le montre de la même façon. Chaque niveau porte aussi un badge (`✓`, `~✓`, `!`) : la différence se voit sans les couleurs.
 
 La règle de places vit dans l'API (`PlacementVerdict`) : l'aperçu des Paramètres et le moteur la partagent.
 
@@ -489,7 +493,8 @@ La règle de places vit dans l'API (`PlacementVerdict`) : l'aperçu des Paramèt
 |---|---|
 | Table non nettoyée | **Table non nettoyée** — Legrand est parti à 20:12, elle n'a pas encore été redressée. *En plaçant Moreau, elle sera considérée comme nettoyée.* |
 | Places en trop (dans la tolérance) | **2 places de trop** — table de 6 pour 4 personnes. Il ne te restera plus de table de 6 ce soir. |
-| Réservée plus tard | **Réservée à 22:00** — il reste 1h30, la rotation moyenne est de 1h45. |
+| Réservée juste après | **Réservée à 22:00** — elle doit être libre à 21:50, 10 min de marge. La rotation habituelle est de 1h45. |
+| Table collée | **Table collée** — la 12 est collée à la 13 (12-13) : il faudra les séparer. |
 | Zone non demandée | **Terrasse** — la réservation demandait la salle. *(note du client : « intérieur svp »)* |
 | Rapprochement nécessaire | **Rapprochement nécessaire** — les tables 12 et 13 devront être poussées l'une contre l'autre avant l'arrivée. |
 
@@ -728,10 +733,12 @@ Une pastille par réservation : nom, couverts, heure, source. La sélection la m
 ### 5.8 Le placement
 
 1. Toucher une réservation → **la fiche remplace la colonne** (§6.7), la frise saute sur son créneau, les tables compatibles reçoivent leur halo, tout le reste tombe à 26 % d'opacité. `Échap` annule.
-2. Déposer sur une table `✓` → placement immédiat, aucun popup.
+2. Déposer sur une table `✓` → placement immédiat, aucun popup. **Toucher** une table allumée vaut un dépôt, au même titre que glisser la pastille ; une table estompée ne réagit pas.
 3. Déposer sur une table `~✓` → popup listant **toutes** les raisons, puis *Annuler* / *Placer*.
 4. Si le dépôt crée une combinaison inédite → popup de création (nom auto « 12-13 » modifiable, capacité proposée à la somme et modifiable). Si la combinaison existe déjà, aucune question.
 5. Si la réservation déposée est **en attente**, elle est acceptée du même geste, et le message au client part avec 8 s de délai annulable (§6.7).
+6. **Changer de table** : le lien de la fiche (§6.5), ou glisser l'occupation d'une table vers une autre. Mêmes halos, même popup ; le journal note « 5 → 7 ». Lâcher sur sa propre table ne fait rien. Des clients assis qu'on déplace laissent leur table « à nettoyer » (si le suivi est actif). « Annuler » est refusé si l'ancienne table a été prise entre-temps.
+7. Deux postes qui déposent sur la même table au même instant : l'API en place un, l'autre voit « Table prise » et les halos se recalculent. Un rechargement pendant un placement (un collègue a placé ailleurs) recalcule les halos sans quitter le placement.
 
 ---
 
@@ -836,6 +843,8 @@ Une fiche peut théoriquement déclencher huit choses. Les afficher à parité o
 **Les trois boutons d'une demande en attente ne changent jamais de place.** « Accepter et placer à une table » reste en tête **même hors du service en cours**, où il est pourtant moins pertinent. Une position stable vaut mieux qu'une hiérarchie juste : un bouton qui se déplace selon l'heure se tape de travers.
 
 Justification de l'ordre : pendant un service, accepter sans placer laisse une réservation en suspens dans la colonne — du travail remis à plus tard. *Accepter* seul garde tout son sens la veille, en préparation. *Refuser* reste visible et discret : le cacher pousserait à laisser traîner les demandes, le mettre à parité en ferait un choix aussi banal qu'accepter.
+
+**« Changer de table »** est un lien de la fiche pour une réservation confirmée déjà placée, ou assise. Il vient avant « No-show » : quand ce dernier apparaît, rien ne bouge sous le doigt. Sur l'écran Service, il allume les halos sur place ; ailleurs, il y mène.
 
 ### 6.6 Trois règles que le contenu impose
 
@@ -1106,7 +1115,7 @@ Au moment où l'on touche **« Créer et placer »**, le formulaire se ferme et 
 
 | Cas | Où ça se passe |
 |---|---|
-| **Le client de passage** *(walk-in, volet B)* | Pas ici. On **touche une table libre sur le plan** → « Asseoir maintenant » → couverts. Deux gestes, pas de nom, pas de téléphone, pas de fiche client (§7.2). Un formulaire de réservation pour des gens déjà debout devant vous, c'est une file d'attente qu'on crée soi-même |
+| **Le client de passage** *(walk-in, volet B)* | Pas ici. On **touche une table libre sur le plan** → « Asseoir maintenant » → couverts. Deux gestes, pas de nom, pas de téléphone, pas de fiche client (§7.2). Si la table est réservée plus tard pendant la durée du repas, la bulle le dit d'abord (« Réservée à 21:00 · Legrand · 4 p — 1 h devant vous ») et n'assied qu'après « Asseoir quand même ». Un formulaire de réservation pour des gens déjà debout devant vous, c'est une file d'attente qu'on crée soi-même |
 | **Choisir la table** | Sauf ouverture depuis une table, il n'y a **pas de champ table**. On ne place pas depuis un formulaire, pour la raison qu'on ne place pas depuis une liste (§6.4) : il faut voir la salle. Le bouton dit « **Créer et placer** » et enchaîne sur le plan, tables compatibles allumées. « Créer » seul reste possible : la réservation tombe dans « À placer » |
 
 **La durée** est affichée, pré-remplie depuis `rotation_defaut`, et modifiable. Un groupe de 8 pour un anniversaire ne tient pas en 1 h 45 ; si on ne peut pas le dire, le plan ment pour toute la soirée.

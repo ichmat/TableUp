@@ -325,6 +325,190 @@ namespace TUROAPI.Controllers
         public Task<IActionResult> Reopen([FromRoute] Guid id) => ActAsync(id, ReservationGesture.Reopen);
 
         /// <summary>
+        /// §5.8 : placer, accepter en déposant (PLACE-09) ou changer de table. Les tables visées sont verrouillées, puis le moteur
+        /// refait son calcul : deux tablettes qui visent la même table passent l'une après l'autre, la seconde est refusée.
+        /// Les raisons ~✓ ne bloquent pas — le front les a dites au dépôt
+        /// </summary>
+        [HttpPost("{id:guid}/place")]
+        [ProducesResponseType<ReservationActionResponse>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Place([FromRoute] Guid id, [FromBody] PlaceRequest request)
+        {
+            if ((request.TableId == null) == (request.CombinationId == null))
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, "give either a table or a combination.");
+            }
+
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            Reservation reservation = await LockAsync(id);
+            if (!PlacementEngine.Placeable.Contains(reservation.Status))
+            {
+                throw new ApiErrorException(ApiError.ReservationActionNotAllowed, $"a {reservation.Status} reservation cannot be placed.");
+            }
+            List<Guid> tableIds = request.TableId is Guid tableId
+                ? await context.Tables.Where(t => t.Id == tableId && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
+                    .Select(t => t.Id).ToListAsync()
+                : await context.Combinations.Where(c => c.Id == request.CombinationId && c.Zone.RestaurantId == CurrentRestaurantId && c.IsActive)
+                    .SelectMany(c => c.Tables.Select(t => t.Id)).ToListAsync();
+            if (tableIds.Count == 0)
+            {
+                throw new ApiErrorException(ApiError.NotFound, "Table not found.");
+            }
+            Assignment? current = reservation.LatestAssignment();
+            if (reservation.Status != ReservationStatus.Pending && current != null
+                && (request.TableId is Guid same ? current.TableId == same : current.CombinationId == request.CombinationId))
+            {
+                // Lâchée sur sa propre table : le geste est abandonné, rien ne change et rien n'est à défaire
+                return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = null });
+            }
+            // Des clients assis qu'on déplace laissent leur table : elle est verrouillée avec la nouvelle
+            List<Guid> left = reservation.Status == ReservationStatus.Seated
+                ? TablesOf(current).Select(t => t.Id).Except(tableIds).ToList()
+                : [];
+            await LockTablesAsync([.. tableIds, .. left]);
+
+            // Relu après le verrou : un placement concurrent sur ces tables est maintenant visible
+            Restaurant restaurant = await LoadRestaurantAsync();
+            DateTime now = DateTime.UtcNow;
+            // DISPO-02 ne vaut que pour le service en cours : une table sale maintenant reste sale pour demain
+            bool forNow = reservation.ServiceDay == await ServiceDayAsync(restaurant, TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone));
+            PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, reservation.ServiceDay, now);
+            PlacementEngine.Candidate target = floor.Candidates.FirstOrDefault(c =>
+                    request.TableId is Guid t ? c.TableId == t : c.CombinationId == request.CombinationId)
+                ?? throw new ApiErrorException(ApiError.NotFound, "Table not found.");
+            string? zoneName = reservation.PreferredZoneId is Guid zoneId
+                ? await context.Zones.Where(z => z.Id == zoneId).Select(z => z.Name).FirstOrDefaultAsync()
+                : null;
+            PlacementEngine.Verdict verdict = PlacementEngine.Judge(PlacementEngine.RequestOf(reservation, zoneName, now),
+                [target], floor.Occupations, PlacementEngine.SettingsOf(restaurant) with { TrackCleaning = restaurant.TrackTableCleaning && forNow }).Single();
+            if (verdict.Level == PlacementLevel.Excluded)
+            {
+                throw new ApiErrorException(ApiError.PlacementUnavailable, target.Name);
+            }
+
+            ReservationState before = ReservationState.Of(reservation);
+            Assignment? previous = reservation.LatestAssignment();
+            string? previousName = previous?.Table?.Name ?? previous?.Combination?.Name;
+            EventLog line = previous == null
+                ? NewEvent(id, EventType.Placement, target.Name)
+                : NewEvent(id, EventType.Move, $"{previousName} → {target.Name}");
+            EventLog? acceptance = null;
+            if (reservation.Status == ReservationStatus.Pending)
+            {
+                reservation.Status = ReservationStatus.Confirmed;
+                acceptance = NewEvent(id, EventType.Acceptance, null);
+                // L'acceptation précède le placement : l'annulation exige que le placement soit la dernière ligne
+                acceptance.Timestamp = line.Timestamp.AddTicks(-10);
+                context.EventLogs.Add(acceptance);
+            }
+            var assignment = new Assignment
+            {
+                Id = Guid.NewGuid(),
+                ReservationId = id,
+                TableId = target.TableId,
+                CombinationId = target.CombinationId,
+                AssignedById = CurrentUserId,
+                AssignedAt = now,
+            };
+            context.Assignments.Add(assignment);
+            Dictionary<Guid, DateTime?> tablesBefore = forNow ? await CleanImplicitlyAsync(restaurant, tableIds) : [];
+            if (restaurant.TrackTableCleaning)
+            {
+                // Les clients quittent leur table : elle est à nettoyer, comme après « Libérer » (DISPO-03)
+                foreach (Table table in TablesOf(previous).Where(t => left.Contains(t.Id)))
+                {
+                    tablesBefore[table.Id] = table.NeedsCleaningSince;
+                    table.NeedsCleaningSince = now;
+                }
+            }
+            context.EventLogs.Add(line);
+            await context.SaveChangesAsync();
+            await ApplyCountersAsync(reservation.ClientId, ClientCounters.Delta(before.Status, reservation.Status));
+            await transaction.CommitAsync();
+
+            _undo.Remember(line.Id, new UndoEntry(id, CurrentUserId, UndoKind.Placement)
+            {
+                StateBefore = before,
+                TablesBefore = tablesBefore,
+                AssignmentId = assignment.Id,
+                AcceptanceEventId = acceptance?.Id,
+            });
+            await NotifyAsync(reservation.ClientId != null);
+            return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = line.Id });
+        }
+
+        /// <summary>
+        /// WALK : un client de passage, assis maintenant sur une table libre maintenant, sans nom ni numéro. Une table
+        /// réservée plus tard dans la durée du repas n'est prise qu'avec l'accord explicite du restaurateur
+        /// </summary>
+        [HttpPost("/api/service/tables/{tableId:guid}/seat")]
+        [ProducesResponseType<ReservationActionResponse>(StatusCodes.Status201Created)]
+        public async Task<IActionResult> SeatWalkIn([FromRoute] Guid tableId, [FromBody] SeatRequest request)
+        {
+            Restaurant restaurant = await LoadRestaurantAsync();
+            TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone);
+            DateTime now = DateTime.UtcNow;
+            var table = await context.Tables
+                .Where(t => t.Id == tableId && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
+                .Select(t => new { t.Name, t.Capacity })
+                .FirstOrDefaultAsync()
+                ?? throw new ApiErrorException(ApiError.NotFound, "Table not found.");
+            DateOnly serviceDay = await ServiceDayAsync(restaurant, timeZone);
+            ReservationClock.Window window = (await WindowsAsync(restaurant, serviceDay))
+                .FirstOrDefault(w => ServiceView.StateOf(ServiceView.BoundsOf(serviceDay, w, timeZone), now) == ServiceState.InProgress)
+                ?? throw new ApiErrorException(ApiError.OutsideService, "no service is open now.");
+            if (request.Covers < 1 || request.Covers > table.Capacity)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, $"covers must be between 1 and {table.Capacity}.");
+            }
+
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await LockTablesAsync([tableId]);
+            PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, serviceDay, now);
+            List<PlacementEngine.Occupied> onTable = floor.Occupations.Where(o => o.TableId == tableId).ToList();
+            if (onTable.Any(o => o.Start <= now && now < o.End))
+            {
+                throw new ApiErrorException(ApiError.PlacementUnavailable, table.Name);
+            }
+            DateTime end = now.AddMinutes(window.Duration);
+            PlacementEngine.Occupied? later = onTable.Where(o => o.Start > now && o.Start < end).MinBy(o => o.Start);
+            if (later != null && !request.AcceptBookedLater)
+            {
+                throw new ApiErrorException(ApiError.TableBookedLater, table.Name, ReservationClock.LocalTime(later.Start, timeZone).ToString("HH:mm"));
+            }
+
+            var reservation = new Reservation
+            {
+                Id = Guid.NewGuid(),
+                RestaurantId = CurrentRestaurantId,
+                Start = now,
+                SeatedAt = now,
+                Duration = window.Duration,
+                ServiceDay = serviceDay,
+                Covers = request.Covers,
+                Status = ReservationStatus.Seated,
+                Source = ReservationSource.WalkIn,
+                CreatedAt = now,
+            };
+            context.Reservations.Add(reservation);
+            context.Assignments.Add(new Assignment
+            {
+                Id = Guid.NewGuid(), ReservationId = reservation.Id, TableId = tableId, AssignedById = CurrentUserId, AssignedAt = now,
+            });
+            // Une seule ligne : le client n'a jamais été attendu, il n'y a pas d'arrivée à noter
+            EventLog creation = NewEvent(reservation.Id, EventType.Creation,
+                $"{ReservationJournal.SourceLabel(ReservationSource.WalkIn)}, assis sur {table.Name}");
+            context.EventLogs.Add(creation);
+            Dictionary<Guid, DateTime?> tablesBefore = await CleanImplicitlyAsync(restaurant, [tableId]);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _undo.Remember(creation.Id, new UndoEntry(reservation.Id, CurrentUserId, UndoKind.Creation) { TablesBefore = tablesBefore });
+            await NotifyAsync(false);
+            var response = new ReservationActionResponse { Reservation = await DetailAsync(reservation.Id), EventId = creation.Id };
+            return Created($"/api/reservations/{reservation.Id}", response);
+        }
+
+        /// <summary>
         /// Le bandeau « Annuler » (§6.7) : défait la dernière écriture de son auteur, dans les 30 s, si rien ne l'a suivie.
         /// Une action défaite ne laisse aucune trace au journal
         /// </summary>
@@ -354,6 +538,7 @@ namespace TUROAPI.Controllers
             if (entry.Kind == UndoKind.Creation)
             {
                 // Le journal et les affectations partent avec la réservation (suppression en cascade)
+                await RestoreTablesAsync(entry.TablesBefore);
                 context.Reservations.Remove(reservation);
                 await context.SaveChangesAsync();
                 if (entry.CreatedClientId is Guid createdId)
@@ -377,12 +562,19 @@ namespace TUROAPI.Controllers
                     TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById((await LoadRestaurantAsync()).TimeZone);
                     await CheckNoOverlapAsync(reservation.ClientId, id, reservation.Start, reservation.Duration, timeZone);
                 }
-                foreach (Table table in TablesOf(reservation.LatestAssignment()))
+                // Un placement défait : son affectation part, la précédente redevient la plus récente
+                if (entry.AssignmentId is Guid assignmentId && reservation.Assignments.FirstOrDefault(a => a.Id == assignmentId) is Assignment placed)
                 {
-                    if (entry.TablesBefore.TryGetValue(table.Id, out DateTime? cleaningSince))
+                    if (reservation.Assignments.Where(a => a.Id != placed.Id).MaxBy(a => a.AssignedAt) is Assignment previous)
                     {
-                        table.NeedsCleaningSince = cleaningSince;
+                        await CheckStillFreeAsync(reservation, previous);
                     }
+                    context.Assignments.Remove(placed);
+                }
+                await RestoreTablesAsync(entry.TablesBefore);
+                if (entry.AcceptanceEventId is Guid acceptanceId)
+                {
+                    context.EventLogs.Remove(await context.EventLogs.FirstAsync(e => e.Id == acceptanceId));
                 }
                 context.EventLogs.Remove(await context.EventLogs.FirstAsync(e => e.Id == eventId));
                 await context.SaveChangesAsync();
@@ -553,6 +745,67 @@ namespace TUROAPI.Controllers
         /// <summary>Les tables physiques d'une affectation : la table, ou les membres de la combinaison</summary>
         private static IEnumerable<Table> TablesOf(Assignment? assignment) =>
             assignment?.Table is Table table ? [table] : assignment?.Combination?.Tables ?? [];
+
+        /// <summary>
+        /// Défaire un changement de table remet l'ancienne : un collègue a pu la prendre entre-temps. Elle est verrouillée
+        /// et rejugée comme un dépôt ; prise, l'annulation est refusée plutôt que d'asseoir deux réservations au même endroit
+        /// </summary>
+        private async Task CheckStillFreeAsync(Reservation reservation, Assignment previous)
+        {
+            await LockTablesAsync(TablesOf(previous).Select(t => t.Id).ToList());
+            Restaurant restaurant = await LoadRestaurantAsync();
+            DateTime now = DateTime.UtcNow;
+            PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, reservation.ServiceDay, now);
+            PlacementEngine.Candidate? candidate = floor.Candidates.FirstOrDefault(c =>
+                previous.TableId is Guid tableId ? c.TableId == tableId : c.CombinationId == previous.CombinationId);
+            bool free = candidate != null && PlacementEngine.Judge(PlacementEngine.RequestOf(reservation, null, now),
+                [candidate], floor.Occupations, PlacementEngine.SettingsOf(restaurant)).Single().Level != PlacementLevel.Excluded;
+            if (!free)
+            {
+                throw new ApiErrorException(ApiError.PlacementUnavailable, previous.Table?.Name ?? previous.Combination?.Name ?? string.Empty);
+            }
+        }
+
+        /// <summary>Verrouille des tables jusqu'à la fin de la transaction, toujours dans le même ordre : pas d'interblocage</summary>
+        private async Task LockTablesAsync(IReadOnlyCollection<Guid> tableIds)
+        {
+            Guid[] ids = [.. tableIds];
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Tables\" WHERE \"Id\" = ANY({ids}) ORDER BY \"Id\" FOR UPDATE");
+        }
+
+        /// <summary>
+        /// DISPO-02 : placer ou asseoir sur une table « à nettoyer » la nettoie. Suivi désactivé, la marque est ignorée
+        /// et gardée (NET-03). Renvoie les dates d'avant, pour l'annulation
+        /// </summary>
+        private async Task<Dictionary<Guid, DateTime?>> CleanImplicitlyAsync(Restaurant restaurant, IEnumerable<Guid> tableIds)
+        {
+            var before = new Dictionary<Guid, DateTime?>();
+            if (!restaurant.TrackTableCleaning)
+            {
+                return before;
+            }
+            List<Guid> ids = [.. tableIds];
+            foreach (Table table in await context.Tables.Where(t => ids.Contains(t.Id) && t.NeedsCleaningSince != null).ToListAsync())
+            {
+                before[table.Id] = table.NeedsCleaningSince;
+                table.NeedsCleaningSince = null;
+            }
+            return before;
+        }
+
+        /// <summary>Les tables retrouvent leur état « à nettoyer » d'avant le geste défait</summary>
+        private async Task RestoreTablesAsync(Dictionary<Guid, DateTime?> before)
+        {
+            if (before.Count == 0)
+            {
+                return;
+            }
+            List<Guid> ids = [.. before.Keys];
+            foreach (Table table in await context.Tables.Where(t => ids.Contains(t.Id)).ToListAsync())
+            {
+                table.NeedsCleaningSince = before[table.Id];
+            }
+        }
 
         /// <summary>CPT-02 : l'incrément se fait en base, jamais lu puis réécrit — deux réservations du même client ne perdent rien</summary>
         private async Task ApplyCountersAsync(Guid? clientId, (int Visits, int NoShows) delta)

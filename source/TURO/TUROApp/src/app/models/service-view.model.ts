@@ -17,6 +17,8 @@ export interface ServiceInfo {
     expectedCovers: number,
     /** Places des tables actives, toutes salles */
     capacity: number,
+    /** Durée d'un repas de cette plage, en minutes */
+    defaultDuration: number,
 }
 
 /** Une plage du jour, dans le sélecteur */

@@ -18,7 +18,7 @@ describe('ReservationActions', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    reservations = jasmine.createSpyObj<ReservationService>('ReservationService', ['act', 'cancel']);
+    reservations = jasmine.createSpyObj<ReservationService>('ReservationService', ['act', 'cancel', 'place']);
     undo = jasmine.createSpyObj<UndoService>('UndoService', ['offer']);
     modal = jasmine.createSpyObj<ModalService>('ModalService', ['infoModal']);
     modal.infoModal.and.resolveTo();
@@ -78,6 +78,24 @@ describe('ReservationActions', () => {
 
     expect(reservations.cancel).toHaveBeenCalledOnceWith('r1', 'Restaurant');
     expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Réservation annulée', reservationId: 'r1', eventId: 'e2' });
+  });
+
+  it('should place on a table and offer to undo, or offer nothing when refused', async () => {
+    const placed = { ...AFTER, place: { name: '5', capacity: 4 }, events: [{ id: 'e3', timestamp: '2026-08-20T18:31:00Z', type: 'Placement', authorLogin: 'camille', details: '5' }] } as ReservationDetail;
+    reservations.place.and.resolveTo({ value: { reservation: placed, eventId: 'e3' }, error: null });
+
+    const result = await actions.placeOn('r1', { tableId: 't5' }, false);
+
+    expect(result.error).toBeNull();
+    expect(reservations.place).toHaveBeenCalledOnceWith('r1', { tableId: 't5' });
+    expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Moreau placée · 5', reservationId: 'r1', eventId: 'e3' });
+
+    undo.offer.calls.reset();
+    reservations.place.and.resolveTo({ value: null, error: 'Table 5 is no longer free for this reservation.', code: ApiError.PlacementUnavailable });
+    const refused = await actions.placeOn('r1', { tableId: 't5' }, false);
+    expect(refused.error !== null && refused.code).toBe(ApiError.PlacementUnavailable);
+    expect(undo.offer).not.toHaveBeenCalled();
+    expect(modal.infoModal).not.toHaveBeenCalled();
   });
 
   it('should send « Placer » to the floor plan, on the right day', () => {

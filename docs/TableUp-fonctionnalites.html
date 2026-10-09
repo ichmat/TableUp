@@ -1644,6 +1644,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PLACE-09</b><div>Si la réservation déposée est <code>en_attente</code>, elle est <strong>acceptée du même geste</strong> ; la table est réservée immédiatement, le message au client part avec 8 s de délai annulable.</div></div>
 <div class="rg"><b>PLACE-10</b><div><strong>Pas de voile sur le plan</strong> pendant un placement : le plan est l'objet de l'action.</div></div>
 <div class="rg"><b>PLACE-11</b><div><strong>Le plan se recompose uniquement quand quelque chose y est désigné.</strong> La fiche ouverte pour un placement décale le plan ; le formulaire de création, lui, survole.</div></div>
+<div class="rg"><b>PLACE-12</b><div>Moins de <strong>15 min</strong> entre la fin prévue et la réservation suivante de la table : <code>~✓</code> « Réservée juste après ». À 15 min ou plus, la table reste <code>✓</code> et le plan écrit « Ensuite 22:30 · marge 30 min ». Les 15 min sont fixes.</div></div>
+<div class="rg"><b>PLACE-13</b><div>Une table seule <strong>collée dans une combinaison active</strong> est <code>~✓</code> « Table collée » : il faudra les séparer. La combinaison active elle-même peut être <code>✓</code>.</div></div>
+<div class="rg"><b>PLACE-14</b><div><strong>Toucher</strong> une table allumée vaut un dépôt, comme glisser la pastille. Une table estompée ne réagit pas.</div></div>
+<div class="rg"><b>PLACE-15</b><div><strong>Changer de table</strong> : le lien de la fiche (réservation confirmée placée, ou assise), ou glisser l'occupation d'une table vers une autre. Le journal note « 5 → 7 » ; « Annuler » remet l'ancienne table, sauf si elle a été prise entre-temps. Lâcher sur sa propre table ne fait rien ; des clients assis qu'on déplace laissent leur table « à nettoyer ».</div></div>
 </div>
 
 <h3 id="sec-7.7"><span class="hn">7.7</span>Le bouton Allergies</h3>
@@ -1662,6 +1666,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>WALK-01</b><div>Un walk-in ne passe <strong>pas</strong> par le formulaire de création : <strong>toucher une table libre sur le plan → « Asseoir maintenant » → couverts</strong>. Deux gestes.</div></div>
 <div class="rg"><b>WALK-02</b><div>Ni nom, ni téléphone demandés. <strong>Aucune fiche client n'est créée.</strong></div></div>
 <div class="rg"><b>WALK-03</b><div>La réservation créée porte <code>source = sur_place</code>, <code>client_id = null</code>, et passe directement en <code>assise</code>.</div></div>
+<div class="rg"><b>WALK-04</b><div>Une table libre maintenant mais <strong>réservée plus tard pendant la durée du repas</strong> le dit d'abord (« Réservée à 21:00 · Legrand · 4 p — 1 h devant vous ») : rien ne part sans « Asseoir quand même ».</div></div>
 </div>
 
 <h3 id="sec-7.9"><span class="hn">7.9</span>Nettoyage des tables</h3>
