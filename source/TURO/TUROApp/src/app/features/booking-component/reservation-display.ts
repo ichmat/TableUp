@@ -2,7 +2,7 @@ import {
   CLIENT_TAG_LABEL, EventType, ExceptionalClosure, PendingRequests, ReservationDay, ReservationDetail, ReservationEvent,
   ReservationGesture, ReservationListClient, ReservationListItem, ReservationStatus, RestaurantService,
 } from '../../models';
-import { addDays, dayOfWeek, formatHistoryDate, formatLongDate, formatWeekday } from '../../shared/utils/calendar-date';
+import { addDays, dayOfWeek, formatHistoryDate, formatLongDate, formatWeekday, todayIn } from '../../shared/utils/calendar-date';
 import { timeIn } from '../../shared/utils/time-of-day';
 
 /** Le nom de la fiche, ou « Client de passage » sans fiche (§7.2) */
@@ -193,4 +193,23 @@ export function isServiceDay(day: string, services: RestaurantService[], closure
 /** Le calendrier du formulaire grise un jour passé, fermé, ou sans service. L'API reste juge (`OutsideService`) */
 export function isBookableDay(day: string, services: RestaurantService[], closures: ExceptionalClosure[], today: string): boolean {
   return day >= today && isServiceDay(day, services, closures);
+}
+
+/**
+ * Le jour de service en cours (§4.3) : la veille tant qu'une de ses plages passe minuit et dure encore — à 00:20,
+ * le dîner du samedi est encore « aujourd'hui ». L'API applique la même règle et reste juge
+ */
+export function currentServiceDay(timeZone: string, services: RestaurantService[], closures: ExceptionalClosure[], now: Date = new Date()): string {
+  const today = todayIn(timeZone, now);
+  const yesterday = addDays(today, -1);
+  const time = timeIn(timeZone, now);
+  const closure = closures.find((c) => c.from <= yesterday && yesterday <= c.to);
+  if (closure?.type === 'Closed') {
+    return today;
+  }
+  const hours = closure?.type === 'ModifiedHours'
+    ? closure.replacementHours ?? []
+    : services.filter((service) => service.day === dayOfWeek(yesterday));
+  const runsPastMidnight = hours.some((h) => h.closing.slice(0, 5) <= h.opening.slice(0, 5) && time < h.closing.slice(0, 5));
+  return runsPastMidnight ? yesterday : today;
 }

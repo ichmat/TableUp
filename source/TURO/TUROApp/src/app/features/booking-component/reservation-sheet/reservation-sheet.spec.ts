@@ -95,8 +95,11 @@ describe('ReservationSheet', () => {
 
   it('should offer « No-show » only once the late grace has passed', () => {
     expect(buttons()).not.toContain('No-show');
+    const links = buttons();
 
     show(SHEET({ noShowFrom: new Date(Date.now() - 60_000).toISOString() }));
+    // Il s'ajoute en dernier : « Annuler la réservation » ne se décale pas sous le doigt
+    expect(buttons()).toEqual([...links, 'No-show']);
     button('No-show').click();
 
     expect(actions.run).toHaveBeenCalledOnceWith('r1', 'no-show');

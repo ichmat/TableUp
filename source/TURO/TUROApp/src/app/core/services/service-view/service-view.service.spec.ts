@@ -125,6 +125,23 @@ describe('ServiceViewService', () => {
     await settle();
   });
 
+  it('should tell a reload failed, and whether the service asked no longer exists, keeping the last snapshot', async () => {
+    service.setQuery({ day: '2026-10-10', opening: '19:00', focus: null });
+    TestBed.tick();
+    snapshotCall().flush(serviceSnapshot());
+    await settle();
+    expect(service.snapshot()).not.toBeNull();
+
+    service.reload();
+    TestBed.tick();
+    snapshotCall().flush({ statusCode: 404, message: 'No service opens at 19:00.', error: 'NotFound' }, { status: 404, statusText: 'Not Found' });
+    await settle();
+
+    expect(service.failed()).toBeTrue();
+    expect(service.notFound()).toBeTrue();
+    expect(service.snapshot()).not.toBeNull();
+  });
+
   it('should read the calendar, peek at a day, and fetch the default service for the landing', async () => {
     const calendar = service.calendar('2026-10');
     http.expectOne((r) => r.url === '/api/service/calendar' && r.params.get('month') === '2026-10').flush(['2026-10-10']);

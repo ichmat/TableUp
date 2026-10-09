@@ -23,6 +23,7 @@ import { ZoneTabs } from './zone-tabs/zone-tabs';
 import { PlanLegend } from './plan-legend/plan-legend';
 import { ToPlaceColumn } from './to-place-column/to-place-column';
 import { defaultSlot, slotIndexAt, tableMarks, tableStatusAt, zoneCount } from './table-status';
+import { apiErrorText } from '../../shared/utils/api-error-text';
 
 export const TABLE_UNDO_TOO_LATE = 'Trop tard : la table a changé entre-temps';
 
@@ -104,12 +105,37 @@ export class ServiceComponent implements OnDestroy {
     }
     const at = this._params().get('at');
     const fromAddress = at === null ? -1 : snapshot.slots.findIndex((slot) => slot.time.startsWith(at));
-    return fromAddress >= 0 ? fromAddress : defaultSlot(snapshot);
+    return fromAddress >= 0 ? fromAddress : defaultSlot(snapshot, new Date(this._now()));
   });
+  /**
+   * L'heure que montre le plan. Le créneau en cours d'un service en cours se lit à maintenant, pas à son début :
+   * une table libérée à 20:06 n'est plus occupée sur le créneau de 20:00. `now` de l'API couvre l'horloge locale en retard
+   */
   private _activeAt = computed(() => {
     const snapshot = this.snapshot();
-    const slot = snapshot?.slots[this.activeIndex()];
-    return new Date(slot?.at ?? snapshot?.now ?? Date.now());
+    if (snapshot === null) {
+      return new Date(this._now());
+    }
+    const index = this.activeIndex();
+    const present = Math.max(this._now(), Date.parse(snapshot.now));
+    if (snapshot.service?.state === 'InProgress' && index === slotIndexAt(snapshot.slots, new Date(present))) {
+      return new Date(present);
+    }
+    return new Date(snapshot.slots[index]?.at ?? snapshot.now);
+  });
+
+  /** La prochaine fin prévue d'une table assise, encore à venir quand l'instantané a été pris */
+  private _nextSeatedEnd = computed(() => {
+    const snapshot = this.snapshot();
+    if (snapshot === null) {
+      return null;
+    }
+    const taken = Date.parse(snapshot.now);
+    const ends = snapshot.zones.flatMap((zone) => zone.tables).flatMap((table) => table.occupations)
+      .filter((o) => o.status === 'Seated')
+      .map((o) => Date.parse(o.end))
+      .filter((end) => end > taken);
+    return ends.length === 0 ? null : Math.min(...ends);
   });
 
   // ---- La salle : gardée d'un rechargement à l'autre tant qu'elle existe ----
@@ -160,7 +186,8 @@ export class ServiceComponent implements OnDestroy {
     // L'instantané arrivé : la réservation désignée s'ouvre, puis l'adresse nomme le service affiché
     effect(() => {
       const snapshot = this.snapshot();
-      if (snapshot === null || this._view.isLoading()) {
+      // Un rechargement en échec garde l'instantané d'avant : il ne décide pas de l'adresse
+      if (snapshot === null || this._view.isLoading() || this._view.failed()) {
         return;
       }
       const params = this._params();
@@ -179,6 +206,21 @@ export class ServiceComponent implements OnDestroy {
           });
         }
       });
+    });
+
+    // Le service demandé n'existe plus (ouverture déplacée, jour fermé entre-temps) : on retombe sur le jour
+    effect(() => {
+      if (this._view.notFound() && this._params().get('opening') !== null) {
+        untracked(() => void this._router.navigate([], { queryParams: { opening: null, at: null }, queryParamsHandling: 'merge', replaceUrl: true }));
+      }
+    });
+
+    // Une table assise atteint son heure prévue : l'API seule sait qu'elle déborde, on lui redemande l'état (§3.2)
+    effect(() => {
+      const end = this._nextSeatedEnd();
+      if (end !== null && this._now() >= end && !untracked(() => this._view.isLoading())) {
+        untracked(() => this._view.reload());
+      }
     });
 
     // « Annuler » dans le bandeau après une création ou une modification : le formulaire revient
@@ -252,7 +294,7 @@ export class ServiceComponent implements OnDestroy {
     this.bubble.set(null);
     const result = await this._view.clean(bubble.tableId);
     if (result.error !== null) {
-      await this._modal.infoModal('Action impossible', result.error);
+      await this._modal.infoModal('Action impossible', apiErrorText(result));
       return;
     }
     const { tableId, since } = result.value;

@@ -28,6 +28,9 @@ namespace TUROAPI.Services
         /// <summary>Un créneau de la frise (§5.4)</summary>
         public sealed record SlotFigures(TimeOnly Time, DateTime At, int Covers, int TakenTables, bool HasUnplaced);
 
+        /// <summary>La fin d'une table assise qui a dépassé son heure prévue : elle reste occupée tant que personne ne l'a libérée</summary>
+        public static readonly DateTime Unreleased = DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc);
+
         /// <summary>Jusqu'où chercher le prochain jour ouvert</summary>
         public const int SearchDays = 366;
 
@@ -89,13 +92,24 @@ namespace TUROAPI.Services
             return null;
         }
 
+        /// <summary>
+        /// Le jour de service en cours : la veille tant qu'une de ses plages passe minuit et dure encore (00:30, le dîner du samedi),
+        /// sinon la date du jour. C'est lui qui borne « passé » et « aujourd'hui », pas le calendrier
+        /// </summary>
+        public static DateOnly ServiceDayAt(DateTime now, TimeZoneInfo timeZone, List<Window> windowsOfYesterday)
+        {
+            DateOnly today = TodayOf(now, timeZone);
+            DateOnly yesterday = today.AddDays(-1);
+            return windowsOfYesterday.Any(w => StateOf(BoundsOf(yesterday, w, timeZone), now) == ServiceState.InProgress) ? yesterday : today;
+        }
+
         /// <summary>Même jour de service, et l'heure locale du début tombe dans la plage (y compris après minuit)</summary>
         public static bool BelongsTo(Reservation reservation, Choice service, List<Window> windowsOfDay, TimeZoneInfo timeZone) =>
             reservation.ServiceDay == service.Day
             && ReservationClock.WindowAt(windowsOfDay, ReservationClock.LocalTime(reservation.Start, timeZone)) == service.Window;
 
         /// <summary>
-        /// §3.2 : confirmée = l'heure prévue ; assise = depuis l'arrivée (si plus tôt) et tant qu'elle déborde ;
+        /// §3.2 : confirmée = l'heure prévue ; assise = depuis l'arrivée (si plus tôt), et sans fin tant qu'elle déborde ;
         /// terminée = jusqu'à la libération, ou l'heure prévue si elle a été close automatiquement. Le reste n'occupe rien
         /// </summary>
         public static Interval? OccupationOf(Reservation reservation, DateTime now)
@@ -105,7 +119,8 @@ namespace TUROAPI.Services
             return reservation.Status switch
             {
                 ReservationStatus.Confirmed => new Interval(reservation.Start, plannedEnd),
-                ReservationStatus.Seated => new Interval(start, plannedEnd > now ? plannedEnd : now),
+                // Passé l'heure prévue, aucun départ n'a été vu : la table reste prise sur tous les créneaux suivants
+                ReservationStatus.Seated => new Interval(start, plannedEnd > now ? plannedEnd : Unreleased),
                 ReservationStatus.Finished => new Interval(start, reservation.FinishedAt ?? plannedEnd),
                 _ => null,
             };

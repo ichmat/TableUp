@@ -363,7 +363,7 @@ C'est ce qui rend la frise possible. Avec un statut stocké, une table n'aurait 
 
 **Le suivi du nettoyage est un réglage, désactivé par défaut.** Désactivé, « Libérer » rend la table libre aussitôt et l'état « à nettoyer » n'apparaît nulle part — ni sur le plan, ni dans la légende. Activé, la table libérée passe « à nettoyer » ; la toucher sur le plan ouvre une bulle **« Nettoyée »**, qui la rend libre, avec le bandeau « Annuler » 8 s. Désactiver le réglage ne vide pas les tables déjà marquées : elles sont ignorées, et reviennent si on le réactive.
 
-**Ce qu'occupe une réservation.** Confirmée : son heure prévue. Assise : depuis l'arrivée — ou l'heure prévue si elle est plus tard — et **tant qu'elle déborde** : une table qui dépasse sa durée reste occupée jusqu'à maintenant. Terminée : jusqu'à la libération, ou jusqu'à l'heure prévue si elle a été close automatiquement. Une demande, une annulation, un no-show n'occupent rien.
+**Ce qu'occupe une réservation.** Confirmée : son heure prévue. Assise : depuis l'arrivée — ou l'heure prévue si elle est plus tard. **Une table qui dépasse sa durée reste occupée jusqu'à ce qu'on la libère**, sur tous les créneaux suivants : le logiciel ne promet pas un départ qu'il n'a pas vu. Terminée : jusqu'à la libération, ou jusqu'à l'heure prévue si elle a été close automatiquement. Une demande, une annulation, un no-show n'occupent rien.
 
 ---
 
@@ -872,7 +872,7 @@ Mais l'un des deux **sort du logiciel** — accepter envoie un message à un vra
 
 Une popup demande « es-tu sûr ? » à quelqu'un qui vient d'agir et qui répond oui par réflexe. L'annulation différée intervient au moment où l'on *voit* le résultat — donc au moment où l'on repère l'erreur. Elle rattrape aussi ce qu'une popup ne rattrape pas : la mauvaise table, la mauvaise ligne.
 
-**Ce bandeau sert à tous les gestes** : accepter, refuser, arrivée, libérer, no-show, annuler, rouvrir, créer, modifier — y compris depuis la colonne Action de la liste. Pour une création ou une modification, « Annuler » rouvre le formulaire avec la saisie. Une action défaite ne laisse aucune trace au journal. Les messages aux clients n'existent pas encore ; ils passeront par une file d'envoi différé côté serveur, qui ne part qu'à la fin du délai.
+**Ce bandeau sert à tous les gestes** : accepter, refuser, arrivée, libérer, no-show, annuler, rouvrir, créer, modifier — y compris depuis la colonne Action de la liste. Pour une création ou une modification, « Annuler » rouvre le formulaire avec la saisie. Une action défaite ne laisse aucune trace au journal. Elle est refusée si elle redonnait au client deux réservations au même moment : une annulation défaite après que le client a repris le créneau ferait un doublon. Les messages aux clients n'existent pas encore ; ils passeront par une file d'envoi différé côté serveur, qui ne part qu'à la fin du délai.
 
 La popup de raison sur les tables `~✓` (§5.8) reste, elle : elle n'interroge pas, elle **informe** d'une chose qu'on ne peut pas voir.
 
@@ -1070,7 +1070,7 @@ C'est **le vocabulaire du §5.8 réutilisé tel quel** : vert plein / ambre poin
 
 Le restaurateur connaît sa salle mieux que le logiciel : il sait que la 7 part toujours tôt le samedi. **Un logiciel qui dit non se fait contourner — et il se fait contourner sur papier**, c'est-à-dire hors de toute vue d'ensemble. Autant garder la réservation dedans, même signalée.
 
-Seuls un jour passé, un jour fermé ou une heure hors des services sont refusés : ce n'est pas une question de place, le restaurant n'est pas ouvert.
+Seuls un jour passé, un jour fermé ou une heure hors des services sont refusés : ce n'est pas une question de place, le restaurant n'est pas ouvert. Un jour passé se compte en jours de service : à 00:20, le dîner de la veille qui passe minuit est encore « aujourd'hui », il se réserve et le formulaire s'ouvre sur lui.
 
 **Un doublon est refusé, lui aussi.** Un client ne tient pas deux tables à la fois : si sa fiche a déjà une réservation active (à répondre, confirmée ou assise) qui chevauche le créneau, la création, la modification ou la réouverture est refusée. Le formulaire renvoie vers la réservation existante. Bout à bout, ou le midi et le soir, c'est permis ; un client de passage n'est jamais concerné.
 
@@ -1080,7 +1080,7 @@ La **liste d'attente** serait la vraie réponse à « complet », mais elle est 
 
 Dès que le numéro correspond (§7.2), la fiche s'attache et **l'allergie s'affiche dans le formulaire**. C'est tout le rendement du §7 : l'information ne sert pas à consulter après coup, elle sert à parler mieux *maintenant* — « on note toujours les fruits à coque, c'est bien ça ? »
 
-Sans attendre le numéro entier, **les fiches connues se proposent** dès quatre chiffres, ou deux lettres du nom : un client qui ne donne que « Marchand » se retrouve quand même. En choisir une l'attache comme si le numéro avait été tapé. Seules les fiches qui ont un numéro sont proposées : la réservation l'exige.
+Sans attendre le numéro entier, **les fiches connues se proposent** dès trois chiffres, ou trois lettres du nom : un client qui ne donne que « Marchand » se retrouve quand même. La liste déroulante (20 fiches au plus) attend 2 secondes sans frappe pour ne pas clignoter à chaque touche ; pendant ce temps, une jauge sous le champ annonce qu'elle arrive. En choisir une l'attache comme si le numéro avait été tapé. Seules les fiches qui ont un numéro sont proposées : la réservation l'exige.
 
 Le ratio `2 / 41` apparaît au même moment, et c'est le seul moment où il sert : pendant qu'on décide d'accepter un samedi 20:00. Lu le lendemain, il ne change plus rien.
 

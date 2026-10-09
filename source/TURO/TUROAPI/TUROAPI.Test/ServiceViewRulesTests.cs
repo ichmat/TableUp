@@ -78,6 +78,17 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public void The_service_day_stays_yesterday_while_its_late_service_still_runs()
+        {
+            DateOnly sunday = Saturday.AddDays(1);
+
+            Assert.AreEqual(Saturday, ServiceDayAt(At(sunday, 0, 30), Paris, [LateDinner]));
+            Assert.AreEqual(sunday, ServiceDayAt(At(sunday, 1, 0), Paris, [LateDinner]));
+            Assert.AreEqual(sunday, ServiceDayAt(At(sunday, 0, 30), Paris, [Dinner]));
+            Assert.AreEqual(sunday, ServiceDayAt(At(sunday, 0, 30), Paris, []));
+        }
+
+        [TestMethod]
         public void A_day_without_service_shows_the_next_open_day()
         {
             DateOnly tuesday = Saturday.AddDays(3);
@@ -119,12 +130,16 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public void A_seated_table_that_overruns_stays_occupied_until_now()
+        public void A_seated_table_that_overruns_stays_occupied_until_it_is_released()
         {
             Reservation seated = Booked(ReservationStatus.Seated, At(Saturday, 20), seatedAt: At(Saturday, 20, 5));
 
             Assert.AreEqual(new Interval(At(Saturday, 20), At(Saturday, 22)), OccupationOf(seated, At(Saturday, 21)));
-            Assert.AreEqual(new Interval(At(Saturday, 20), At(Saturday, 22, 40)), OccupationOf(seated, At(Saturday, 22, 40)));
+            // Passé l'heure prévue, le logiciel ne promet pas un départ qu'il n'a pas vu (§3.2) : occupée sur tous les créneaux suivants
+            Interval overrun = OccupationOf(seated, At(Saturday, 22, 40))!;
+            Assert.AreEqual(At(Saturday, 20), overrun.Start);
+            Assert.IsTrue(overrun.Covers(At(Saturday, 23, 30)));
+            Assert.AreEqual(Unreleased, overrun.End);
         }
 
         [TestMethod]

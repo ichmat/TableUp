@@ -40,9 +40,13 @@ export function slotIndexAt(slots: ServiceSlot[], instant: Date): number {
   return index;
 }
 
-/** Un service en cours s'ouvre sur maintenant, tout autre sur son premier créneau */
-export function defaultSlot(snapshot: ServiceSnapshot): number {
-  return snapshot.service?.state === 'InProgress' ? slotIndexAt(snapshot.slots, new Date(snapshot.now)) : 0;
+/**
+ * Un service en cours s'ouvre sur maintenant — et le suit, l'écran restant ouvert tout le service —, tout autre sur son
+ * premier créneau. `now` : l'horloge du poste ; celle de l'API la rattrape si le poste retarde
+ */
+export function defaultSlot(snapshot: ServiceSnapshot, now?: Date): number {
+  const present = Math.max(now?.getTime() ?? 0, Date.parse(snapshot.now));
+  return snapshot.service?.state === 'InProgress' ? slotIndexAt(snapshot.slots, new Date(present)) : 0;
 }
 
 /** « Salle 8/12 » : tables réservées ou occupées à cette heure, sur les tables actives */

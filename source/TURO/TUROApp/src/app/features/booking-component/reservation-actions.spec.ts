@@ -47,6 +47,14 @@ describe('ReservationActions', () => {
     expect(undo.offer).toHaveBeenCalledOnceWith({ message: 'Moreau acceptée', reservationId: 'r1', eventId: 'e1' });
   });
 
+  it('should explain in French a gesture another device already made', async () => {
+    reservations.act.and.resolveTo({ value: null, error: 'NoShow is not possible on a NoShow reservation.', code: ApiError.ReservationActionNotAllowed });
+
+    expect(await actions.run('r1', 'no-show')).toBeNull();
+    expect(modal.infoModal).toHaveBeenCalledOnceWith('Action impossible',
+      "Ce geste n'est pas possible sur cette réservation dans son état actuel : elle a peut-être changé sur un autre poste.");
+  });
+
   it('should show a refusal and offer nothing', async () => {
     reservations.act.and.resolveTo({ value: null, error: 'NoShow is not possible on a Pending reservation.' });
 

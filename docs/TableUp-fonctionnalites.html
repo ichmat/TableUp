@@ -1608,7 +1608,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PLAN-04</b><div>Ces marques appartiennent à la <strong>réservation</strong>, pas à la table : une pastille suit un déplacement.</div></div>
 <div class="rg"><b>PLAN-05</b><div>Sur la <em>fiche</em>, l'allergie reste écrite en toutes lettres et épinglée, jamais réduite à une icône.</div></div>
 <div class="rg"><b>PLAN-06</b><div>Icônes : SVG dessinés, <strong>jamais d'emoji</strong>. Allergie = un couvert, blanc sur corail.</div></div>
-<div class="rg"><b>PLAN-07</b><div>Sur la table, <strong>seule l'allergie est dessinée</strong>, avec le nom et l'heure de la réservation en dessous ; une table assise qui déborde sa durée reste occupée jusqu'à maintenant.</div></div>
+<div class="rg"><b>PLAN-07</b><div>Sur la table, <strong>seule l'allergie est dessinée</strong>, avec le nom et l'heure de la réservation en dessous ; une table assise qui déborde sa durée reste occupée <strong>jusqu'à ce qu'on la libère</strong>, sur tous les créneaux suivants.</div></div>
 </div>
 
 <h3 id="sec-7.5"><span class="hn">7.5</span>Colonne « À placer »</h3>
@@ -1995,7 +1995,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
 <div class="rg"><b>FORM-06</b><div>Le vocabulaire est <strong>celui du placement, réutilisé tel quel</strong> : vert plein / ambre pointillé / gris barré. Lisible en noir et blanc.</div></div>
-<div class="rg"><b>FORM-07</b><div><strong>« Complet » n'est jamais un verrou.</strong> Toucher un créneau complet reste possible : le formulaire prévient — « aucune table pour 4 à 20:30 » — et laisse passer. La réservation part en « À placer » avec sa marque. Seuls un jour passé, un jour fermé ou une heure hors service sont refusés.</div></div>
+<div class="rg"><b>FORM-07</b><div><strong>« Complet » n'est jamais un verrou.</strong> Toucher un créneau complet reste possible : le formulaire prévient — « aucune table pour 4 à 20:30 » — et laisse passer. La réservation part en « À placer » avec sa marque. Seuls un jour passé, un jour fermé ou une heure hors service sont refusés. Un jour passé se compte en jours de service : à 00:20, le dîner de la veille qui passe minuit est encore « aujourd'hui », il se réserve et le formulaire s'ouvre sur lui.</div></div>
 <div class="rg"><b>FORM-08</b><div>Le formulaire <strong>nomme la condition</strong> d'un créneau serré. Il informe, il ne demande pas.</div></div>
 <div class="rg"><b>FORM-09</b><div>La longueur de la bande suit <code>pas_creneau</code>. Passer de 30 à 15 min la double.</div></div>
 </div>
@@ -2003,7 +2003,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <h3 id="sec-11.4"><span class="hn">11.4</span>Reconnaissance du client</h3>
 
 <div class="rules">
-<div class="rg"><b>FORM-10</b><div>Dès que le numéro saisi correspond à une fiche, <strong>la fiche s'attache et l'allergie s'affiche dans le formulaire</strong>. Avant cela, les fiches connues se proposent dès quatre chiffres ou deux lettres du nom ; en choisir une l'attache. Seules les fiches qui ont un numéro sont proposées.</div></div>
+<div class="rg"><b>FORM-10</b><div>Dès que le numéro saisi correspond à une fiche, <strong>la fiche s'attache et l'allergie s'affiche dans le formulaire</strong>. Avant cela, les fiches connues se proposent dès trois chiffres ou trois lettres du nom, dans une liste déroulante (20 au plus) qui attend 2 s sans frappe — une jauge annonce son arrivée ; en choisir une l'attache. Seules les fiches qui ont un numéro sont proposées.</div></div>
 <div class="rg"><b>FORM-11</b><div>Le ratio <code>2 / 41</code> apparaît au même moment, pendant qu'on décide d'accepter.</div></div>
 </div>
 

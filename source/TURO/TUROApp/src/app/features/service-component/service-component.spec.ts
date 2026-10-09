@@ -54,7 +54,10 @@ describe('ServiceComponent', () => {
   const snapshot = signal<ServiceSnapshot | null>(null);
   const isLoading = signal(false);
   const setQuery = jasmine.createSpy('setQuery');
-  const view = { snapshot, failed: signal(false), isLoading, setQuery, clean: jasmine.createSpy('clean'), undoClean: jasmine.createSpy('undoClean') };
+  const failed = signal(false);
+  const notFound = signal(false);
+  const reload = jasmine.createSpy('reload');
+  const view = { snapshot, failed, notFound, isLoading, setQuery, reload, clean: jasmine.createSpy('clean'), undoClean: jasmine.createSpy('undoClean') };
   const selectedId = signal<string | null>(null);
   const reservations = {
     selectedId, select: (id: string | null) => selectedId.set(id), selectClient: jasmine.createSpy('selectClient'),
@@ -68,6 +71,8 @@ describe('ServiceComponent', () => {
   const isAdmin = signal(false);
   const text = () => (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
   const page = () => fixture.componentInstance as unknown as Page;
+  /** L'horloge de l'écran avance (elle se relit toutes les 30 s) */
+  const clockAt = (time: string) => (fixture.componentInstance as unknown as { _now: { set(value: number): void } })._now.set(Date.parse(utc(time)));
   const tap = (item: PlanTable) => page().onTable({ item, point: { x: 1, y: 1 }, event: new PointerEvent('pointerdown', { clientX: 40, clientY: 50 }) });
   const load = (value: ServiceSnapshot) => {
     snapshot.set(value);
@@ -87,6 +92,9 @@ describe('ServiceComponent', () => {
     params.next(convertToParamMap({ day: '2026-10-10', opening: '19:00' }));
     snapshot.set(null);
     isLoading.set(false);
+    failed.set(false);
+    notFound.set(false);
+    reload.calls.reset();
     setQuery.calls.reset();
     view.clean.calls.reset();
     view.undoClean.calls.reset();
@@ -114,6 +122,8 @@ describe('ServiceComponent', () => {
     }).overrideComponent(ServiceComponent, {
       set: { imports: [HeaderStub, TimelineStub, TabsStub, CanvasStub, LegendStub, ColumnStub, SheetStub, ClientStub, FormStub, Button] },
     }).compileComponents();
+    // L'horloge de l'écran vit le samedi des fixtures : le créneau en cours se lit à 20:07, quel que soit le jour réel
+    spyOn(Date, 'now').and.returnValue(Date.parse(utc('20:07')));
     fixture = TestBed.createComponent(ServiceComponent);
     fixture.detectChanges();
   });
@@ -238,6 +248,63 @@ describe('ServiceComponent', () => {
 
     expect((fixture.componentInstance as unknown as { zoneId: () => string }).zoneId()).toBe('z2');
     expect(text()).toContain('TABS true');
+  });
+
+  it('should read the current slot at the present instant, a table released a minute ago being free', () => {
+    // 20:07 : le créneau courant commence à 20:00, la table a été libérée à 20:06
+    const released = serviceTable({ id: 't9', name: 'T9', occupations: [occupation({ reservationId: 'gone', status: 'Finished', lateFrom: null, start: utc('18:00'), end: utc('20:06') })] });
+    load(serviceSnapshot({ zones: [serviceZone({ tables: [released] })] }));
+
+    tap(released);
+    fixture.detectChanges();
+    expect(selectedId()).toBeNull();
+
+    // Un autre créneau se lit à son heure de début
+    page().pickSlot(1);
+    tap(released);
+    expect(selectedId()).toBe('gone');
+  });
+
+  it('should follow the clock while the service runs, without a reload', () => {
+    load(SNAPSHOT);
+    expect(text()).toContain('TIMELINE 2');
+
+    clockAt('20:40');
+    fixture.detectChanges();
+
+    expect(text()).toContain('TIMELINE 3');
+  });
+
+  it('should reload once a seated table passes its planned end, so it stays taken', () => {
+    const seated = serviceTable({ id: 't8', name: 'T8', occupations: [occupation({ reservationId: 'long', status: 'Seated', lateFrom: null, start: utc('18:30'), end: utc('20:30') })] });
+    load(serviceSnapshot({ zones: [serviceZone({ tables: [seated] })] }));
+
+    clockAt('20:29');
+    fixture.detectChanges();
+    expect(reload).not.toHaveBeenCalled();
+
+    clockAt('20:31');
+    fixture.detectChanges();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('should say a reload failed rather than show stale tables as current, and keep the address', () => {
+    load(SNAPSHOT);
+    params.next(convertToParamMap({ day: '2026-10-17', opening: '19:00' }));
+    failed.set(true);
+    fixture.detectChanges();
+
+    expect(text()).toContain("Le service n'a pas pu être rechargé");
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('should drop an opening that no longer exists and fall back to the day', () => {
+    load(SNAPSHOT);
+    failed.set(true);
+    notFound.set(true);
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { opening: null, at: null }, queryParamsHandling: 'merge', replaceUrl: true }));
   });
 
   it('should not act on a snapshot still loading', () => {

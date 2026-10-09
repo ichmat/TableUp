@@ -8,6 +8,7 @@ import { RestaurantService } from '../../core/services/restaurant/restaurant-ser
 import { ApiResult } from '../../core/services/api-result';
 import { createdMessage, gestureMessage, modifiedMessage } from './reservation-display';
 import { ReservationFormMode, ReservationSaved } from './reservation-draft';
+import { apiErrorText } from '../../shared/utils/api-error-text';
 
 /**
  * Les gestes de la liste et de la fiche : l'API agit tout de suite, le bandeau propose de défaire 8 s (§6.7).
@@ -75,7 +76,7 @@ export class ReservationActions {
     if (result.error !== null) {
       await this._modal.infoModal('Action impossible', result.code === ApiError.ClientAlreadyBooked
         ? 'Ce client a déjà une autre réservation sur ce créneau : la rouvrir ferait un doublon.'
-        : result.error);
+        : apiErrorText(result));
       return null;
     }
     const { reservation, eventId } = result.value;

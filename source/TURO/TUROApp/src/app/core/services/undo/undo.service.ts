@@ -2,6 +2,7 @@ import { inject, Service, signal } from '@angular/core';
 import { ApiError, RESERVATION_LIMITS, ReservationDetail } from '../../../models';
 import { ReservationService } from '../reservation/reservation.service';
 import { ApiResult } from '../api-result';
+import { apiErrorText } from '../../../shared/utils/api-error-text';
 
 /** Un geste sur une réservation : l'API défait la ligne de journal qu'il a écrite */
 export interface ReservationUndoOffer {
@@ -29,6 +30,8 @@ export type UndoBannerState =
     | { kind: 'failed', message: string };
 
 export const UNDO_TOO_LATE = 'Trop tard : la réservation a changé entre-temps';
+/** Rétablir la réservation reprendrait un créneau que le même client tient déjà ailleurs */
+export const UNDO_DOUBLE_BOOKING = "Impossible d'annuler : ce client a déjà une autre réservation à ce moment-là";
 
 const FAILED_MS = 4_000;
 
@@ -67,7 +70,7 @@ export class UndoService {
         if ('run' in offer) {
             const result = await offer.run();
             if (result.error !== null) {
-                this.fail(result.code === ApiError.UndoExpired ? offer.tooLate : result.error);
+                this.fail(result.code === ApiError.UndoExpired ? offer.tooLate : apiErrorText(result));
             }
             return;
         }
@@ -77,7 +80,9 @@ export class UndoService {
             return;
         }
         const tooLate = result.code === ApiError.UndoExpired || result.code === ApiError.ReservationChanged;
-        this.fail(tooLate ? UNDO_TOO_LATE : result.error);
+        this.fail(tooLate ? UNDO_TOO_LATE
+            : result.code === ApiError.ClientAlreadyBooked ? UNDO_DOUBLE_BOOKING
+            : apiErrorText(result));
     }
 
     private fail(message: string) {

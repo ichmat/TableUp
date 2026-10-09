@@ -89,6 +89,13 @@
   --color-plan-clean-line: #C9AC52;
   --color-plan-clean-text: #E3CE86;
   --color-plan-late: #D9765C;
+
+  /* La jauge des propositions de clients : elle se remplit pendant l'attente (durée posée par le composant) */
+  --animate-fill: fill linear forwards;
+  @keyframes fill {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
 }
 
 /* Hachures (PAR-02, PAR-03) : un état se lit aussi par sa forme, jamais par la seule teinte */

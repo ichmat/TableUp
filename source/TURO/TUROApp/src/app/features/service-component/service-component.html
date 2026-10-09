@@ -5,6 +5,12 @@
         @if (s.slots.length > 0) {
             <app-service-timeline [slots]="s.slots" [activeIndex]="activeIndex()" [tableCount]="tableCount()" (picked)="pickSlot($event)" />
         }
+        @if (failed()) {
+            <!-- L'instantané d'avant reste affiché : le dire, plutôt que de le faire passer pour l'état présent -->
+            <p data-reload-failed class="rounded-lg bg-coral-soft px-3 py-2 text-sm font-bold text-coral-ink">
+                Le service n'a pas pu être rechargé : les tables affichées datent du dernier chargement.
+            </p>
+        }
         <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [canEdit]="isAdmin()" (selected)="zoneId.set($event)" />
 
         <div class="flex flex-row grow min-h-0 gap-2">

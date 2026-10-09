@@ -1,6 +1,6 @@
 import { ExceptionalClosure, ReservationDay, ReservationDetail, ReservationEvent, ReservationListClient, RestaurantService } from '../../models';
 import {
-  createdMessage, dayHeader, gestureMessage, guestName, isBookableDay, isServiceDay, journalLine, marks, modifiedMessage, ordinal, originLabel,
+  createdMessage, dayHeader, gestureMessage, currentServiceDay, guestName, isBookableDay, isServiceDay, journalLine, marks, modifiedMessage, ordinal, originLabel,
   pendingBanner, primaryAction, quickAction, sheetSubtitle,
 } from './reservation-display';
 
@@ -124,5 +124,28 @@ describe('isServiceDay', () => {
   it('should refuse a day without service or closed', () => {
     expect(isServiceDay('2026-10-12', services, [])).toBeFalse();
     expect(isServiceDay('2026-10-10', services, [{ from: '2026-10-10', to: '2026-10-10', type: 'Closed' } as ExceptionalClosure])).toBeFalse();
+  });
+});
+
+describe('currentServiceDay', () => {
+  // Samedi 10 octobre 2026, Paris (UTC+2) : un dîner 19:00 – 01:00
+  const lateSaturday = [{ day: 'Saturday', opening: '19:00:00', closing: '01:00:00' } as RestaurantService];
+  const at = (iso: string) => new Date(iso);
+
+  it('should stay on the evening before while its service runs past midnight', () => {
+    expect(currentServiceDay('Europe/Paris', lateSaturday, [], at('2026-10-10T22:20:00Z'))).toBe('2026-10-10');
+    expect(currentServiceDay('Europe/Paris', lateSaturday, [], at('2026-10-10T23:05:00Z'))).toBe('2026-10-11');
+  });
+
+  it('should follow the calendar when the evening before closes before midnight, or was closed', () => {
+    const early = [{ day: 'Saturday', opening: '19:00:00', closing: '23:00:00' } as RestaurantService];
+    expect(currentServiceDay('Europe/Paris', early, [], at('2026-10-10T22:20:00Z'))).toBe('2026-10-11');
+    const closed = [{ from: '2026-10-10', to: '2026-10-10', type: 'Closed' } as ExceptionalClosure];
+    expect(currentServiceDay('Europe/Paris', lateSaturday, closed, at('2026-10-10T22:20:00Z'))).toBe('2026-10-11');
+  });
+
+  it('should read the replacement hours of a modified evening', () => {
+    const modified = [{ from: '2026-10-10', to: '2026-10-10', type: 'ModifiedHours', replacementHours: [{ opening: '20:00:00', closing: '02:00:00' }] } as ExceptionalClosure];
+    expect(currentServiceDay('Europe/Paris', [], modified, at('2026-10-10T23:30:00Z'))).toBe('2026-10-10');
   });
 });

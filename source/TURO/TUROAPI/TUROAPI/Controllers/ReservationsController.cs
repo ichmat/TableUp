@@ -60,7 +60,8 @@ namespace TUROAPI.Controllers
             }
 
             Restaurant restaurant = await LoadRestaurantAsync();
-            DateOnly today = ReservationImpact.Today(TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone));
+            // « Aujourd'hui » est le jour du service en cours : à 00:20, le dîner de la veille qui passe minuit
+            DateOnly today = await ServiceDayAsync(restaurant, TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone));
             IQueryable<Reservation> reservations = context.Reservations.Where(r => r.RestaurantId == CurrentRestaurantId);
             reservations = query.Period switch
             {
@@ -365,8 +366,17 @@ namespace TUROAPI.Controllers
             else
             {
                 ReservationStatus after = reservation.Status;
+                (DateTime Start, int Duration, Guid? ClientId) slotAfter = (reservation.Start, reservation.Duration, reservation.ClientId);
                 entry.ValuesBefore?.ApplyTo(reservation);
                 entry.StateBefore?.ApplyTo(reservation);
+                // Défaire une annulation ou un déplacement reprend un créneau : il a pu être repris par le même client entre-temps
+                bool takesASlotAgain = ActiveStatuses.Contains(reservation.Status)
+                    && (!ActiveStatuses.Contains(after) || slotAfter != (reservation.Start, reservation.Duration, reservation.ClientId));
+                if (takesASlotAgain)
+                {
+                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById((await LoadRestaurantAsync()).TimeZone);
+                    await CheckNoOverlapAsync(reservation.ClientId, id, reservation.Start, reservation.Duration, timeZone);
+                }
                 foreach (Table table in TablesOf(reservation.LatestAssignment()))
                 {
                     if (entry.TablesBefore.TryGetValue(table.Id, out DateTime? cleaningSince))
@@ -561,6 +571,13 @@ namespace TUROAPI.Controllers
         private async Task<Restaurant> LoadRestaurantAsync() =>
             await context.Restaurants.Include(r => r.Services).AsNoTracking().FirstAsync(r => r.Id == CurrentRestaurantId);
 
+        /// <summary>Le jour de service en cours : la veille tant qu'une de ses plages passe minuit et dure encore (§4.3)</summary>
+        private async Task<DateOnly> ServiceDayAsync(Restaurant restaurant, TimeZoneInfo timeZone)
+        {
+            DateOnly yesterday = ReservationImpact.Today(timeZone).AddDays(-1);
+            return ServiceView.ServiceDayAt(DateTime.UtcNow, timeZone, await WindowsAsync(restaurant, yesterday));
+        }
+
         private async Task<List<ReservationClock.Window>> WindowsAsync(Restaurant restaurant, DateOnly day)
         {
             List<Closure> closures = await context.Closures
@@ -574,7 +591,7 @@ namespace TUROAPI.Controllers
         private async Task<(DateTime Start, ReservationClock.Window Window)> ScheduleAsync(
             Restaurant restaurant, TimeZoneInfo timeZone, DateOnly day, TimeOnly time)
         {
-            if (day < ReservationImpact.Today(timeZone))
+            if (day < await ServiceDayAsync(restaurant, timeZone))
             {
                 throw new ApiErrorException(ApiError.OutsideService, "this day is past.");
             }

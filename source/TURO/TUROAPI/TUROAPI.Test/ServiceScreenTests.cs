@@ -1,3 +1,5 @@
+using TUROAPI.Services;
+
 namespace TUROAPI.Test
 {
     /// <summary>GET /api/service : quel service, et qui occupe quelle table, à quelle heure (§5, §3.2, §3.3)</summary>
@@ -51,6 +53,55 @@ namespace TUROAPI.Test
             Assert.AreEqual(ServiceState.InProgress, snapshot.Service!.State);
             Assert.AreEqual(new TimeOnly(local.Hour, 0), snapshot.Service.Opening);
             Assert.IsTrue(snapshot.IsDefault);
+        }
+
+        [TestMethod]
+        public async Task A_late_service_opened_yesterday_and_still_running_is_the_default_with_its_after_midnight_reservations()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            if (local.Hour >= 22)
+            {
+                Assert.Inconclusive("La plage d'hier doit passer minuit et contenir maintenant : impossible après 22 h");
+            }
+            DateOnly yesterday = Dates.Today.AddDays(-1);
+            // Hier de h+2 à aujourd'hui h+1 : comme à 00:30 le dîner de la veille, la plage a passé minuit et dure encore
+            await ReservationApi.AddServiceAsync(restaurant.Id, yesterday.DayOfWeek, local.Hour + 2, local.Hour + 1);
+            Reservation afterMidnight = await restaurant.AddReservationAsync(yesterday, local.Hour, startDay: Dates.Today);
+
+            ServiceSnapshotResponse snapshot = await ServiceApi.GetAsync(staff);
+
+            Assert.AreEqual(yesterday, snapshot.Day);
+            Assert.AreEqual(ServiceState.InProgress, snapshot.Service!.State);
+            Assert.IsTrue(snapshot.IsDefault);
+            Assert.AreEqual(afterMidnight.Id, snapshot.ToPlace.Single().Id);
+            // Les créneaux continuent après minuit, sur la date réelle du lendemain
+            ServiceSlotResponse midnight = snapshot.Slots.Single(s => s.Time == new TimeOnly(0, 0));
+            Assert.AreEqual(Dates.ToUtc(Dates.Today, new TimeOnly(0, 0)), midnight.At);
+            Assert.IsTrue(snapshot.Slots.Single(s => s.Time == new TimeOnly(local.Hour, 0)).HasUnplaced);
+        }
+
+        [TestMethod]
+        public async Task A_modified_hours_day_shows_its_replacement_hours_instead_of_its_services()
+        {
+            TestRestaurant restaurant = await SaturdayRestaurantAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ReservationApi.AddClosureAsync(restaurant.Id, Saturday, (12, 16));
+            Reservation lunch = await restaurant.AddReservationAsync(Saturday, 15, 30);
+            await restaurant.AddReservationAsync(Saturday, 20);
+
+            ServiceSnapshotResponse snapshot = await ServiceApi.GetAsync(staff, $"?day={Day(Saturday)}");
+
+            Assert.AreEqual(new TimeOnly(12, 0), snapshot.Service!.Opening);
+            Assert.AreEqual(new TimeOnly(16, 0), snapshot.Service.Closing);
+            // Le pas le plus fin des services du jour, sur la plage de remplacement
+            Assert.AreEqual(30, snapshot.Service.SlotStep);
+            Assert.AreEqual(8, snapshot.Slots.Count);
+            Assert.AreEqual(new TimeOnly(12, 0), snapshot.Windows.Single().Opening);
+            // La réservation de 20:00 tombe hors de toute plage : elle n'est d'aucun service
+            Assert.AreEqual(lunch.Id, snapshot.ToPlace.Single().Id);
+            await ApiAssert.ErrorAsync(await staff.GetAsync($"api/service?day={Day(Saturday)}&opening=19:00"), HttpStatusCode.NotFound, "NotFound");
         }
 
         [TestMethod]
@@ -168,7 +219,7 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
-        public async Task A_seated_table_stays_occupied_until_now_and_a_finished_one_until_it_was_released()
+        public async Task An_overrunning_seated_table_stays_occupied_until_released_and_a_finished_one_until_it_was()
         {
             TestRestaurant restaurant = await SaturdayRestaurantAsync();
             using HttpClient staff = restaurant.StaffClient();
@@ -189,7 +240,7 @@ namespace TUROAPI.Test
             Assert.AreEqual(ServiceState.Finished, snapshot.Service!.State);
             Dictionary<string, ServiceOccupationResponse> byTable = snapshot.Zones.Single().Tables.ToDictionary(t => t.Name, t => t.Occupations.Single());
             Assert.AreEqual(Dates.ToUtc(lastSaturday, new TimeOnly(19, 50)), byTable["T1"].Start);
-            Assert.AreEqual(snapshot.Now, byTable["T1"].End);
+            Assert.AreEqual(ServiceView.Unreleased, byTable["T1"].End);
             Assert.IsNull(byTable["T1"].LateFrom);
             Assert.AreEqual(Dates.ToUtc(lastSaturday, new TimeOnly(20, 10)), byTable["T2"].End);
             Assert.AreEqual(Dates.ToUtc(lastSaturday, new TimeOnly(21, 30)), byTable["T3"].End);

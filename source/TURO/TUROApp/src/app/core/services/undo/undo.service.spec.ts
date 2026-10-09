@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApiError, ReservationDetail } from '../../../models';
 import { ReservationService } from '../reservation/reservation.service';
-import { UNDO_TOO_LATE, UndoBannerState, UndoService } from './undo.service';
+import { UNDO_DOUBLE_BOOKING, UNDO_TOO_LATE, UndoBannerState, UndoService } from './undo.service';
 
 const RESTORED = { id: 'r1', status: 'Confirmed' } as ReservationDetail;
 const seconds = (state: UndoBannerState | null) => (state?.kind === 'offer' ? state.secondsLeft : null);
@@ -70,6 +70,17 @@ describe('UndoService', () => {
     expect(onUndone).not.toHaveBeenCalled();
     jasmine.clock().tick(4000);
     expect(service.state()).toBeNull();
+  });
+
+  it('should not bring back a cancelled reservation onto a slot the client holds again', async () => {
+    reservations.undo.and.resolveTo({ value: null, error: 'Moreau already has a reservation at 20:00 on 2026-10-10.', code: ApiError.ClientAlreadyBooked });
+    const onUndone = jasmine.createSpy('onUndone');
+    service.offer({ message: 'Moreau annulée', reservationId: 'r1', eventId: 'e1', onUndone });
+
+    await service.undo();
+
+    expect(service.state()).toEqual({ kind: 'failed', message: UNDO_DOUBLE_BOOKING });
+    expect(onUndone).not.toHaveBeenCalled();
   });
 
   it('should undo any action through its own call, and name what changed when it is too late', async () => {

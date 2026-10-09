@@ -1,5 +1,5 @@
 import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
-import { HttpClient, httpResource } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import { DataScope, ServiceQuery, ServiceSnapshot, TableCleaned } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -42,6 +42,8 @@ export class ServiceViewService {
   });
   snapshot = this._snapshot.asReadonly();
   failed = computed(() => this._resource.status() === 'error');
+  /** Le service demandé n'existe plus (une heure d'ouverture déplacée, un jour fermé entre-temps) */
+  notFound = computed(() => { const error = this._resource.error(); return error instanceof HttpErrorResponse && error.status === 404; });
   /** Vrai pendant un chargement : l'instantané affiché peut encore être celui d'avant */
   isLoading = this._resource.isLoading;
 
