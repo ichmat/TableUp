@@ -25,7 +25,7 @@ export class ServiceTimeline {
   }
 
   protected slotClass(index: number): string {
-    return twMerge('relative flex flex-col items-center gap-0.5 min-w-16 px-2 py-1 rounded-lg cursor-pointer',
+    return twMerge('relative flex flex-col items-center gap-1 min-w-24 px-3 py-1.5 rounded-lg cursor-pointer text-lg',
       index === this.activeIndex() ? 'bg-interactive text-surface' : 'bg-surface hover:bg-app');
   }
 }

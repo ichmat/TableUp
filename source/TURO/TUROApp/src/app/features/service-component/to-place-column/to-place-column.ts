@@ -4,7 +4,7 @@ import { ServiceReservation, SOURCE_LABEL } from '../../../models';
 import { timeIn } from '../../../shared/utils/time-of-day';
 import { guestName, marks } from '../../booking-component/reservation-display';
 
-/** §5.7 : 126 px, repliable ; deux groupes qu'on ne peut pas confondre, une pastille par réservation */
+/** §5.7 : 189 px, repliable ; deux groupes qu'on ne peut pas confondre, une pastille par réservation */
 @Component({
   selector: 'app-to-place-column',
   imports: [NgTemplateOutlet],

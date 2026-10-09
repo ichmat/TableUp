@@ -80,5 +80,7 @@ describe('ServiceHeader', () => {
 
     expect(element().textContent).toContain('PICKER 2026-10-10');
     expect(create).toHaveBeenCalledTimes(1);
+    // Le bouton dit ce qu'il fait : un « + » seul ne se devine pas
+    expect(element().querySelector('[data-create]')!.textContent!.replace(/\s+/g, ' ').trim()).toBe('+ Réservation');
   });
 });

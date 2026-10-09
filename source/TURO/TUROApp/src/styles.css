@@ -46,6 +46,8 @@
   /* Plan (ardoise) */
   --color-slate: #2E2A26;
   --color-slate-border: #241F1B;
+  /* Murs et piliers sur l'ardoise : assez clairs pour se détacher du sol, sans voler la vedette aux tables */
+  --color-plan-decor: #5C534B;
   /* Craie */
   --color-chalk: #B6AC9C;
   /* Corail — fermeture exceptionnelle, conflit avec des réservations */

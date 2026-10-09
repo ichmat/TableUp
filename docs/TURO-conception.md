@@ -541,7 +541,7 @@ Plan et Agenda ne sont **pas** deux entrées du rail : ce sont deux onglets de v
 
 Deux conséquences directes :
 
-- **Le bouton « + » est global**, dans l'en-tête, pas dans le plan. Créer une réservation doit rester possible depuis la fiche d'un client comme depuis la salle.
+- **Le bouton « + Réservation » est global**, dans l'en-tête, pas dans le plan. Il dit ce qu'il fait : un « + » seul ne se devine pas. Créer une réservation doit rester possible depuis la fiche d'un client comme depuis la salle.
 - **La fiche réservation est un panneau**, jamais un écran plein. Toucher une réservation ouvre un volet à droite *sans quitter la vue* : on garde le plan sous les yeux pendant qu'on lit les notes du client.
 
 ### 4.3 En-tête de contexte et sélecteur de service
@@ -721,7 +721,7 @@ Sur la table, seule l'allergie est dessinée, avec le nom et l'heure de la rése
 
 Nuance conservée du §6.6 : sur la **fiche** réservation, l'allergie reste écrite en toutes lettres et épinglée, jamais réduite à une icône. Une icône signale, un mot informe — et au moment de servir, c'est le mot qu'il faut.
 
-### 5.7 Colonne « À placer » — 126 px, repliable
+### 5.7 Colonne « À placer » — 189 px, repliable
 
 **Deux groupes**, deux compteurs, une séparation nette :
 
@@ -869,7 +869,7 @@ Toucher une réservation ouvre la fiche **à la place de la colonne**, et allume
 
 **Pas de voile sur le plan.** Si ouvrir la fiche allume les tables compatibles, le plan n'est pas en attente — il est *l'objet* de l'action.
 
-**Ici, et seulement ici, le plan se recompose.** La fiche est plus large que la colonne (250 px contre 126) ; si elle recouvrait le plan, une table allumée pourrait se retrouver dessous — exactement ce qu'on cherchait à montrer. Ce n'est pas une contradiction avec la règle du rail (§4.4) : le rail s'ouvre au survol, par accident, potentiellement pendant un glisser ; la fiche s'ouvre sur un clic délibéré, une fois, avant tout glisser. Le décalage coûte 124 px et garantit qu'aucune table allumée n'est cachée. Les tables des autres salles restent signalées par le badge vert sur l'onglet de salle.
+**Ici, et seulement ici, le plan se recompose.** La fiche est plus large que la colonne (250 px contre 189) ; si elle recouvrait le plan, une table allumée pourrait se retrouver dessous — exactement ce qu'on cherchait à montrer. Ce n'est pas une contradiction avec la règle du rail (§4.4) : le rail s'ouvre au survol, par accident, potentiellement pendant un glisser ; la fiche s'ouvre sur un clic délibéré, une fois, avant tout glisser. Le décalage coûte 124 px et garantit qu'aucune table allumée n'est cachée. Les tables des autres salles restent signalées par le badge vert sur l'onglet de salle.
 
 #### Glisser une demande en attente sur une table
 

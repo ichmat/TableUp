@@ -23,6 +23,10 @@ describe('ServiceTimeline', () => {
     expect(element().querySelector('[data-slot="19:30"]')!.getAttribute('class')).toContain('bg-interactive');
   });
 
+  it('should make the slots big enough to hit during a service', () => {
+    expect(element().querySelector('[data-slot]')!.getAttribute('class')).toContain('min-w-24');
+  });
+
   it('should fill each bar with the share of tables taken', () => {
     const bar = element().querySelector('[data-slot="20:00"] [data-fill]') as HTMLElement;
     expect(bar.style.width).toBe('50%');

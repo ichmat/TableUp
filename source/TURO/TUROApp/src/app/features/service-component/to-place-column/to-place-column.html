@@ -5,7 +5,7 @@
         <span title="En attente" class="text-violet">{{ pending().length }}</span>
     </aside>
 } @else {
-    <aside class="w-[126px] shrink-0 h-full bg-surface rounded-xl shadow-xl flex flex-col gap-3 p-2 overflow-y-auto text-xs">
+    <aside class="w-[189px] shrink-0 h-full bg-surface rounded-xl shadow-xl flex flex-col gap-3 p-2 overflow-y-auto text-xs">
         <button type="button" data-collapse aria-label="Replier la colonne" class="self-end cursor-pointer font-bold" (click)="collapsed.set(true)">›</button>
         <section data-group="to-place" class="flex flex-col gap-1">
             <p class="font-bold text-text-muted">À PLACER · {{ toPlace().length }}</p>

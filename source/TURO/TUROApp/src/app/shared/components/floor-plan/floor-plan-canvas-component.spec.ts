@@ -105,6 +105,22 @@ describe('FloorPlanCanvasComponent', () => {
     expect(host.textContent).toContain('BAR');
   });
 
+  it('should set walls and pillars apart from the slate in service, and keep the editor as it is', () => {
+    fixture.componentRef.setInput('decors', [
+      { id: 'wall', zoneId: 'z', type: 'Wall', label: null, x: 0, y: 0, width: 8, height: 0.15, rotation: 0 },
+      { id: 'door', zoneId: 'z', type: 'Door', label: null, x: 2, y: 0, width: 0.9, height: 0.1, rotation: 0 },
+    ]);
+    fixture.detectChanges();
+    const shape = (id: string) => host.querySelector(`[data-decor-id="${id}"] rect`)!.getAttribute('class')!;
+    expect(shape('wall')).toContain('fill-slate');
+
+    fixture.componentRef.setInput('theme', 'slate');
+    fixture.detectChanges();
+    expect(shape('wall')).toContain('fill-plan-decor');
+    expect(shape('wall')).toContain('stroke-chalk');
+    expect(shape('door')).toContain('stroke-chalk');
+  });
+
   it('should not start a table drag with the second finger of a pinch', () => {
     const pressed: unknown[] = [];
     let pinches = 0;

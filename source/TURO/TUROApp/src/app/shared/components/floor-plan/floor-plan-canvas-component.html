@@ -22,11 +22,11 @@
             (pointerdown)="onDecorPointerDown(decor, $event)">
             @switch (decor.type) {
                 @case ('Wall') {
-                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-slate ' + decorStroke(decor)"
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="solidFill() + ' ' + decorStroke(decor)"
                         stroke-width="1" vector-effect="non-scaling-stroke" />
                 }
                 @case ('Pillar') {
-                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="'fill-slate ' + decorStroke(decor)"
+                    <rect [attr.width]="decor.width" [attr.height]="decor.height" [attr.class]="solidFill() + ' ' + decorStroke(decor)"
                         stroke-width="1" vector-effect="non-scaling-stroke" />
                 }
                 @case ('Door') {

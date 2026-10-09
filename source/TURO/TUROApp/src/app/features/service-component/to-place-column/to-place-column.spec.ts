@@ -63,6 +63,10 @@ describe('ToPlaceColumn', () => {
     expect(element().querySelector('[data-pill="moreau"]')!.getAttribute('class')).toContain('touch-none');
   });
 
+  it('should be wide enough to read a name', () => {
+    expect(element().querySelector('aside')!.getAttribute('class')).toContain('w-[189px]');
+  });
+
   it('should fold away and keep the counts in sight', () => {
     (element().querySelector('[data-collapse]') as HTMLButtonElement).click();
     fixture.detectChanges();

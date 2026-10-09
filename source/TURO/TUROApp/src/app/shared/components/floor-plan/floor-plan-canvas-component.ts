@@ -289,7 +289,16 @@ export class FloorPlanCanvasComponent implements OnDestroy {
     if (this.selectedIds().includes(decor.id)) {
       return 'stroke-interactive';
     }
-    return this.flaggedIds().includes(decor.id) ? 'stroke-red-700' : 'stroke-slate';
+    if (this.flaggedIds().includes(decor.id)) {
+      return 'stroke-red-700';
+    }
+    // Sur l'ardoise du service, un contour ardoise disparaîtrait dans le sol
+    return this.theme() === 'slate' ? 'stroke-chalk' : 'stroke-slate';
+  }
+
+  /** Murs et piliers : pleins d'ardoise dans l'éditeur, plus clairs que le sol en service */
+  protected solidFill(): string {
+    return this.theme() === 'slate' ? 'fill-plan-decor' : 'fill-slate';
   }
 
   protected onSvgPointerDown(event: PointerEvent) {
