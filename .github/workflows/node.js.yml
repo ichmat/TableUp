@@ -8,8 +8,8 @@ on:
   workflow_call:
 
 jobs:
-  test-and-build:
-
+  build:
+    name: CI Angular
     runs-on: self-hosted
     env:
       NG_BUILD_MAX_WORKERS: 1
