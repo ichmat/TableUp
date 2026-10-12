@@ -1,3 +1,5 @@
+using TUROAPI.Models.Enums;
+
 namespace TUROAPI.Services
 {
     /// <summary>
@@ -9,9 +11,9 @@ namespace TUROAPI.Services
         /// <summary>Une combinaison et les réponses qu'elle retient. `NoShowStands` : la réservation du no-show l'est toujours</summary>
         public sealed record State(Guid Id, bool IsActive, IReadOnlyList<Guid> TableIds, Guid? KeepGluedFor, Guid? SeparateAfterNoShowOf, bool NoShowStands);
 
-        /// <summary>Une réservation confirmée ou assise, l'entité qui la porte et ses tables physiques : `[Start, End)`</summary>
+        /// <summary>Une réservation confirmée ou assise (`Status`), l'entité qui la porte et ses tables physiques : `[Start, End)`</summary>
         public sealed record Hold(Guid ReservationId, DateOnly ServiceDay, Guid? CombinationId, IReadOnlyList<Guid> TableIds,
-            DateTime Start, DateTime End, string? Guest, int Covers);
+            DateTime Start, DateTime End, string? Guest, int Covers, ReservationStatus Status = ReservationStatus.Confirmed);
 
         public sealed record Planned(DateTime? ActivateAt, DateTime? DeactivateAt, Guid? KeepGluedFor, Guid? SeparateAfterNoShowOf);
 

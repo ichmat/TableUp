@@ -151,6 +151,28 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task Undo_is_refused_when_it_would_glue_a_table_twice()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("12", 4), ("13", 4), ("14", 4), ("15", 4));
+            Guid first = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[0].Id, tables[1].Id);
+            Guid asleep = await ReservationApi.AddCombinationAsync(zoneId, "13-14", 8, tables[1].Id, tables[2].Id);
+            Guid then = await ReservationApi.AddCombinationAsync(zoneId, "14-15", 8, tables[2].Id, tables[3].Id);
+            await PlacementApi.ActivateAsync(asleep);
+
+            Guid undo = await CombinationApi.LaidOutAsync(staff, new LayoutRequest { Glue = new GlueRequest { CombinationId = first } });
+            Assert.IsFalse((await CombinationApi.StoredAsync(asleep)).IsActive);
+            await CombinationApi.LaidOutAsync(staff, new LayoutRequest { Glue = new GlueRequest { CombinationId = then } });
+
+            // 13-14 recollée reprendrait la 14 que tient 14-15 (COMB-04)
+            await ApiAssert.ErrorAsync(await CombinationApi.UndoAsync(staff, undo), HttpStatusCode.Conflict, "UndoExpired");
+            Assert.IsFalse((await CombinationApi.StoredAsync(asleep)).IsActive);
+            Assert.IsTrue((await CombinationApi.StoredAsync(first)).IsActive);
+            Assert.IsTrue((await CombinationApi.StoredAsync(then)).IsActive);
+        }
+
+        [TestMethod]
         public async Task Moving_notifies_the_floor_plan()
         {
             Arranged a = await ArrangeAsync();

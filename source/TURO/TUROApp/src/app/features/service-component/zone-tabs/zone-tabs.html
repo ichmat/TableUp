@@ -7,13 +7,12 @@
             }
         </button>
     }
-    @if (canEdit()) {
-        <a data-edit-plan routerLink="/parametres/plan"
-            [class.opacity-40]="levels() !== null" class="ml-auto flex flex-row items-center gap-1 px-3 py-1 rounded-full border-2 border-interactive text-interactive font-bold">
-            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />
-            </svg>
-            Éditer le plan
-        </a>
-    }
+    <button type="button" data-edit-plan [disabled]="levels() !== null" (click)="editToggle.emit()"
+        [class]="'ml-auto flex flex-row items-center gap-1 px-3 py-1 rounded-full border-2 border-interactive font-bold cursor-pointer disabled:opacity-40 disabled:cursor-default '
+            + (editing() ? 'bg-interactive text-surface' : 'text-interactive')">
+        <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" />
+        </svg>
+        {{ editing() ? 'Terminer' : 'Éditer le plan' }}
+    </button>
 </div>

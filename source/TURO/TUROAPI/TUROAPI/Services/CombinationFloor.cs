@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TUROAPI.Context;
 using TUROAPI.Models;
 using TUROAPI.Models.Enums;
@@ -21,6 +22,14 @@ namespace TUROAPI.Services
 
         /// <summary>`Combinations` sont suivies (avec leurs tables) ; `NoShows` : les no-shows cités par un rappel, par id</summary>
         public sealed record Floor(List<Combination> Combinations, List<Hold> Holds, Dictionary<Guid, Hold> NoShows);
+
+        /// <summary>
+        /// Toutes les combinaisons du restaurant, verrouillées dans l'ordre : deux écritures de collage se suivent (COMB-04).
+        /// Ordre des verrous partout : réservation → tables → combinaisons. L'étage se lit après
+        /// </summary>
+        public static Task LockAsync(TuroDBContext context, Guid restaurantId) =>
+            context.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM \"Combinations\" c JOIN \"Zones\" z ON z.\"Id\" = c.\"ZoneId\" WHERE z.\"RestaurantId\" = {restaurantId} ORDER BY c.\"Id\" FOR UPDATE OF c");
 
         public static async Task<Floor> LoadAsync(TuroDBContext context, Guid restaurantId, DateTime now)
         {
@@ -46,7 +55,7 @@ namespace TUROAPI.Services
                 .AsNoTracking()
                 .ToListAsync();
             return new Floor(combinations, holds, noShows.ToDictionary(r => r.Id,
-                r => new Hold(r.Id, r.ServiceDay, null, [], r.Start, r.Start.AddMinutes(r.Duration), r.Client?.Name, r.Covers)));
+                r => new Hold(r.Id, r.ServiceDay, null, [], r.Start, r.Start.AddMinutes(r.Duration), r.Client?.Name, r.Covers, r.Status)));
         }
 
         public static State StateOf(Combination combination, Floor floor) =>
@@ -60,6 +69,13 @@ namespace TUROAPI.Services
         /// </summary>
         public static async Task ApplyAsync(TuroDBContext context, Guid restaurantId, DateTime now, Reservation? noShow = null)
         {
+            await LockAsync(context, restaurantId);
+            // Une combinaison lue avant le verrou (avec la réservation du geste) garderait ses valeurs d'alors : EF ne
+            // réécrit pas une entité suivie. L'appelant a fait son `SaveChanges` : rien n'est perdu
+            foreach (EntityEntry<Combination> entry in context.ChangeTracker.Entries<Combination>().Where(e => e.State == EntityState.Unchanged).ToList())
+            {
+                await entry.ReloadAsync();
+            }
             Floor floor = await LoadAsync(context, restaurantId, now);
             if (noShow?.LatestAssignment()?.CombinationId is Guid gluedId
                 && floor.Combinations.FirstOrDefault(c => c.Id == gluedId) is { IsActive: true } glued
@@ -67,7 +83,7 @@ namespace TUROAPI.Services
             {
                 glued.SeparateAfterNoShowOf = noShow.Id;
                 floor.NoShows[noShow.Id] = new Hold(noShow.Id, noShow.ServiceDay, null, [], noShow.Start,
-                    noShow.Start.AddMinutes(noShow.Duration), null, noShow.Covers);
+                    noShow.Start.AddMinutes(noShow.Duration), null, noShow.Covers, ReservationStatus.NoShow);
             }
             foreach (Combination combination in floor.Combinations)
             {
@@ -112,7 +128,14 @@ namespace TUROAPI.Services
                 TableIds = members.Select(t => t.Id).ToList(),
                 TableNames = members.Select(t => t.Name).ToList(),
                 Reservation = reminder.About is Hold about
-                    ? new ReminderReservationResponse { Id = about.ReservationId, Start = about.Start, GuestName = about.Guest, Covers = about.Covers }
+                    ? new ReminderReservationResponse
+                    {
+                        Id = about.ReservationId, Start = about.Start, GuestName = about.Guest, Covers = about.Covers, Status = about.Status,
+                        ServiceDay = about.ServiceDay,
+                        ClaimedTable = reminder.Kind == CombinationReminderKind.Separate
+                            ? members.FirstOrDefault(m => about.TableIds.Contains(m.Id))?.Name
+                            : null,
+                    }
                     : null,
                 Separates = reminder.Kind == CombinationReminderKind.Approach
                     ? floor.Combinations
@@ -149,7 +172,7 @@ namespace TUROAPI.Services
                 : assignment.Combination?.Tables.Select(t => t.Id).ToList() ?? [];
             DateTime end = interval.End == ServiceView.Unreleased ? now.AddMinutes(PlacementEngine.SoonMinutes) : interval.End;
             return new Hold(reservation.Id, reservation.ServiceDay, assignment.CombinationId, tableIds, interval.Start, end,
-                reservation.Client?.Name, reservation.Covers);
+                reservation.Client?.Name, reservation.Covers, reservation.Status);
         }
     }
 }

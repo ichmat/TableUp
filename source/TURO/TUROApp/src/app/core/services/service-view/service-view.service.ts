@@ -54,7 +54,12 @@ export class ServiceViewService {
 
   // Les rappels parlent de la salle maintenant : lus dès la connexion, quel que soit l'écran (le rail les signale)
   private _reminders = httpResource<CombinationReminder[]>(() => (this._auth.isConnected() ? `${SERVICE_URL}/reminders` : undefined));
-  reminders = computed(() => (this._reminders.hasValue() ? this._reminders.value() : []));
+  // Comme l'instantané : la liste précédente reste pendant un rechargement, même en échec ; déconnecté, il n'y en a plus
+  private _reminderList = linkedSignal<CombinationReminder[] | undefined, CombinationReminder[]>({
+    source: () => (this._reminders.hasValue() ? this._reminders.value() : this._auth.isConnected() ? undefined : []),
+    computation: (value, previous) => value ?? previous?.value ?? [],
+  });
+  reminders = this._reminderList.asReadonly();
   // L'horloge est relue à chaque nouvelle liste : un rappel déjà échu à l'arrivée s'affiche sans attendre le pas suivant
   private _clock = linkedSignal<CombinationReminder[], number>({ source: () => this.reminders(), computation: () => Date.now() });
   /** Ceux dont l'heure est venue ; aucun n'expire (COMB-06) */

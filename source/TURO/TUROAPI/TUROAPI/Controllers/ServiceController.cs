@@ -351,15 +351,33 @@ namespace TUROAPI.Controllers
             }
 
             await using var transaction = await context.Database.BeginTransactionAsync();
-            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Combinations\" WHERE \"Id\" = {id} FOR UPDATE");
             DateTime now = DateTime.UtcNow;
+            // « Finalement non » retire les affectations d'une réservation : elle se verrouille avant les combinaisons
+            Guid? abandoned = null;
+            if (request.Answer == ReminderAnswer.Abandon)
+            {
+                CombinationFloor.Floor seen = await CombinationFloor.LoadAsync(context, CurrentRestaurantId, now);
+                abandoned = seen.Combinations.FirstOrDefault(c => c.Id == id) is Combination c ? CombinationFloor.ReminderOf(c, seen, now)?.Reservation?.Id : null;
+                if (abandoned is Guid abandonedId)
+                {
+                    await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Reservations\" WHERE \"Id\" = {abandonedId} FOR UPDATE");
+                }
+                // L'étage se relit sous verrou : rien de ce coup d'œil ne doit rester suivi
+                context.ChangeTracker.Clear();
+            }
+            await CombinationFloor.LockAsync(context, CurrentRestaurantId);
             CombinationFloor.Floor floor = await CombinationFloor.LoadAsync(context, CurrentRestaurantId, now);
             Combination combination = floor.Combinations.FirstOrDefault(c => c.Id == id)
                 ?? throw new ApiErrorException(ApiError.NotFound, "Combination not found.");
             CombinationReminderResponse? current = CombinationFloor.ReminderOf(combination, floor, now);
-            if (current == null || current.Kind != request.Kind || current.DueAt > now)
+            if (current == null || current.Kind != request.Kind || current.DueAt > now
+                || (request.Answer == ReminderAnswer.Abandon && current.Reservation?.Id != abandoned))
             {
                 throw new ApiErrorException(ApiError.ReminderChanged, combination.Name);
+            }
+            if (request.Answer == ReminderAnswer.Abandon && current.Reservation is { Status: not ReservationStatus.Confirmed })
+            {
+                throw new ApiErrorException(ApiError.ReservationActionNotAllowed, "the guests are already seated.");
             }
 
             Dictionary<Guid, CombinationFields> before = floor.Combinations.ToDictionary(c => c.Id, CombinationFields.Of);
@@ -369,12 +387,7 @@ namespace TUROAPI.Controllers
             switch (request.Answer)
             {
                 case ReminderAnswer.Done:
-                    // COMB-04 : une table n'est que dans une combinaison collée ; les tables poussées ici quittent l'autre
-                    foreach (Combination other in floor.Combinations.Where(o => o.Id != id && o.IsActive && o.Tables.Any(t => combination.Tables.Any(m => m.Id == t.Id))))
-                    {
-                        CombinationFloor.SetActive(other, false);
-                    }
-                    CombinationFloor.SetActive(combination, true);
+                    Glue(floor, combination);
                     break;
                 case ReminderAnswer.Later:
                     combination.SnoozedUntil = TruncateToMicroseconds(now.AddMinutes(CombinationFloor.SnoozeMinutes));
@@ -467,6 +480,10 @@ namespace TUROAPI.Controllers
 
             await using var transaction = await context.Database.BeginTransactionAsync();
             DateTime now = DateTime.UtcNow;
+            // Les tables déplacées et celles d'une paire à créer, puis les combinaisons : l'ordre des verrous des gestes
+            Guid[] lockedTables = [.. movedIds.Concat(request.Glue is { CombinationId: null } pair ? pair.TableIds : []).Distinct()];
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Tables\" WHERE \"Id\" = ANY({lockedTables}) ORDER BY \"Id\" FOR UPDATE");
+            await CombinationFloor.LockAsync(context, CurrentRestaurantId);
             Dictionary<Guid, Table> moved = await context.Tables
                 .Include(t => t.Zone)
                 .Where(t => movedIds.Contains(t.Id) && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
@@ -602,19 +619,24 @@ namespace TUROAPI.Controllers
                 : throw new ApiErrorException(ApiError.UndoExpired);
 
             await using var transaction = await context.Database.BeginTransactionAsync();
+            // L'ordre des verrous des gestes : réservations, tables, puis combinaisons.
+            // Un second « Annuler » simultané attend ici, puis voit les affectations déjà remises
+            Guid[] reservations = [.. entry.RemovedAssignments.Select(a => a.ReservationId).Distinct()];
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Reservations\" WHERE \"Id\" = ANY({reservations}) ORDER BY \"Id\" FOR UPDATE");
             Guid[] tableIds = [.. entry.PositionsAfter.Keys];
             await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Tables\" WHERE \"Id\" = ANY({tableIds}) ORDER BY \"Id\" FOR UPDATE");
-            Guid[] combinationIds = [.. entry.CombinationsAfter.Keys];
-            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Combinations\" WHERE \"Id\" = ANY({combinationIds}) ORDER BY \"Id\" FOR UPDATE");
+            await CombinationFloor.LockAsync(context, CurrentRestaurantId);
 
             List<Table> tables = await context.Tables.Where(t => tableIds.Contains(t.Id)).ToListAsync();
-            List<Combination> combinations = await context.Combinations.Where(c => combinationIds.Contains(c.Id)).ToListAsync();
+            Guid[] combinationIds = [.. entry.CombinationsAfter.Keys];
+            List<Combination> all = await context.Combinations
+                .Where(c => c.Zone.RestaurantId == CurrentRestaurantId)
+                .Include(c => c.Tables)
+                .ToListAsync();
+            List<Combination> combinations = all.Where(c => combinationIds.Contains(c.Id)).ToList();
             const double epsilon = 1e-6;
             bool moved = tables.Any(t => Math.Abs(t.X - entry.PositionsAfter[t.Id].X) > epsilon || Math.Abs(t.Y - entry.PositionsAfter[t.Id].Y) > epsilon);
             bool changed = combinations.Count != combinationIds.Length || combinations.Any(c => CombinationFields.Of(c) != entry.CombinationsAfter[c.Id]);
-            Guid[] reservations = [.. entry.RemovedAssignments.Select(a => a.ReservationId).Distinct().Order()];
-            // Un second « Annuler » simultané attend ici, puis voit les affectations déjà remises
-            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Reservations\" WHERE \"Id\" = ANY({reservations}) ORDER BY \"Id\" FOR UPDATE");
             bool replaced = await context.Assignments.AnyAsync(a => reservations.Contains(a.ReservationId));
             if (moved || changed || replaced)
             {
@@ -628,6 +650,12 @@ namespace TUROAPI.Controllers
             foreach (Combination combination in combinations)
             {
                 entry.CombinationsBefore[combination.Id].ApplyTo(combination);
+            }
+            // COMB-04 : une combinaison recollée ne reprend pas une table qu'une autre, collée depuis, tient
+            List<Combination> others = all.Where(o => !combinationIds.Contains(o.Id) && o.IsActive).ToList();
+            if (combinations.Any(c => c.IsActive && others.Any(o => o.Tables.Any(t => c.Tables.Any(m => m.Id == t.Id)))))
+            {
+                throw new ApiErrorException(ApiError.UndoExpired);
             }
             context.Assignments.AddRange(entry.RemovedAssignments.Select(a => a.ToAssignment()));
             await context.EventLogs.Where(e => entry.EventIds.Contains(e.Id)).ExecuteDeleteAsync();

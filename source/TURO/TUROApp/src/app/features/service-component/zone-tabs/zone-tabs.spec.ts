@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { bestLevel, ZoneTabs } from './zone-tabs';
 
 describe('ZoneTabs', () => {
@@ -7,7 +6,6 @@ describe('ZoneTabs', () => {
   const element = () => fixture.nativeElement as HTMLElement;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(ZoneTabs);
     fixture.componentRef.setInput('tabs', [{ id: 'z1', name: 'Salle', taken: 8, total: 12 }, { id: 'z2', name: 'Terrasse', taken: 3, total: 6 }]);
     fixture.componentRef.setInput('activeId', 'z1');
@@ -29,13 +27,24 @@ describe('ZoneTabs', () => {
     expect(selected).toHaveBeenCalledOnceWith('z2');
   });
 
-  it('should offer the plan editor to an administrator only', () => {
-    expect(element().querySelector('[data-edit-plan]')).toBeNull();
+  it('should offer the edit mode to both roles, and say how to leave it', () => {
+    let toggled = 0;
+    fixture.componentInstance.editToggle.subscribe(() => toggled++);
+    const edit = () => element().querySelector('[data-edit-plan]') as HTMLButtonElement;
+    expect(edit().textContent).toContain('Éditer le plan');
 
-    fixture.componentRef.setInput('canEdit', true);
+    edit().click();
+    fixture.componentRef.setInput('editing', true);
     fixture.detectChanges();
 
-    expect(element().querySelector('[data-edit-plan]')!.getAttribute('href')).toBe('/parametres/plan');
+    expect(toggled).toBe(1);
+    expect(edit().textContent).toContain('Terminer');
+  });
+
+  it('should dim the edit mode during a placement', () => {
+    fixture.componentRef.setInput('levels', {});
+    fixture.detectChanges();
+    expect((element().querySelector('[data-edit-plan]') as HTMLButtonElement).disabled).toBeTrue();
   });
 });
 
@@ -43,7 +52,6 @@ describe('ZoneTabs placement levels', () => {
   let fixture: ComponentFixture<ZoneTabs>;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(ZoneTabs);
     fixture.componentRef.setInput('tabs', [{ id: 'z1', name: 'Salle', taken: 1, total: 4 }, { id: 'z2', name: 'Terrasse', taken: 0, total: 2 }]);
   });

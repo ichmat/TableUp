@@ -1,0 +1,20 @@
+<div class="flex w-72 flex-col gap-2">
+    @for (reminder of reminders(); track reminder.combinationId) {
+        <div [attr.data-reminder]="reminder.combinationId" class="flex flex-col gap-2 rounded-xl border-2 border-violet bg-surface p-3 text-text shadow-2xl">
+            <p class="flex flex-row items-center gap-2 text-sm font-bold">
+                <!-- Le violet du ! de la frise : un seul violet, un seul sens — « ça t'attend » -->
+                <span class="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-violet text-xs text-surface">!</span>
+                {{ title(reminder) }}
+            </p>
+            @if (detail(reminder, timeZone()); as text) {
+                <p class="whitespace-pre-line text-sm text-text-muted">{{ text }}</p>
+            }
+            <div class="flex flex-row flex-wrap gap-1">
+                @for (choice of answers(reminder); track choice.answer) {
+                    <app-button [attr.data-answer]="choice.answer" [text]="choice.label" type="Secondary" buttonClass="h-9"
+                        (click)="answered.emit({ reminder, answer: choice.answer })" />
+                }
+            </div>
+        </div>
+    }
+</div>

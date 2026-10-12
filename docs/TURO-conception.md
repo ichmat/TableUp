@@ -24,7 +24,7 @@
 | Placement | Toutes les possibilités montrées : `✓` vert plein / `~✓` vert-jaune |
 | Confirmation | Popup **uniquement** si la table a une réserve, avec la raison explicite |
 | Tables jointes | Table virtuelle réservable, créée par accolage dans l'éditeur ou en service |
-| Édition du plan | Bouton crayon dans la ligne d'onglets, visible en mode admin seulement |
+| Édition du plan | Bouton crayon dans la ligne d'onglets, visible pour les deux rôles : il bascule l'écran en mode édition sur place |
 | Structure de navigation | 5 entrées de rail. **Plan et Agenda sont deux vues de « Service »**, pas deux écrans |
 | Onglet « Liste » | **Écarté** — l'écran Réservations remplit déjà ce rôle |
 | Rail | Icônes seules, pas de bouton de repli. Survol (PC) / 3 s (tablette). **Recouvre, ne pousse pas** |
@@ -165,7 +165,7 @@ Toutes les requêtes sont filtrées par `restaurant_id`. C'est la frontière du 
 | `retard_grace` | Minutes avant d'afficher le cercle « en retard » (ex. 15) |
 | `rappel_actif`, `rappel_delai_h` | Rappel J-1. Le désactiver rend le compteur de no-show plus sévère qu'il n'est juste (§9.9) |
 | `confirmation_auto` | Confirmation automatique d'une réservation web sur un créneau franchement libre (§11.3) |
-| `proposer_rapprochements` | Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table |
+| `proposer_rapprochements` | Propose de recoller les combinaisons en sommeil et les paires inédites d'une même salle. Une combinaison active se place toujours comme une table |
 | `suivre_nettoyage` | « Libérer » passe la table « à nettoyer ». **Désactivé par défaut** : un petit restaurant n'a pas à cocher chaque table (§3.2) |
 | `delai_min_reservation`, `horizon_reservation` | Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60) |
 
@@ -340,7 +340,7 @@ Une ligne par enregistrement du texte. Jamais modifiée, jamais supprimée : c'e
 | `id`, `restaurant_id` | |
 | `role` | admin · staff |
 
-Le bouton « Éditer le plan » n'existe que pour `admin`.
+L'éditeur de plan (formes, ajouts, salles) n'est ouvert que par `admin`. Le bouton « ✎ Éditer le plan » de l'écran Service, lui, est visible des deux rôles : il ne fait que basculer l'écran en mode édition sur place (§5.5).
 
 ---
 
@@ -454,6 +454,14 @@ Le logiciel **ne bascule jamais `active` tout seul**. Il sonne, l'utilisateur r�
 
 **Aucun rappel n'expire.** Il reste affiché tant que personne n'a répondu. Pas de délai, pas de bascule automatique, pas d'annulation.
 
+**Où ils vivent.** Des cartes en haut à droite du plan, au-dessus de tout ; les tables concernées portent un `!` violet en bas à gauche ; ailleurs, un point violet sur l'icône Service du rail. Les deux rôles répondent. Chaque réponse se défait 8 s.
+
+**Ce que retiennent les réponses.**
+- *Pas encore* : le rappel revient 10 minutes plus tard (`rappel_reporte_a`).
+- *Finalement non* : la réservation qui attendait le rapprochement **retourne dans « À placer »** ; ses tables lui sont retirées (l'historique reste au journal, « Rapprochement 12-13 abandonné »). Les autres réservations de la même combinaison ne sont pas touchées. Le logiciel ne la replace nulle part de lui-même.
+- *Non, les laisser ensemble* : vaut pour **la** réservation qui réclamait la table (`garder_collee_pour`) ; une autre réservation qui en réclame une fait revenir le rappel.
+- *Oui, c'est fait* sépare la combinaison collée qui partage une table : la carte le dit (« 13-14 sera séparée »).
+
 ---
 
 ### 3.5 Fonction de compatibilité
@@ -508,6 +516,8 @@ Le moteur ne se contente pas d'accepter un rapprochement, il le **propose** : sa
 - Mais les candidats sont **triés par distance croissante**, calculée depuis les `x/y` des tables physiques. Les voisines remontent en tête, le reste reste atteignable.
 - Un rapprochement n'est **jamais `✓`** — au mieux `~✓`, ou déconseillé si ses places vides dépassent la tolérance : pousser deux tables et refaire les couverts coûte du travail physique.
 
+**Ce qui est proposé :** les combinaisons en sommeil, et toute **paire** de tables d'une même salle qu'aucune combinaison ne réunit. Au-delà de deux tables, on colle d'abord sur le plan (« ✎ Éditer le plan »). Ils ne se dessinent pas sur le plan — deux tables éloignées n'ont pas d'enveloppe qui veuille dire quelque chose — mais dans la fiche, sous les actions : « Rapprochements · n », cinq lignes puis « Voir plus », du plus proche au plus loin. Toucher une ligne allume ses tables, reliées par un trait violet ; la toucher de nouveau, ou « Placer », vaut un dépôt.
+
 ---
 
 ## 4. Navigation et écrans
@@ -524,7 +534,7 @@ Le moteur ne se contente pas d'accepter un rapprochement, il le **propose** : sa
 | **Paramètres** | Ouvertures, services, capacités, notifications, tables & zones, équipe | Conçu (§9) |
 | **Fiche réservation** | **Pas un écran** : panneau latéral. Se remplace avec la fiche client | Conçu (§6.5, §7.6) |
 | **Formulaire de création** | **Pas un écran** : panneau ouvert par le « + » global, qui survole le plan | Conçu (§8) |
-| **Éditeur de plan** | Plein écran, atteint par le crayon. Admin uniquement | Conçu (§10) |
+| **Éditeur de plan** | Plein écran, atteint depuis Paramètres › Salles et tables. Admin uniquement | Conçu (§10) |
 | **Widget client** | Application publique séparée, hors back-office. **Mobile d'abord** | Conçu (§11) |
 
 ### 4.2 Structure : le service est un seul endroit
@@ -624,11 +634,11 @@ L'accueil reste atteignable en permanence dans le rail. Il devient l'écran de l
 
 ### 4.7 Rôles
 
-Deux rôles au minimum, rendus nécessaires par le bouton crayon « visible en mode admin seulement ».
+Deux rôles au minimum, initialement justifiés par le bouton crayon « visible en mode admin seulement » ; il est désormais visible des deux rôles (§5.5), et ce sont l'éditeur de plan, les paramètres et l'équipe qui restent réservés à l'administrateur.
 
 | Rôle | Accès |
 |---|---|
-| **Service** | Accueil, Service, Réservations, Clients. Place, déplace, marque une arrivée, note un no-show. **Ne peut pas** déplacer une table ni modifier les horaires d'ouverture |
+| **Service** | Accueil, Service, Réservations, Clients. Place, déplace, marque une arrivée, note un no-show. Déplace, colle et sépare les tables depuis l'écran Service. **Ne peut pas** éditer le plan (formes, ajouts, salles) ni modifier les horaires d'ouverture |
 | **Administrateur** | Tout, plus l'éditeur de plan, les paramètres, l'équipe et le widget |
 
 ---
@@ -697,7 +707,11 @@ Le taux d'un onglet compte les tables réservées ou occupées à l'heure du cr�
 
 Pendant un placement, chaque onglet porte **le meilleur niveau qu'il contient** : vert s'il a du parfait, vert-jaune s'il n'a que du possible, estompé s'il n'a rien. Une zone vide mais sans table assez grande est **estompée, pas badgée** — le badge dit « compatible », pas « libre ».
 
-**Bouton « ✎ Éditer le plan »** poussé à droite, contour orange, visible en mode admin seulement, estompé pendant un placement.
+**Bouton « ✎ Éditer le plan »** poussé à droite, contour orange, visible pour les deux rôles, estompé pendant un placement. Il n'ouvre pas l'éditeur : il bascule l'écran en **mode édition** sur place.
+- On glisse une table dans sa salle, ou une combinaison par sa pastille.
+- L'amener contre une autre propose de les coller ; l'écarter de sa combinaison propose de séparer.
+- Chaque lâcher est enregistré tout de suite, passe aussi dans le brouillon de l'éditeur s'il y en a un, et se défait 8 s.
+- Ni rotation, ni changement de salle, ni ajout.
 
 ### 5.6 Le plan
 
@@ -735,7 +749,7 @@ Une pastille par réservation : nom, couverts, heure, source. La sélection la m
 1. Toucher une réservation → **la fiche remplace la colonne** (§6.7), la frise saute sur son créneau, les tables compatibles reçoivent leur halo, tout le reste tombe à 26 % d'opacité. `Échap` annule.
 2. Déposer sur une table `✓` → placement immédiat, aucun popup. **Toucher** une table allumée vaut un dépôt, au même titre que glisser la pastille ; une table estompée ne réagit pas.
 3. Déposer sur une table `~✓` → popup listant **toutes** les raisons, puis *Annuler* / *Placer*.
-4. Si le dépôt crée une combinaison inédite → popup de création (nom auto « 12-13 » modifiable, capacité proposée à la somme et modifiable). Si la combinaison existe déjà, aucune question.
+4. Si le dépôt crée une combinaison inédite (une paire de la liste des rapprochements) → popup de création (nom auto « 12-13 » modifiable, capacité proposée à la somme et modifiable). Si la combinaison existe déjà, aucune question.
 5. Si la réservation déposée est **en attente**, elle est acceptée du même geste, et le message au client part avec 8 s de délai annulable (§6.7).
 6. **Changer de table** : le lien de la fiche (§6.5), ou glisser l'occupation d'une table vers une autre. Mêmes halos, même popup ; le journal note « 5 → 7 ». Lâcher sur sa propre table ne fait rien. Des clients assis qu'on déplace laissent leur table « à nettoyer » (si le suivi est actif). « Annuler » est refusé si l'ancienne table a été prise entre-temps.
 7. Deux postes qui déposent sur la même table au même instant : l'API en place un, l'autre voit « Table prise » et les halos se recalculent. Un rechargement pendant un placement (un collègue a placé ailleurs) recalcule les halos sans quitter le placement.
@@ -1159,7 +1173,7 @@ Dix sections dans une **colonne permanente de 158 px**, à droite du rail, la se
 | **Widget** | Apparence et activation du parcours public |
 | **Restaurant** | Nom, fuseau, coordonnées |
 
-`proposer_rapprochements` ne concerne que les combinaisons en sommeil ; une combinaison active se place toujours comme une table.
+`proposer_rapprochements` concerne les combinaisons en sommeil et les paires inédites d'une même salle ; une combinaison active se place toujours comme une table.
 
 `suivre_nettoyage` affiche sa conséquence sous la case : « Une table libérée redevient libre aussitôt » ou « Une table libérée passe « à nettoyer » jusqu'à ce qu'on la touche → « Nettoyée » ».
 
@@ -1313,7 +1327,7 @@ Les paramètres servent à *prévoir* les fermetures ; l'Accueil à *subir* cell
 
 ## 10. L'éditeur de plan (admin)
 
-Plein écran, atteint par le crayon, réservé au rôle administrateur (§4.7).
+Plein écran, atteint depuis Paramètres › Salles et tables, réservé au rôle administrateur (§4.7). Le crayon de l'écran Service n'ouvre pas l'éditeur : il bascule en mode édition (§5.5).
 
 ### 10.1 La contrainte de départ
 
@@ -1373,6 +1387,8 @@ Deux raisons, et la seconde est la plus forte :
 2. **La salle est peut-être pleine.** Si l'administrateur réorganise le plan à 20 h 30 depuis le bureau, **l'équipe en service ne doit pas voir les tables bouger sous ses doigts**. Le plan publié reste celui du service en cours jusqu'à la publication. Un plan à moitié fini poussé en direct est pire que pas de changement du tout.
 
 Le bandeau permanent répond à la question qu'on se pose en revenant deux jours plus tard : *est-ce que j'avais fini ?*
+
+Un déplacement fait en service arrive dans le brouillon ouvert. L'éditeur le reprend s'il n'a rien en attente ; sinon il le dit (« Le plan a été modifié en service ») et laisse choisir.
 
 ### 10.7 Désactiver une table qui porte des réservations
 

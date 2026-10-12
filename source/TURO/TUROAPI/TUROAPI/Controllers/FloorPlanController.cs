@@ -319,6 +319,12 @@ namespace TUROAPI.Controllers
         [ProducesResponseType<List<ZoneResponse>>(StatusCodes.Status200OK)]
         public async Task<IActionResult> Publish()
         {
+            // Publication, recalcul des dates et leurs deux SaveChanges : tout ou rien. Les verrous des gestes du service,
+            // dans leur ordre (tables puis combinaisons) : un geste en cours finit avant, et son brouillon se relit après
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await context.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM \"Tables\" t JOIN \"Zones\" z ON z.\"Id\" = t.\"ZoneId\" WHERE z.\"RestaurantId\" = {CurrentRestaurantId} ORDER BY t.\"Id\" FOR UPDATE OF t");
+            await CombinationFloor.LockAsync(context, CurrentRestaurantId);
             FloorPlanDraft draft = await context.FloorPlanDrafts
                 .GetOrThrowAsync(d => d.RestaurantId == CurrentRestaurantId, "no floor plan draft to publish.");
             FloorPlanDraftContent content = draft.ReadContent();
@@ -405,11 +411,11 @@ namespace TUROAPI.Controllers
 
             context.FloorPlanDrafts.Remove(draft);
 
-            // Un seul SaveChanges : tout est publié, ou rien
             await context.SaveChangesAsync();
             // Les dates suivent le plan publié : une combinaison collée ou séparée ici se replanifie
             await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
             await context.SaveChangesAsync();
+            await transaction.CommitAsync();
             await NotifyChangedAsync(DataScope.FloorPlan);
             return Ok(await LoadPublishedAsync());
         }

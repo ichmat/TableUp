@@ -2,16 +2,18 @@ import { Component, computed, effect, ElementRef, inject, linkedSignal, NgZone, 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  ApiError, Placement, PlacementEntity, PlacementLevel, PlacementMark, PlanCombination, PlanTable, ReservationDetail, ServiceSnapshot,
+  ApiError, CombinationReminder, LayoutRequest, PlaceTarget, Placement, PlacementApproach, PlacementEntity, PlacementLevel, PlacementMark, PlanCombination, PlanTable, ReminderAnswer, ReservationDetail, ServiceSnapshot, ServiceTable,
 } from '../../models';
 import { ServiceViewService } from '../../core/services/service-view/service-view.service';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
 import { ClientService } from '../../core/services/client/client.service';
-import { AuthService } from '../../core/services/auth/auth.service';
 import { UndoService } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
+import { FloorPlanService } from '../../core/services/floor-plan/floor-plan.service';
 import { Button } from '../../shared/components/button/button';
+import { AccolageDialogComponent } from '../../shared/components/floor-plan/accolage-dialog-component';
+import { SeparationDialogComponent } from '../../shared/components/floor-plan/separation-dialog-component';
 import { FloorPlanCanvasComponent, PlanPointerEvent } from '../../shared/components/floor-plan/floor-plan-canvas-component';
 import { ReservationSheet } from '../booking-component/reservation-sheet/reservation-sheet';
 import { ClientSheet } from '../clients-component/client-sheet/client-sheet';
@@ -23,14 +25,20 @@ import { ServiceChoice, ServiceHeader } from './service-header/service-header';
 import { ServiceTimeline } from './service-timeline/service-timeline';
 import { bestLevel, ZoneTabs } from './zone-tabs/zone-tabs';
 import { PlanLegend } from './plan-legend/plan-legend';
+import { CombinationReminders } from './combination-reminders/combination-reminders';
+import { ApproachList, approachKey } from './approach-list/approach-list';
+import { ApproachDialog } from './approach-dialog/approach-dialog';
+import { answeredMessage } from './combination-reminders/reminder-text';
 import { ToPlaceColumn } from './to-place-column/to-place-column';
 import { defaultSlot, slotIndexAt, tableMarks, tableStatusAt, zoneCount } from './table-status';
 import { apiErrorText } from '../../shared/utils/api-error-text';
 import { entityId, nextText, reasonsMessage, targetOf } from './placement-reasons';
 import { DropTarget, PlacementDrag } from './placement-drag';
 import { bookedLater, bookedLaterText } from './walk-in';
+import { LayoutDrop, LayoutEdit, LayoutScene, movedMessage } from './layout-edit';
 
 export const TABLE_UNDO_TOO_LATE = 'Trop tard : la table a changé entre-temps';
+export const PLAN_UNDO_TOO_LATE = 'Trop tard : le plan a changé entre-temps';
 
 const NOW_MS = 30_000;
 
@@ -84,7 +92,7 @@ function isPlaceable(id: string, snapshot: ServiceSnapshot): boolean {
  * Toucher une table prise ou une pastille ouvre la fiche à la place de la colonne (§6.7) ; le formulaire « + » survole
  */
 @Component({
-  imports: [ServiceHeader, ServiceTimeline, ZoneTabs, FloorPlanCanvasComponent, PlanLegend, ToPlaceColumn, ReservationSheet, ClientSheet, ReservationForm, Button],
+  imports: [ServiceHeader, ServiceTimeline, ZoneTabs, FloorPlanCanvasComponent, PlanLegend, CombinationReminders, ToPlaceColumn, ReservationSheet, ClientSheet, ReservationForm, ApproachList, ApproachDialog, AccolageDialogComponent, SeparationDialogComponent, Button],
   selector: 'app-service-component',
   templateUrl: './service-component.html',
   host: { class: 'block h-full', '(document:keydown.escape)': 'onEscape()' },
@@ -98,12 +106,12 @@ export class ServiceComponent implements OnDestroy {
   private _actions = inject(ReservationActions);
   private _undo = inject(UndoService);
   private _modal = inject(ModalService);
+  private _floorPlan = inject(FloorPlanService);
 
   private _params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
 
   protected snapshot = this._view.snapshot;
   protected failed = this._view.failed;
-  protected isAdmin = inject(AuthService).isAdmin;
   protected timeZone = computed(() => this._restaurant.model()?.timeZone ?? 'Europe/Paris');
   protected hasServices = computed(() => (this._restaurant.model()?.services.length ?? 1) > 0);
 
@@ -173,9 +181,12 @@ export class ServiceComponent implements OnDestroy {
   protected tabs = computed(() => (this.snapshot()?.zones ?? []).map((zone) => ({
     id: zone.id, name: zone.name, ...zoneCount(zone, this._activeAt(), new Date(this._now()), this._track()),
   })));
+  /** COMB-06 : les rappels échus survolent le plan ; leurs tables portent le ! violet */
+  protected reminders = this._view.dueReminders;
+  private _reminderTables = computed(() => new Set(this.reminders().flatMap((reminder) => reminder.tableIds)));
   protected marks = computed(() => {
     const zone = this.zone();
-    return zone === null ? null : tableMarks(zone, this._activeAt(), new Date(this._now()), this._track(), this.timeZone());
+    return zone === null ? null : tableMarks(zone, this._activeAt(), new Date(this._now()), this._track(), this.timeZone(), this._reminderTables());
   });
   protected tableCount = computed(() => (this.snapshot()?.zones ?? []).reduce((count, zone) => count + zone.tables.length, 0));
 
@@ -211,6 +222,22 @@ export class ServiceComponent implements OnDestroy {
   private _placementRequest = 0;
   private _placementLoad: Promise<void> = Promise.resolve();
   private _dropping = false;
+  private _confirming = false;
+
+  /** Le rapprochement désigné dans la liste : ses tables s'allument, reliées (RAPP-03) */
+  approach = signal<PlacementApproach | null>(null);
+  protected selectedApproachKey = computed(() => {
+    const approach = this.approach();
+    return approach === null ? null : approachKey(approach);
+  });
+  protected approachLine = computed(() => this.approach()?.tableIds ?? null);
+  /** Une paire inédite à nommer avant de la créer en plaçant (PLACE-08) */
+  protected approachDialog = signal<{ approach: PlacementApproach, message: string, guest: string, covers: number } | null>(null);
+
+  /** Le plan publié, en sommeil compris : ce que l'accolage réveille, et ce dont un nom doit se distinguer */
+  protected allTables = computed<ServiceTable[]>(() => (this.snapshot()?.zones ?? []).flatMap((zone) => zone.tables));
+  protected allCombinations = computed<PlanCombination[]>(() => this._floorPlan.zones()
+    .flatMap((zone) => zone.combinations.map(({ id, name, capacity, tableIds, isActive }) => ({ id, name, capacity, tableIds, isActive }))));
 
   /** Le glisser (§5.8) : une pastille vers une table, ou l'occupation d'une table vers une autre */
   readonly drag = new PlacementDrag();
@@ -225,6 +252,11 @@ export class ServiceComponent implements OnDestroy {
     const marks: Record<string, PlacementMark> = {};
     for (const entity of placement.entities) {
       marks[entityId(entity)] = { level: entity.level, next: entity.next === null || entity.level === 'Excluded' ? null : nextText(entity.next, this.timeZone()) };
+    }
+    // Un rapprochement désigné : ses tables prennent son niveau, quelle que soit leur marque seules
+    const approach = this.approach();
+    for (const id of approach?.tableIds ?? []) {
+      marks[id] = { level: approach!.level, next: null };
     }
     return marks;
   });
@@ -242,7 +274,183 @@ export class ServiceComponent implements OnDestroy {
     return levels;
   });
 
+  // ---- Le mode édition (§5.5) : déplacer, coller, séparer sur place, pour les deux rôles ----
+
+  editing = signal(false);
+  readonly layoutEdit = new LayoutEdit();
+  private _canvas = viewChild(FloorPlanCanvasComponent);
+  /** Le lâcher dont la fenêtre d'accolage, ou de séparation, attend la réponse */
+  protected accolage = signal<LayoutDrop | null>(null);
+  protected separation = signal<LayoutDrop | null>(null);
+
+  /** Les tables telles qu'elles s'affichent : l'aperçu d'un glisser, ou d'un lâcher que l'API n'a pas encore relu */
+  protected planTables = computed(() => {
+    const preview = this.layoutEdit.preview();
+    return (this.zone()?.tables ?? []).map((table) => {
+      const position = preview?.get(table.id);
+      return position === undefined ? table : { ...table, ...position };
+    });
+  });
+
+  protected accolageView = computed(() => {
+    const proposal = this.accolage()?.accolage;
+    if (!proposal) {
+      return null;
+    }
+    const members = proposal.tableIds
+      .map((id) => this.allTables().find((table) => table.id === id))
+      .filter((table): table is ServiceTable => table !== undefined);
+    return members.length !== proposal.tableIds.length ? null : {
+      members,
+      existing: this.allCombinations().find((c) => c.id === proposal.existingId) ?? null,
+      deactivated: this.allCombinations().filter((c) => proposal.deactivatedIds.includes(c.id)),
+    };
+  });
+
+  protected separationView = computed(() => {
+    const proposal = this.separation()?.separation;
+    const combination = this.allCombinations().find((c) => c.id === proposal?.combinationId);
+    return combination === undefined ? null : {
+      combination,
+      reactivated: this.allCombinations().find((c) => c.id === proposal?.reactivatedId) ?? null,
+    };
+  });
+
+  protected toggleEditing() {
+    if (this.editing()) {
+      this.stopEditing();
+      return;
+    }
+    if (this.placing() !== null) {
+      return;
+    }
+    this.closeAll();
+    this.form.set(null);
+    this.editing.set(true);
+  }
+
+  private stopEditing() {
+    this.layoutEdit.reset();
+    this.accolage.set(null);
+    this.separation.set(null);
+    this.editing.set(false);
+  }
+
+  private scene(): LayoutScene | null {
+    const zone = this.zone();
+    const canvas = this._canvas();
+    return zone === null || canvas === undefined ? null : {
+      zone, tables: zone.tables, decors: zone.decors, combinations: this.allCombinations(),
+      toMetres: (x, y) => canvas.toMetres(x, y),
+    };
+  }
+
+  /** Un lâcher : l'accolage se demande d'abord, puis la séparation ; sinon le déplacement part seul */
+  async onLayoutDrop(drop: LayoutDrop) {
+    if (drop.accolage !== null) {
+      this.accolage.set(drop);
+      return;
+    }
+    if (drop.separation !== null) {
+      this.separation.set(drop);
+      return;
+    }
+    await this.sendLayout({ moves: drop.moves }, movedMessage(drop.moves, this.allTables()));
+  }
+
+  protected async createCombination({ name, capacity }: { name: string, capacity: number }) {
+    const drop = this.accolage();
+    if (drop?.accolage == null) {
+      return;
+    }
+    this.accolage.set(null);
+    await this.sendLayout({ moves: drop.moves, glue: { tableIds: [...drop.accolage.tableIds], name, capacity } }, `${name} collée`);
+  }
+
+  protected async reactivateCombination() {
+    const drop = this.accolage();
+    const existing = this.allCombinations().find((c) => c.id === drop?.accolage?.existingId);
+    if (drop === null || existing === undefined) {
+      return;
+    }
+    this.accolage.set(null);
+    await this.sendLayout({ moves: drop.moves, glue: { combinationId: existing.id } }, `${existing.name} collée`);
+  }
+
+  protected async dismissAccolage() {
+    const drop = this.accolage();
+    if (drop?.accolage == null) {
+      return;
+    }
+    this.layoutEdit.decline(drop.accolage);
+    this.accolage.set(null);
+    // la table a quand même quitté sa combinaison : refuser la nouvelle ne laisse pas l'ancienne réservable
+    if (drop.separation !== null) {
+      this.separation.set(drop);
+      return;
+    }
+    await this.sendLayout({ moves: drop.moves }, movedMessage(drop.moves, this.allTables()));
+  }
+
+  protected async separateCombination() {
+    const drop = this.separation();
+    const proposal = drop?.separation;
+    if (drop === null || !proposal) {
+      return;
+    }
+    this.separation.set(null);
+    const name = this.allCombinations().find((c) => c.id === proposal.combinationId)?.name ?? '';
+    await this.sendLayout({ moves: drop.moves, separate: { combinationId: proposal.combinationId, reactivateId: proposal.reactivatedId } },
+      `${name} séparée`);
+  }
+
+  protected async dismissSeparation() {
+    const drop = this.separation();
+    if (drop?.separation == null) {
+      return;
+    }
+    this.layoutEdit.keep(drop.separation);
+    this.separation.set(null);
+    await this.sendLayout({ moves: drop.moves }, movedMessage(drop.moves, this.allTables()));
+  }
+
+  private async sendLayout(request: LayoutRequest, message: string) {
+    const result = await this._view.layout(request);
+    if (result.error === null) {
+      const undoId = result.value.undoId;
+      this._undo.offer({ message, run: () => this._view.undo(undoId), tooLate: PLAN_UNDO_TOO_LATE });
+      return;
+    }
+    this.layoutEdit.clear();
+    await this._modal.infoModal('Modification impossible', apiErrorText(result));
+  }
+
   constructor() {
+    // Le plan relu remplace l'aperçu du lâcher, sauf pendant un geste ou une question en attente : l'aperçu y est encore la seule trace
+    effect(() => {
+      this.snapshot();
+      untracked(() => {
+        if (!this.layoutEdit.isDragging() && this.accolage() === null && this.separation() === null) {
+          this.layoutEdit.clear();
+        }
+      });
+    });
+
+    // Une fenêtre dont les tables ont disparu au rechargement ne peut plus répondre : le déplacement part seul, il n'est pas perdu
+    effect(() => {
+      const accolage = this.accolage();
+      const separation = this.separation();
+      const stuck = accolage !== null ? this.accolageView() === null : separation !== null && this.separationView() === null;
+      const drop = accolage ?? separation;
+      if (stuck && drop !== null) {
+        untracked(() => {
+          this.accolage.set(null);
+          this.separation.set(null);
+          void this.sendLayout({ moves: drop.moves }, movedMessage(drop.moves, this.allTables()));
+        });
+      }
+    });
+
     effect(() => {
       const params = this._params();
       this._view.setQuery({ day: params.get('day'), opening: params.get('opening'), focus: params.get('place') ?? params.get('focus') });
@@ -352,11 +560,20 @@ export class ServiceComponent implements OnDestroy {
 
   /** La réservation s'ouvre, la frise saute sur son créneau, puis les halos s'allument */
   async startPlacing(reservationId: string) {
+    if (this.editing()) {
+      return;
+    }
     this.bubble.set(null);
     this.seatBubble.set(null);
     if (this.top()?.id !== reservationId) {
       this.focusOn(reservationId);
     }
+    if (this.placing()?.reservationId !== reservationId) {
+      this.approach.set(null);
+      this.approachDialog.set(null);
+    }
+    // Le plan des combinaisons se charge à la demande : prêt avant que la fenêtre d'une paire inédite valide un nom
+    this.allCombinations();
     this.placing.set({ reservationId, placement: null });
     this._placementLoad = this.loadPlacement();
     await this._placementLoad;
@@ -365,6 +582,8 @@ export class ServiceComponent implements OnDestroy {
   stopPlacing() {
     this._placementRequest++;
     this.placing.set(null);
+    this.approach.set(null);
+    this.approachDialog.set(null);
   }
 
   /** L'entité sous un toucher ou un lâcher */
@@ -405,6 +624,70 @@ export class ServiceComponent implements OnDestroy {
     await this._modal.infoModal('Placement impossible', apiErrorText(result));
   }
 
+  /** Toucher une ligne la désigne ; la toucher de nouveau vaut un dépôt, comme une table allumée (PLACE-14) */
+  selectApproach(approach: PlacementApproach) {
+    const current = this.approach();
+    if (current !== null && approachKey(current) === approachKey(approach)) {
+      void this.dropApproach(approach);
+      return;
+    }
+    this.approach.set(approach);
+    this.zoneId.set(approach.zoneId);
+  }
+
+  /** Jamais ✓ : toutes les raisons d'abord. Une paire inédite demande en plus son nom et ses places */
+  async dropApproach(approach: PlacementApproach) {
+    const placement = this.placing()?.placement;
+    if (!placement || this._dropping || this._confirming) {
+      return;
+    }
+    const guest = placement.guestName ?? 'ce client';
+    const zoneName = this.snapshot()?.zones.find((zone) => zone.id === approach.zoneId)?.name ?? '';
+    const message = reasonsMessage(approach,
+      { guest, covers: placement.covers, name: approach.name, capacity: approach.capacity, zoneName, end: placement.end }, this.timeZone());
+    if (approach.combinationId === null) {
+      this.approachDialog.set({ approach, message, guest, covers: placement.covers });
+      return;
+    }
+    // Deux « Placer » rapprochés n'ouvrent pas deux confirmations
+    this._confirming = true;
+    const confirmed = await this._modal.confirmModal(`Placer ${guest} sur ${approach.name} ?`, message, 'Placer', 'Annuler').finally(() => (this._confirming = false));
+    if (!confirmed) {
+      return;
+    }
+    await this.placeApproach({ combinationId: approach.combinationId }, approach.name);
+  }
+
+  protected async confirmApproach({ name, capacity }: { name: string, capacity: number }) {
+    const dialog = this.approachDialog();
+    if (dialog === null) {
+      return;
+    }
+    this.approachDialog.set(null);
+    await this.placeApproach({ newCombination: { tableIds: [...dialog.approach.tableIds], name, capacity } }, name);
+  }
+
+  private async placeApproach(target: PlaceTarget, name: string) {
+    const placing = this.placing();
+    if (placing === null) {
+      return;
+    }
+    const wasPending = this.snapshot()?.pending.some((r) => r.id === placing.reservationId) ?? false;
+    this._dropping = true;
+    const result = await this._actions.placeOn(placing.reservationId, target, wasPending, ' (à rapprocher)');
+    this._dropping = false;
+    if (result.error === null) {
+      this.stopPlacing();
+      return;
+    }
+    if (result.code === ApiError.PlacementUnavailable) {
+      await this._modal.infoModal('Tables prises', `${name} n'est plus libre pour cette réservation.`);
+      this._placementLoad = this.loadPlacement();
+      return;
+    }
+    await this._modal.infoModal('Placement impossible', apiErrorText(result));
+  }
+
   private async loadPlacement() {
     const placing = this.placing();
     if (placing === null) {
@@ -419,6 +702,11 @@ export class ServiceComponent implements OnDestroy {
       this.stopPlacing();
       await this._modal.infoModal('Placement impossible', apiErrorText(result));
       return;
+    }
+    // Un rapprochement que l'API ne propose plus ne reste pas désigné
+    const chosen = this.approach();
+    if (chosen !== null && !result.value.approaches.some((a) => approachKey(a) === approachKey(chosen))) {
+      this.approach.set(null);
     }
     this.placing.set({ reservationId: placing.reservationId, placement: result.value });
   }
@@ -449,12 +737,26 @@ export class ServiceComponent implements OnDestroy {
   }
 
   protected onCombination(event: PlanPointerEvent<PlanCombination>) {
+    if (this.editing()) {
+      const scene = this.scene();
+      if (scene !== null) {
+        this.layoutEdit.pressCombination(event.event, event.point, event.item, scene, (drop) => void this.onLayoutDrop(drop));
+      }
+      return;
+    }
     if (this.placing() !== null) {
       void this.dropOn({ combinationId: event.item.id });
     }
   }
 
   protected onTable(event: PlanPointerEvent<PlanTable>) {
+    if (this.editing()) {
+      const scene = this.scene();
+      if (scene !== null) {
+        this.layoutEdit.pressTable(event.event, event.point, event.item, scene, (drop) => void this.onLayoutDrop(drop));
+      }
+      return;
+    }
     if (this.placing() !== null) {
       void this.dropOn({ tableId: event.item.id });
       return;
@@ -515,6 +817,21 @@ export class ServiceComponent implements OnDestroy {
     await this._modal.infoModal('Action impossible', apiErrorText(result));
   }
 
+  protected async answerReminder({ reminder, answer }: { reminder: CombinationReminder, answer: ReminderAnswer }) {
+    const result = await this._view.answerReminder(reminder.combinationId, reminder.kind, answer);
+    if (result.error === null) {
+      const undoId = result.value.undoId;
+      this._undo.offer({ message: answeredMessage(reminder, answer), run: () => this._view.undo(undoId), tooLate: PLAN_UNDO_TOO_LATE });
+      return;
+    }
+    if (result.code === ApiError.ReminderChanged) {
+      // Un collègue a répondu : la liste relue montre le rappel tel qu'il est
+      this._view.reloadReminders();
+      return;
+    }
+    await this._modal.infoModal('Action impossible', apiErrorText(result));
+  }
+
   protected async clean() {
     const bubble = this.bubble();
     if (bubble === null) {
@@ -531,6 +848,9 @@ export class ServiceComponent implements OnDestroy {
   }
 
   protected startCreate() {
+    if (this.editing()) {
+      return;
+    }
     const day = this.snapshot()?.day;
     this.form.set({ kind: 'create', draft: day === undefined ? { source: 'WalkIn' } : { serviceDay: day, source: 'WalkIn' } });
   }
@@ -580,6 +900,12 @@ export class ServiceComponent implements OnDestroy {
   }
 
   protected onEscape() {
+    if (this.editing()) {
+      if (this.accolage() === null && this.separation() === null) {
+        this.stopEditing();
+      }
+      return;
+    }
     if (this.placing() !== null) {
       this.stopPlacing();
     } else if (this.bubble() !== null) {
@@ -596,6 +922,7 @@ export class ServiceComponent implements OnDestroy {
   ngOnDestroy() {
     clearInterval(this._clock);
     this.drag.cancel();
+    this.layoutEdit.reset();
     this._view.setQuery(null);
   }
 

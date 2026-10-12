@@ -943,7 +943,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
-<div class="rg"><b>ROLE-01</b><div>Le bouton « ✎ Éditer le plan » n'est rendu que pour le rôle <code>admin</code>.</div></div>
+<div class="rg"><b>ROLE-01</b><div>Le bouton « ✎ Éditer le plan » de l'écran Service est rendu pour les deux rôles : il bascule l'écran en mode édition sur place. L'éditeur de plan complet reste réservé au rôle <code>admin</code>, atteint depuis Paramètres › Salles et tables.</div></div>
 <div class="rg"><b>ROLE-02</b><div>Fermer le jour courant n'est pas un paramétrage : le panneau de fermeture est atteignable depuis l'Accueil par le rôle Service. Les fermetures <em>futures</em> restent dans les Paramètres, donc administrateur.</div></div>
 <div class="rg"><b>ROLE-03</b><div>Toutes les requêtes sont filtrées par <code>restaurant_id</code>. Un utilisateur n'appartient qu'à un restaurant.</div></div>
 </div>
@@ -960,7 +960,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td><code>retard_grace</code></td><td>Minutes après l'heure avant d'afficher l'anneau « en retard » (ex. 15)</td></tr>
 <tr><td><code>rappel_actif</code>, <code>rappel_delai_h</code></td><td>Rappel avant la réservation, et son délai</td></tr>
 <tr><td><code>confirmation_auto</code></td><td>Confirme d'office une demande web posée sur un créneau franchement libre</td></tr>
-<tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table</td></tr>
+<tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil et les paires inédites d'une même salle. Une combinaison active se place toujours comme une table</td></tr>
 <tr><td><code>suivre_nettoyage</code></td><td>« Libérer » passe la table « à nettoyer ». <strong>Désactivé par défaut</strong> : un petit restaurant n'a pas à cocher chaque table</td></tr>
 <tr><td><code>delai_min_reservation</code>, <code>horizon_reservation</code></td><td>Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60)</td></tr>
 </tbody></table></div>
@@ -1322,6 +1322,9 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>COMB-05</b><div>Contrainte en base : <code>(active = true AND a_active_le IS NULL) OR (active = false AND a_desactive_le IS NULL)</code>. Au plus une action en attente à la fois.</div></div>
 <div class="rg"><b>COMB-06</b><div><strong>Aucun rappel n'expire.</strong> Il reste affiché tant que personne n'a répondu. Pas de délai, pas de bascule automatique.</div></div>
 <div class="rg"><b>COMB-07</b><div>Trois rappels existent : <em>rapprochement</em> (oui c'est fait / pas encore, dans 10 min / finalement non), <em>séparation</em> (oui / non), et <em>après no-show</em> (« Nguyen ne s'est pas présenté. Séparer 12 et 13 ? »).</div></div>
+<div class="rg"><b>COMB-08</b><div><em>Pas encore</em> reporte le rappel de 10 minutes. <em>Finalement non</em> renvoie la réservation dans « À placer ».</div></div>
+<div class="rg"><b>COMB-09</b><div><em>Non, les laisser ensemble</em> vaut pour la réservation qui réclamait la table ; une autre le fait revenir.</div></div>
+<div class="rg"><b>COMB-10</b><div>Les rappels s'affichent en cartes sur l'écran Service, avec un <code>!</code> violet sur leurs tables et, ailleurs, un point violet sur l'icône du rail.</div></div>
 </div>
 
 <h3 id="sec-4.6"><span class="hn">4.6</span>Propositions de rapprochement</h3>
@@ -1331,6 +1334,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>RAPP-02</b><div><strong>Aucun filtre de proximité.</strong> Toutes les combinaisons possibles sont candidates.</div></div>
 <div class="rg"><b>RAPP-03</b><div>Les candidats sont <strong>triés par distance croissante</strong>, calculée depuis les <code>x/y</code> des tables physiques.</div></div>
 <div class="rg"><b>RAPP-04</b><div>Un rapprochement inédit accepté ouvre le popup de création : nom pré-rempli (« 12-13 »), capacité pré-remplie à la somme, les deux modifiables. Si la combinaison existe déjà, aucune question n'est posée.</div></div>
+<div class="rg"><b>RAPP-05</b><div>Les rapprochements proposés sont les combinaisons en sommeil et les paires inédites de la même salle. Au-delà de deux tables, on colle d'abord sur le plan.</div></div>
+<div class="rg"><b>RAPP-06</b><div>Ils se listent dans la fiche, du plus proche au plus loin. Toucher une ligne relie ses tables sur le plan ; la toucher encore vaut un dépôt.</div></div>
 </div>
 <h2 id="sec-5"><span class="hn">5</span>Navigation</h2>
 
@@ -1592,7 +1597,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>ZONE-01</b><div>Une pastille par zone, avec son taux d'occupation. L'onglet actif est orange.</div></div>
 <div class="rg"><b>ZONE-02</b><div>Pendant un placement, chaque onglet porte <strong>le meilleur niveau qu'il contient</strong> : vert s'il a du <code>✓</code>, vert-jaune s'il n'a que du <code>~✓</code>, estompé s'il n'a rien.</div></div>
 <div class="rg"><b>ZONE-03</b><div>Une zone vide mais sans table assez grande est <strong>estompée, pas badgée</strong> : le badge dit « compatible », pas « libre ».</div></div>
-<div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible en mode admin seulement, et <strong>estompé pendant un placement</strong>.</div></div>
+<div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible pour les deux rôles, et <strong>estompé pendant un placement</strong>. Il bascule l'écran en mode édition : déplacer, coller, séparer, sur place.</div></div>
 <div class="rg"><b>ZONE-05</b><div>Le taux d'un onglet compte les tables réservées ou occupées <strong>à l'heure du créneau actif</strong>, sur ses tables actives.</div></div>
 </div>
 
@@ -2026,7 +2031,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <h2 id="sec-12"><span class="hn">12</span>Éditeur de plan</h2>
 
-<p>Plein écran, atteint par le crayon, <strong>réservé au rôle administrateur</strong>.</p>
+<p>Plein écran, atteint depuis Paramètres › Salles et tables, <strong>réservé au rôle administrateur</strong>. Le crayon de l'écran Service n'ouvre pas l'éditeur : il bascule en mode édition (ZONE-04).</p>
 
 <figure class="fig pleine" id="fig-15">
   <div class="fig-n">Figure 15 · §12</div>
@@ -2125,6 +2130,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>EDIT-15</b><div><strong>L'éditeur est la seule exception à la règle de l'action immédiate.</strong> On modifie un brouillon, et on publie.</div></div>
 <div class="rg"><b>EDIT-16</b><div>L'en-tête porte en permanence <strong>« Brouillon · N modifications »</strong>, une annulation par étapes (↶ ↷) et un « Abandonner » qui remet tout.</div></div>
 <div class="rg"><b>EDIT-17</b><div><strong>Le plan publié reste celui du service en cours jusqu'à la publication.</strong> L'équipe en service ne voit jamais les tables bouger sous ses doigts.</div></div>
+<div class="rg"><b>EDIT-21</b><div>Le mode édition du service écrit le plan publié et le brouillon ouvert ; l'éditeur ouvert reprend ou prévient.</div></div>
 </div>
 
 <h3 id="sec-12.6"><span class="hn">12.6</span>Désactiver une table</h3>
@@ -2227,7 +2233,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PAR-08</b><div><code>tolerance_places</code>, <code>rotation_defaut</code>, <code>retard_grace</code> : chacun affiche son <strong>aperçu sur les vraies tables</strong> du restaurant.</div></div>
 <div class="rg"><b>PAR-09</b><div>Changer <code>rotation_defaut</code> est <strong>sans effet</strong> sur les réservations existantes, qui gardent la durée reçue à leur création.</div></div>
 <div class="rg"><b>PAR-10</b><div>La <strong>fenêtre de réservation</strong> — délai minimum avant une réservation, horizon maximum — gouverne les jours et heures proposés par le widget.</div></div>
-<div class="rg"><b>PAR-11</b><div><code>proposer_rapprochements</code> ne concerne que les combinaisons <strong>en sommeil</strong>. Une combinaison active est déjà collée : elle se place toujours comme une table, quel que soit ce réglage.</div></div>
+<div class="rg"><b>PAR-11</b><div><code>proposer_rapprochements</code> concerne les combinaisons <strong>en sommeil</strong> et les paires inédites d'une même salle. Une combinaison active est déjà collée : elle se place toujours comme une table, quel que soit ce réglage.</div></div>
 </div>
 
 <h3 id="sec-13.5"><span class="hn">13.5</span>Conditions d'annulation</h3>

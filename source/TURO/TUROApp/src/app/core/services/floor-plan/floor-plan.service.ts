@@ -32,6 +32,15 @@ export class FloorPlanService {
         this._plan.reload();
     }
 
+    /** Relit le plan publié et le pose tout de suite : l'appelant travaille sur la version relue */
+    async refresh(): Promise<ApiResult<FloorPlanZone[]>> {
+        const result = await toApiResult(this._http.get<FloorPlanZone[]>(FLOOR_PLAN_URL));
+        if (result.value !== null) {
+            this._plan.set(result.value);
+        }
+        return result;
+    }
+
     createZone(request: ZoneRequest): Promise<ApiResult<Zone>> {
         return this.thenReload(toApiResult(this._http.post<Zone>(`${FLOOR_PLAN_URL}/zones`, request)));
     }

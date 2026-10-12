@@ -66,6 +66,21 @@ export class FloorPlanCanvasComponent implements OnDestroy {
     return this.placementMarks()?.[id] ?? null;
   }
 
+  /** Pendant un placement : les tables d'un rapprochement désigné, reliées dans cet ordre (RAPP-03) */
+  approachLine = input<readonly string[] | null>(null);
+
+  protected approachPoints = computed(() => {
+    const ids = this.approachLine();
+    if (ids === null) {
+      return null;
+    }
+    const centres = ids
+      .map((id) => this.tables().find((table) => table.id === id))
+      .filter((table): table is PlanTable => table !== undefined)
+      .map((table) => `${round(table.x + table.width / 2)},${round(table.y + table.height / 2)}`);
+    return centres.length < 2 ? null : centres.join(' ');
+  });
+
   /** Une entité écartée — ou absente des verdicts — tombe à 26 % (§3.5) */
   protected dimmed(id: string): boolean {
     const marks = this.placementMarks();

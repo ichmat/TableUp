@@ -1,0 +1,22 @@
+<section data-approaches class="flex flex-col gap-1 border-t-2 border-border-soft p-3">
+    <p class="text-xs font-bold uppercase text-text-muted">Rapprochements · {{ approaches().length }}</p>
+    @for (approach of shown(); track key(approach)) {
+        <div [attr.data-approach]="key(approach)" role="button" tabindex="0" [class]="lineClass(approach)"
+            (click)="selected.emit(approach)" (keydown.enter)="selected.emit(approach)">
+            <span [class]="'inline-flex min-w-6 justify-center rounded-full px-1 text-xs font-bold text-slate ' + levelClass(approach.level)">{{ badge(approach.level) }}</span>
+            <span class="flex grow flex-col text-sm">
+                <span class="font-bold">{{ tablesOf(approach) }} · {{ approach.capacity }} places</span>
+                <span class="text-xs text-text-muted">{{ approach.combinationId === null ? 'nouvelle combinaison' : approach.name }}</span>
+                @if (approach.next !== null) {
+                    <span class="text-xs text-text-muted">{{ next(approach) }}</span>
+                }
+            </span>
+            <app-button text="Placer" type="Secondary" buttonClass="h-8" (click)="$event.stopPropagation(); placed.emit(approach)" />
+        </div>
+    }
+    @if (!expanded() && approaches().length > shown().length) {
+        <button type="button" data-more class="self-start text-sm font-bold underline cursor-pointer" (click)="expanded.set(true)">
+            Voir plus ({{ approaches().length - shown().length }})
+        </button>
+    }
+</section>

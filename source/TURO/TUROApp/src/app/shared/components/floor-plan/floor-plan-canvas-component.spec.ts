@@ -246,6 +246,12 @@ describe('FloorPlanCanvasComponent', () => {
       expect(element().querySelector('[data-label]')!.textContent).toContain('Moreau · 20:00');
     });
 
+    it('should flag a table a reminder waits on', () => {
+      fixture.componentRef.setInput('tableMarks', marks({ reminder: true }));
+      fixture.detectChanges();
+      expect(element().querySelector(`[data-table-id="${RECT.id}"] [data-reminder]`)).not.toBeNull();
+    });
+
     it('should draw nothing of the kind on a free table', () => {
       fixture.componentRef.setInput('tableMarks', marks({}));
       fixture.detectChanges();
@@ -301,5 +307,14 @@ describe('FloorPlanCanvasComponent placement marks', () => {
     fixture.detectChanges();
 
     expect(el().querySelector('[data-combination-halo="c1"]')!.getAttribute('class')).toContain('stroke-place-reserve');
+  });
+
+  it('should join the tables of a chosen approach with a dashed line', () => {
+    fixture.componentRef.setInput('tables', [{ ...ROUND, id: 'a', x: 1, y: 1 }, { ...ROUND, id: 'b', x: 4, y: 1 }]);
+    fixture.componentRef.setInput('approachLine', ['a', 'b']);
+    fixture.detectChanges();
+
+    const line = el().querySelector('[data-approach-line]')!;
+    expect(line.getAttribute('points')).toBe(`${1 + ROUND.width / 2},${1 + ROUND.height / 2} ${4 + ROUND.width / 2},${1 + ROUND.height / 2}`);
   });
 });

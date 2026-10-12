@@ -58,7 +58,8 @@ export function zoneCount(zone: ServiceZone, at: Date, now: Date, trackCleaning:
 }
 
 /** Ce que le canevas dessine de chaque table : statut, retard, « Moreau · 20:00 », allergie (§5.6) */
-export function tableMarks(zone: ServiceZone, at: Date, now: Date, trackCleaning: boolean, timeZone: string): Record<string, TableMark> {
+export function tableMarks(zone: ServiceZone, at: Date, now: Date, trackCleaning: boolean, timeZone: string,
+  reminders: ReadonlySet<string> = new Set()): Record<string, TableMark> {
   const marks: Record<string, TableMark> = {};
   for (const table of zone.tables) {
     const state = tableStatusAt(table, at, now, trackCleaning);
@@ -70,6 +71,7 @@ export function tableMarks(zone: ServiceZone, at: Date, now: Date, trackCleaning
         ? null
         : `${guestName(occupation.guestName === null ? null : { name: occupation.guestName })} · ${timeIn(timeZone, new Date(occupation.start))}`,
       allergy: occupation?.hasAllergy ?? false,
+      reminder: reminders.has(table.id),
     };
   }
   return marks;

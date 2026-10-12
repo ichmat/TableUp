@@ -188,7 +188,7 @@ describe('ServiceViewService', () => {
 
   const REMINDER = (dueAt: string): CombinationReminder => ({
     combinationId: 'c1', name: '12-13', kind: 'Approach', dueAt, tableIds: ['t12', 't13'], tableNames: ['12', '13'],
-    reservation: { id: 'r1', start: dueAt, guestName: 'Nguyen', covers: 8 }, separates: [],
+    reservation: { id: 'r1', start: dueAt, guestName: 'Nguyen', covers: 8, status: 'Confirmed', serviceDay: '2026-10-10', claimedTable: null }, separates: [],
   });
 
   it('should show a reminder once its time has come, without asking again', async () => {
@@ -240,6 +240,22 @@ describe('ServiceViewService', () => {
       expect(call.request.method).toBe('GET');
       call.flush([]);
     }
+  });
+
+  it('should keep the last reminders while a reload fails', async () => {
+    await settle();
+    service.reloadReminders();
+    TestBed.tick();
+    http.expectOne('/api/service/reminders').flush([REMINDER('2026-10-10T19:30:00Z')]);
+    await settle();
+    expect(service.reminders().length).toBe(1);
+
+    service.reloadReminders();
+    TestBed.tick();
+    http.expectOne('/api/service/reminders').flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(service.reminders().length).toBe(1);
   });
 
   it('should answer a reminder, then reload what it changed', async () => {

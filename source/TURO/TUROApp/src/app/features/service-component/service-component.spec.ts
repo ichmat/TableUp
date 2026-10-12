@@ -4,38 +4,47 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import {
-  ApiError, ClientDetail, Placement, PlacementLevel, PlacementReason, PlanTable, ReservationDetail, Restaurant, ServiceQuery, ServiceSlot,
+  ApiError, ClientDetail, CombinationReminder, FloorPlanZone, Placement, PlacementApproach, PlacementLevel, PlacementReason, PlanTable, ReservationDetail, Restaurant, ServiceQuery, ServiceSlot,
   ServiceSnapshot, TableMark,
 } from '../../models';
 import { ServiceViewService } from '../../core/services/service-view/service-view.service';
 import { ReservationService } from '../../core/services/reservation/reservation.service';
 import { RestaurantService } from '../../core/services/restaurant/restaurant-service';
 import { ClientService } from '../../core/services/client/client.service';
-import { AuthService } from '../../core/services/auth/auth.service';
 import { UndoService } from '../../core/services/undo/undo.service';
 import { ModalService } from '../../core/services/modal/modal.service';
+import { FloorPlanService } from '../../core/services/floor-plan/floor-plan.service';
 import { ReservationActions } from '../booking-component/reservation-actions';
 import { Button } from '../../shared/components/button/button';
 import { ReservationFormMode, ReservationSaved } from '../booking-component/reservation-draft';
-import { ServiceComponent, TABLE_UNDO_TOO_LATE } from './service-component';
+import { PLAN_UNDO_TOO_LATE, ServiceComponent, TABLE_UNDO_TOO_LATE } from './service-component';
 import { PlacementDrag } from './placement-drag';
+import { LayoutDrop, LayoutEdit } from './layout-edit';
 import { occupation, serviceReservation, serviceSnapshot, serviceTable, serviceZone, utc } from './testing/service-fixtures';
 
 @Component({ selector: 'app-service-header', template: 'HEADER' })
 class HeaderStub { snapshot = input.required<ServiceSnapshot>(); timeZone = input.required<string>(); hasServices = input(true); chosen = output<unknown>(); today = output<void>(); create = output<void>(); }
 @Component({ selector: 'app-service-timeline', template: 'TIMELINE {{ activeIndex() }}' })
 class TimelineStub { slots = input.required<ServiceSlot[]>(); activeIndex = input.required<number>(); tableCount = input.required<number>(); picked = output<number>(); }
-@Component({ selector: 'app-zone-tabs', template: 'TABS {{ canEdit() }}' })
-class TabsStub { tabs = input.required<unknown[]>(); activeId = input<string | null>(null); canEdit = input(false); levels = input<unknown>(null); selected = output<string>(); }
+@Component({ selector: 'app-zone-tabs', template: 'TABS {{ editing() }}' })
+class TabsStub {
+  tabs = input.required<unknown[]>(); activeId = input<string | null>(null); editing = input(false); levels = input<unknown>(null);
+  selected = output<string>(); editToggle = output<void>();
+}
 @Component({ selector: 'app-floor-plan-canvas', template: 'CANVAS' })
 class CanvasStub {
   zone = input.required<unknown>(); tables = input<readonly PlanTable[]>([]); decors = input<unknown[]>([]); combinations = input<unknown[]>([]);
   selectedIds = input<readonly string[]>([]); showGrid = input(true); theme = input('light'); tableMarks = input<Record<string, TableMark> | null>(null);
   placementMarks = input<unknown>(null);
+  approachLine = input<unknown>(null);
+  contactIds = input<unknown>([]);
+  toMetres(x: number, y: number) { return { x: x / 100, y: y / 100 }; }
   tablePointerDown = output<unknown>(); backgroundClick = output<unknown>(); combinationPointerDown = output<unknown>();
 }
 @Component({ selector: 'app-plan-legend', template: 'LEGEND' })
 class LegendStub { trackCleaning = input(false); }
+@Component({ selector: 'app-combination-reminders', template: 'REMINDERS' })
+class RemindersStub { reminders = input.required<unknown[]>(); timeZone = input.required<string>(); answered = output<unknown>(); }
 @Component({ selector: 'app-to-place-column', template: 'COLUMN' })
 class ColumnStub {
   toPlace = input.required<unknown[]>(); pending = input.required<unknown[]>(); timeZone = input.required<string>(); opened = output<string>();
@@ -48,6 +57,25 @@ class ClientStub {
   client = input<ClientDetail | null>(null); failed = input(false); readOnly = input(false); origin = input<string | null>(null);
   closed = output<void>(); back = output<void>(); openReservation = output<string>(); openInClients = output<void>();
 }
+@Component({ selector: 'app-approach-list', template: 'APPROACHES' })
+class ApproachListStub {
+  approaches = input.required<unknown[]>(); selectedKey = input<string | null>(null); timeZone = input.required<string>();
+  selected = output<PlacementApproach>(); placed = output<PlacementApproach>();
+}
+@Component({ selector: 'app-approach-dialog', template: 'APPROACH DIALOG' })
+class ApproachDialogStub {
+  approach = input.required<unknown>(); guest = input.required<string>(); covers = input.required<number>(); message = input.required<string>();
+  tables = input.required<unknown[]>(); combinations = input.required<unknown[]>();
+  confirmed = output<{ name: string, capacity: number }>(); cancelled = output<void>();
+}
+@Component({ selector: 'app-accolage-dialog-component', template: 'ACCOLAGE' })
+class AccolageStub {
+  members = input.required<unknown[]>(); existing = input<unknown>(null); deactivated = input<unknown[]>([]);
+  tables = input.required<unknown[]>(); combinations = input.required<unknown[]>();
+  create = output<{ name: string, capacity: number }>(); reactivate = output<void>(); dismiss = output<void>();
+}
+@Component({ selector: 'app-separation-dialog-component', template: 'SEPARATION' })
+class SeparationStub { combination = input.required<unknown>(); reactivated = input<unknown>(null); separate = output<void>(); dismiss = output<void>(); }
 @Component({ selector: 'app-reservation-form', template: 'FORM {{ mode().kind }}' })
 class FormStub { mode = input.required<ReservationFormMode>(); saved = output<ReservationSaved>(); cancelled = output<void>(); }
 
@@ -82,6 +110,8 @@ describe('ServiceComponent', () => {
   const view = {
     snapshot, failed, notFound, isLoading, setQuery, reload, clean: jasmine.createSpy('clean'), undoClean: jasmine.createSpy('undoClean'),
     placement: jasmine.createSpy('placement'), seat: jasmine.createSpy('seat'),
+    dueReminders: signal<CombinationReminder[]>([]), answerReminder: jasmine.createSpy('answerReminder'), undo: jasmine.createSpy('undo'),
+    reloadReminders: jasmine.createSpy('reloadReminders'), layout: jasmine.createSpy('layout'),
   };
   const selectedId = signal<string | null>(null);
   const reservations = {
@@ -96,7 +126,6 @@ describe('ServiceComponent', () => {
     saved: jasmine.createSpy('saved'), placeOn: jasmine.createSpy('placeOn'), reopened,
     takeReopened: () => { const mode = reopened(); reopened.set(null); return mode; },
   };
-  const isAdmin = signal(false);
   const text = () => (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
   const element = () => fixture.nativeElement as HTMLElement;
   const button = (label: string) => Array.from(element().querySelectorAll('button')).find((b) => b.textContent!.trim() === label)!;
@@ -135,6 +164,10 @@ describe('ServiceComponent', () => {
     view.placement.calls.reset();
     view.placement.and.resolveTo({ value: PLACEMENT({}), error: null });
     view.seat.calls.reset();
+    view.dueReminders.set([]);
+    view.answerReminder.calls.reset();
+    view.undo.calls.reset();
+    view.reloadReminders.calls.reset();
     view.seat.and.resolveTo({ value: null, error: 'non' });
     actions.placeOn.calls.reset();
     modal.confirmModal.calls.reset();
@@ -145,7 +178,7 @@ describe('ServiceComponent', () => {
     modal.infoModal.calls.reset();
     modal.infoModal.and.resolveTo();
     reopened.set(null);
-    isAdmin.set(false);
+    view.layout.calls.reset();
     await TestBed.configureTestingModule({
       imports: [ServiceComponent],
       providers: [
@@ -153,15 +186,15 @@ describe('ServiceComponent', () => {
         { provide: ReservationService, useValue: reservations },
         { provide: RestaurantService, useValue: { model: signal({ timeZone: 'UTC', services: [{ day: 'Saturday' }] } as Restaurant) } },
         { provide: ClientService, useValue: { select: jasmine.createSpy('select') } },
-        { provide: AuthService, useValue: { isAdmin } },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { queryParamMap: params } },
         { provide: UndoService, useValue: undo },
         { provide: ModalService, useValue: modal },
         { provide: ReservationActions, useValue: actions },
+        { provide: FloorPlanService, useValue: { zones: signal<FloorPlanZone[]>([]) } },
       ],
     }).overrideComponent(ServiceComponent, {
-      set: { imports: [HeaderStub, TimelineStub, TabsStub, CanvasStub, LegendStub, ColumnStub, SheetStub, ClientStub, FormStub, Button] },
+      set: { imports: [HeaderStub, TimelineStub, TabsStub, CanvasStub, LegendStub, RemindersStub, ColumnStub, SheetStub, ClientStub, FormStub, ApproachListStub, ApproachDialogStub, AccolageStub, SeparationStub, Button] },
     }).compileComponents();
     // L'horloge de l'écran vit le samedi des fixtures : le créneau en cours se lit à 20:07, quel que soit le jour réel
     spyOn(Date, 'now').and.returnValue(Date.parse(utc('20:07')));
@@ -289,15 +322,128 @@ describe('ServiceComponent', () => {
     expect(text()).toContain('COLUMN');
   });
 
-  it('should keep the room chosen when the service reloads, and offer the editor to an administrator', () => {
-    isAdmin.set(true);
+  it('should keep the room chosen when the service reloads', () => {
     load(SNAPSHOT);
     (fixture.componentInstance as unknown as { zoneId: { set(id: string): void } }).zoneId.set('z2');
 
     load({ ...SNAPSHOT });
 
     expect((fixture.componentInstance as unknown as { zoneId: () => string }).zoneId()).toBe('z2');
-    expect(text()).toContain('TABS true');
+  });
+
+  describe('edit mode', () => {
+    type Editing = { editing: () => boolean, layoutEdit: LayoutEdit, onLayoutDrop(drop: LayoutDrop): Promise<void> };
+    const editor = () => fixture.componentInstance as unknown as Editing;
+    const enterEditing = () => { tabs().editToggle.emit(); fixture.detectChanges(); };
+
+    it('should enter and leave the edit mode, closing the sheet', () => {
+      load(SNAPSHOT);
+      page().focusOn('moreau');
+      fixture.detectChanges();
+
+      enterEditing();
+      expect(editor().editing()).toBeTrue();
+      expect(text()).toContain('TABS true');
+      expect(text()).not.toContain('SHEET');
+
+      page().onEscape();
+      fixture.detectChanges();
+      expect(editor().editing()).toBeFalse();
+    });
+
+    it('should neither open a sheet nor place while editing', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+
+      tap(reserved);
+      await page().startPlacing('chen');
+
+      expect(selectedId()).toBeNull();
+      expect(page().placing()).toBeNull();
+    });
+
+    it('should send a plain move, then offer to undo it', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: { undoId: 'u1' }, error: null });
+
+      await editor().onLayoutDrop({ moves: [{ tableId: 't1', x: 3, y: 1 }], accolage: null, separation: null });
+
+      expect(view.layout).toHaveBeenCalledWith({ moves: [{ tableId: 't1', x: 3, y: 1 }] });
+      expect(undo.offer).toHaveBeenCalledWith(jasmine.objectContaining({ message: 'Table T1 déplacée', tooLate: PLAN_UNDO_TOO_LATE }));
+    });
+
+    it('should ask before gluing, and glue a new pair with its name', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: { undoId: 'u2' }, error: null });
+      const moves = [{ tableId: 't1', x: 2.2, y: 1 }];
+
+      await editor().onLayoutDrop({ moves, accolage: { tableIds: ['t1', 't2'], existingId: null, deactivatedIds: [] }, separation: null });
+      fixture.detectChanges();
+      (fixture.debugElement.query(By.directive(AccolageStub)).componentInstance as AccolageStub).create.emit({ name: '1-2', capacity: 8 });
+      await fixture.whenStable();
+
+      expect(view.layout).toHaveBeenCalledWith({ moves, glue: { tableIds: ['t1', 't2'], name: '1-2', capacity: 8 } });
+    });
+
+    it('should only move when the gluing is declined', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: { undoId: 'u3' }, error: null });
+      const moves = [{ tableId: 't1', x: 2.2, y: 1 }];
+
+      await editor().onLayoutDrop({ moves, accolage: { tableIds: ['t1', 't2'], existingId: null, deactivatedIds: [] }, separation: null });
+      fixture.detectChanges();
+      (fixture.debugElement.query(By.directive(AccolageStub)).componentInstance as AccolageStub).dismiss.emit();
+      await fixture.whenStable();
+
+      expect(view.layout).toHaveBeenCalledWith({ moves });
+    });
+
+    it('should keep the preview while a question is pending, and drop it once the plan is read again after the answer', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: { undoId: 'u4' }, error: null });
+      const moves = [{ tableId: 't1', x: 2.2, y: 1 }];
+      editor().layoutEdit.preview.set(new Map([['t1', { x: 2.2, y: 1 }]]));
+
+      await editor().onLayoutDrop({ moves, accolage: { tableIds: ['t1', 't2'], existingId: null, deactivatedIds: [] }, separation: null });
+      load({ ...SNAPSHOT });
+      expect(editor().layoutEdit.preview()).not.toBeNull();
+
+      fixture.detectChanges();
+      (fixture.debugElement.query(By.directive(AccolageStub)).componentInstance as AccolageStub).dismiss.emit();
+      await fixture.whenStable();
+      load({ ...SNAPSHOT });
+      expect(editor().layoutEdit.preview()).toBeNull();
+    });
+
+    it('should send the plain move when the question lost its tables, rather than stay stuck', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: { undoId: 'u5' }, error: null });
+      const moves = [{ tableId: 't1', x: 2.2, y: 1 }];
+
+      await editor().onLayoutDrop({ moves, accolage: { tableIds: ['t1', 'gone'], existingId: null, deactivatedIds: [] }, separation: null });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(view.layout).toHaveBeenCalledWith({ moves });
+      expect(fixture.debugElement.query(By.directive(AccolageStub))).toBeNull();
+    });
+
+    it('should say why a move failed and put the table back', async () => {
+      load(SNAPSHOT);
+      enterEditing();
+      view.layout.and.resolveTo({ value: null, error: 'hors salle', code: ApiError.InvalidModification });
+      editor().layoutEdit.preview.set(new Map([['t1', { x: 9, y: 1 }]]));
+
+      await editor().onLayoutDrop({ moves: [{ tableId: 't1', x: 9, y: 1 }], accolage: null, separation: null });
+
+      expect(modal.infoModal).toHaveBeenCalledWith('Modification impossible', 'hors salle');
+      expect(editor().layoutEdit.preview()).toBeNull();
+    });
   });
 
   it('should read the current slot at the present instant, a table released a minute ago being free', () => {
@@ -582,6 +728,190 @@ describe('ServiceComponent', () => {
       await fixture.whenStable();
 
       expect(actions.placeOn).toHaveBeenCalledOnceWith('r-to-place', { tableId: 't2' }, false);
+    });
+  });
+
+  describe('approaches', () => {
+    const PAIR: PlacementApproach = {
+      combinationId: null, tableIds: ['t1', 't2'], zoneId: 'z1', name: 'T1-T2', capacity: 8, level: 'WithReserve',
+      reasons: [{ kind: 'Approach', with: ['T1', 'T2'] }], next: null, distance: 1.5,
+    };
+    const DORMANT: PlacementApproach = { ...PAIR, combinationId: 'c9', name: 'Banquette' };
+    const approachList = () => fixture.debugElement.query(By.directive(ApproachListStub))?.componentInstance as ApproachListStub | undefined;
+    const approachDialog = () => fixture.debugElement.query(By.directive(ApproachDialogStub))?.componentInstance as ApproachDialogStub | undefined;
+
+    it('should list the approaches under the sheet and light up the chosen one', async () => {
+      load(SNAPSHOT);
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({ t1: 'Excluded' }), approaches: [PAIR] }, error: null });
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+
+      approachList()!.selected.emit(PAIR);
+      fixture.detectChanges();
+
+      expect(canvas().approachLine()).toEqual(['t1', 't2']);
+      expect((canvas().placementMarks() as Record<string, { level: string }>)['t1'].level).toBe('WithReserve');
+    });
+
+    it('should place on a dormant combination after its reasons, saying it waits to be pushed together', async () => {
+      load(SNAPSHOT);
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [DORMANT] }, error: null });
+      modal.confirmModal.and.resolveTo(true);
+      actions.placeOn.and.resolveTo({ value: {}, error: null });
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+
+      approachList()!.placed.emit(DORMANT);
+      await fixture.whenStable();
+
+      expect(modal.confirmModal).toHaveBeenCalledWith('Placer Moreau sur Banquette ?', jasmine.stringContaining('Rapprochement nécessaire'), 'Placer', 'Annuler');
+      expect(actions.placeOn).toHaveBeenCalledWith('chen', { combinationId: 'c9' }, false, ' (à rapprocher)');
+    });
+
+    it('should ask the name of a new pair, then create it by placing', async () => {
+      load(SNAPSHOT);
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [PAIR] }, error: null });
+      actions.placeOn.and.resolveTo({ value: {}, error: null });
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+
+      approachList()!.placed.emit(PAIR);
+      fixture.detectChanges();
+      expect(approachDialog()!.covers()).toBe(4);
+      approachDialog()!.confirmed.emit({ name: 'Grande', capacity: 7 });
+      await fixture.whenStable();
+
+      expect(actions.placeOn).toHaveBeenCalledWith('chen', { newCombination: { tableIds: ['t1', 't2'], name: 'Grande', capacity: 7 } }, false, ' (à rapprocher)');
+    });
+  });
+
+  describe('approaches, lifecycle', () => {
+    const PAIR: PlacementApproach = {
+      combinationId: null, tableIds: ['t1', 't2'], zoneId: 'z1', name: 'T1-T2', capacity: 8, level: 'WithReserve',
+      reasons: [{ kind: 'Approach', with: ['T1', 'T2'] }], next: null, distance: 1.5,
+    };
+    const DORMANT: PlacementApproach = { ...PAIR, combinationId: 'c9', name: 'Banquette' };
+    const approachList = () => fixture.debugElement.query(By.directive(ApproachListStub))?.componentInstance as ApproachListStub | undefined;
+    const startWith = async (approaches: PlacementApproach[]) => {
+      load(SNAPSHOT);
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches }, error: null });
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+    };
+
+    it('should forget the chosen approach when another reservation is placed', async () => {
+      await startWith([PAIR]);
+      approachList()!.selected.emit(PAIR);
+      fixture.detectChanges();
+      expect(canvas().approachLine()).toEqual(['t1', 't2']);
+
+      await page().startPlacing('other');
+      fixture.detectChanges();
+
+      expect(canvas().approachLine()).toBeNull();
+    });
+
+    it('should forget the chosen approach the reloaded placement no longer offers', async () => {
+      await startWith([PAIR]);
+      approachList()!.selected.emit(PAIR);
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [] }, error: null });
+      snapshot.set({ ...SNAPSHOT });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(canvas().approachLine()).toBeNull();
+    });
+
+    it('should drop the approach when the selected line is touched again', async () => {
+      await startWith([DORMANT]);
+      modal.confirmModal.and.resolveTo(true);
+      actions.placeOn.and.resolveTo({ value: {}, error: null });
+
+      approachList()!.selected.emit(DORMANT);
+      approachList()!.selected.emit(DORMANT);
+      await fixture.whenStable();
+
+      expect(actions.placeOn).toHaveBeenCalledWith('chen', { combinationId: 'c9' }, false, ' (à rapprocher)');
+    });
+
+    it('should switch to the zone of the chosen approach', async () => {
+      await startWith([{ ...PAIR, zoneId: 'z2' }]);
+
+      approachList()!.selected.emit({ ...PAIR, zoneId: 'z2' });
+      fixture.detectChanges();
+
+      expect(tabs().activeId()).toBe('z2');
+    });
+
+    it('should say the tables are taken and reload the placement when the API refuses', async () => {
+      await startWith([DORMANT]);
+      modal.confirmModal.and.resolveTo(true);
+      actions.placeOn.and.resolveTo({ value: null, error: 'prise', code: ApiError.PlacementUnavailable });
+      view.placement.calls.reset();
+
+      approachList()!.placed.emit(DORMANT);
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(modal.infoModal).toHaveBeenCalledWith('Tables prises', 'Banquette n\'est plus libre pour cette réservation.');
+      expect(view.placement).toHaveBeenCalledTimes(1);
+      expect(page().placing()).not.toBeNull();
+    });
+
+    it('should open a single confirmation for two quick taps on Placer', async () => {
+      await startWith([DORMANT]);
+      modal.confirmModal.and.returnValue(new Promise<boolean>(() => undefined));
+
+      approachList()!.placed.emit(DORMANT);
+      approachList()!.placed.emit(DORMANT);
+
+      expect(modal.confirmModal).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('reminders', () => {
+    const REMINDER: CombinationReminder = {
+      combinationId: 'c1', name: '12-13', kind: 'Approach', dueAt: utc('20:00'), tableIds: ['t1'], tableNames: ['T1', 'T2'],
+      reservation: { id: 'r1', start: utc('20:00'), guestName: 'Nguyen', covers: 8, status: 'Confirmed', serviceDay: '2026-10-10', claimedTable: null }, separates: [],
+    };
+    const reminders = () => fixture.debugElement.query(By.directive(RemindersStub))?.componentInstance as RemindersStub | undefined;
+
+    it('should show the due reminders over the plan and flag their tables', () => {
+      load(SNAPSHOT);
+      expect(reminders()).toBeUndefined();
+
+      view.dueReminders.set([REMINDER]);
+      fixture.detectChanges();
+
+      expect(reminders()!.reminders()).toEqual([REMINDER]);
+      expect(canvas().tableMarks()!['t1'].reminder).toBeTrue();
+    });
+
+    it('should answer, then offer to undo', async () => {
+      load(SNAPSHOT);
+      view.dueReminders.set([REMINDER]);
+      fixture.detectChanges();
+      view.answerReminder.and.resolveTo({ value: { undoId: 'u1' }, error: null });
+
+      reminders()!.answered.emit({ reminder: REMINDER, answer: 'Done' });
+      await fixture.whenStable();
+
+      expect(view.answerReminder).toHaveBeenCalledWith('c1', 'Approach', 'Done');
+      expect(undo.offer).toHaveBeenCalledWith(jasmine.objectContaining({ message: '12-13 collée', tooLate: PLAN_UNDO_TOO_LATE }));
+    });
+
+    it('should reload silently when the reminder changed on another tablet', async () => {
+      load(SNAPSHOT);
+      view.dueReminders.set([REMINDER]);
+      fixture.detectChanges();
+      view.answerReminder.and.resolveTo({ value: null, error: 'changé', code: ApiError.ReminderChanged });
+
+      reminders()!.answered.emit({ reminder: REMINDER, answer: 'Done' });
+      await fixture.whenStable();
+
+      expect(modal.infoModal).not.toHaveBeenCalled();
+      expect(view.reloadReminders).toHaveBeenCalled();
     });
   });
 });

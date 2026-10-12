@@ -1,3 +1,5 @@
+import { ReservationStatus } from './reservation.model';
+
 /** Miroir de `CombinationReminderKind` (§3.4) */
 export type CombinationReminderKind = 'Approach' | 'Separate' | 'AfterNoShow';
 
@@ -11,6 +13,12 @@ export interface ReminderReservation {
     /** `null` : client de passage */
     guestName: string | null,
     covers: number,
+    /** « Finalement non » ne vaut que pour une réservation confirmée */
+    status: ReservationStatus,
+    /** `AAAA-MM-JJ` */
+    serviceDay: string,
+    /** `Separate` : la table membre que la réservation attend seule */
+    claimedTable: string | null,
 }
 
 /** GET /api/service/reminders : un rappel par combinaison ; aucun n'expire (COMB-06) */

@@ -114,6 +114,13 @@
                             fill="none" class="stroke-surface" stroke-width="1.2" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                     </g>
                 }
+                @if (mark.reminder) {
+                    <!-- COMB-06 : un rappel attend une réponse sur cette table — le violet de « ça t'attend », en bas à gauche -->
+                    <g data-reminder [attr.transform]="'translate(0 ' + table.height + ')'" class="pointer-events-none">
+                        <circle r="0.15" class="fill-violet stroke-slate" stroke-width="1" vector-effect="non-scaling-stroke" />
+                        <text text-anchor="middle" dominant-baseline="central" font-size="0.17" class="fill-surface font-bold">!</text>
+                    </g>
+                }
             }
             @if (placementOf(table.id); as placed) {
                 @if (placed.level !== 'Excluded') {
@@ -129,6 +136,12 @@
                 }
             }
         </g>
+    }
+
+    @if (approachPoints(); as points) {
+        <!-- Un rapprochement désigné : ses tables reliées, au violet de « ça t'attend » ; le trait ne prend aucun toucher -->
+        <polyline data-approach-line [attr.points]="points" fill="none" class="stroke-violet pointer-events-none" stroke-width="2"
+            stroke-dasharray="6 4" vector-effect="non-scaling-stroke" />
     }
 
     <!-- LE CADRE ORANGE : deux tables qui se touchent pendant un glisser (un geste, pas un statut) -->

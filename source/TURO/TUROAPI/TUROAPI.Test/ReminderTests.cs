@@ -34,6 +34,9 @@ namespace TUROAPI.Test
             CollectionAssert.AreEqual(new[] { "12", "13" }, reminder.TableNames);
             Assert.AreEqual("Nguyen", reminder.Reservation!.GuestName);
             Assert.AreEqual(8, reminder.Reservation.Covers);
+            Assert.AreEqual(ReservationStatus.Confirmed, reminder.Reservation.Status);
+            Assert.AreEqual(Dates.Today, reminder.Reservation.ServiceDay);
+            Assert.IsNull(reminder.Reservation.ClaimedTable);
             Assert.IsTrue(reminder.DueAt <= DateTime.UtcNow);
         }
 
@@ -126,6 +129,42 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task Abandon_is_refused_once_the_guests_are_seated()
+        {
+            using Arranged a = await ApproachDueAsync();
+            await ReservationApi.DoAsync(a.Staff, a.Nguyen.Id, "arrive");
+
+            Assert.AreEqual(ReservationStatus.Seated, (await CombinationApi.RemindersAsync(a.Staff)).Single().Reservation!.Status);
+            await ApiAssert.ErrorAsync(await CombinationApi.AnswerAsync(a.Staff, a.Combination, CombinationReminderKind.Approach, ReminderAnswer.Abandon),
+                HttpStatusCode.Conflict, "ReservationActionNotAllowed");
+            Assert.AreEqual("12-13", (await ReservationApi.GetAsync(a.Staff, a.Nguyen.Id)).Place!.Name);
+        }
+
+        [TestMethod]
+        public async Task Two_tablets_gluing_combinations_that_share_a_table_leave_one_glued()
+        {
+            using Arranged a = await ApproachDueAsync();
+            Guid other = await ReservationApi.AddCombinationAsync(a.ZoneId, "13-14", 8, a.Tables[1].Id, a.Tables[2].Id);
+            Reservation legrand = await a.Restaurant.AddReservationAsync(Dates.Today, 20, covers: 8, clientName: "Legrand");
+            await CombinationApi.StartsAtAsync(legrand.Id, DateTime.UtcNow.AddMinutes(-10));
+            await ReservationApi.AssignAsync(legrand.Id, combinationId: other);
+            await CombinationApi.RecomputeAsync(a.Restaurant.Id);
+            using HttpClient second = a.Restaurant.StaffClient();
+
+            HttpResponseMessage[] answers = await Task.WhenAll(
+                CombinationApi.AnswerAsync(a.Staff, a.Combination, CombinationReminderKind.Approach, ReminderAnswer.Done),
+                CombinationApi.AnswerAsync(second, other, CombinationReminderKind.Approach, ReminderAnswer.Done));
+
+            foreach (HttpResponseMessage answer in answers)
+            {
+                // La seconde réponse trouve un rappel changé, ou passe et sépare la première (COMB-04)
+                Assert.IsTrue(answer.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict, $"{answer.StatusCode}");
+            }
+            bool[] glued = [(await CombinationApi.StoredAsync(a.Combination)).IsActive, (await CombinationApi.StoredAsync(other)).IsActive];
+            Assert.AreEqual(1, glued.Count(g => g));
+        }
+
+        [TestMethod]
         public async Task Abandon_also_forgets_an_older_table()
         {
             using Arranged a = await ApproachDueAsync();
@@ -156,6 +195,8 @@ namespace TUROAPI.Test
             CombinationReminderResponse separate = (await CombinationApi.RemindersAsync(staff)).Single();
             Assert.AreEqual(CombinationReminderKind.Separate, separate.Kind);
             Assert.AreEqual("Moreau", separate.Reservation!.GuestName);
+            Assert.AreEqual("12", separate.Reservation.ClaimedTable);
+            Assert.AreEqual(Dates.Today.AddDays(1), separate.Reservation.ServiceDay);
 
             await CombinationApi.AnsweredAsync(staff, combination, CombinationReminderKind.Separate, ReminderAnswer.KeepTogether);
             Assert.IsEmpty(await CombinationApi.RemindersAsync(staff));

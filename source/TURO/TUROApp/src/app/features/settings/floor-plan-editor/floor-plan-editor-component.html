@@ -25,6 +25,17 @@
     }
 </header>
 
+@if (changedInService()) {
+    <div data-service-changed class="flex flex-row flex-wrap items-center gap-2 bg-violet-soft px-3 py-2 text-sm">
+        <p class="font-bold">Le plan a été modifié en service.</p>
+        <p class="text-text-muted">Recharger reprend ses positions ; garder la vôtre les réécrira à la publication.</p>
+        <div class="ml-auto flex flex-row gap-2">
+            <app-button text="Recharger" type="Secondary" buttonClass="h-9" (click)="reloadFromService()" />
+            <app-button text="Garder la mienne" type="Secondary" buttonClass="h-9" (click)="keepMine()" />
+        </div>
+    </div>
+}
+
 @switch (loadState()) {
     @case ('loading') {
         <p class="m-6 text-text-muted">Chargement du plan…</p>

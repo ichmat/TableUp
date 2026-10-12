@@ -25,5 +25,10 @@ namespace TUROAPI.Models.Responses
         /// <summary>`null` : client de passage</summary>
         public string? GuestName { get; set; }
         public int Covers { get; set; }
+        /// <summary>« Finalement non » ne vaut que pour une réservation confirmée : assis, les clients restent</summary>
+        public ReservationStatus Status { get; set; }
+        public DateOnly ServiceDay { get; set; }
+        /// <summary>`Separate` : la table membre que la réservation attend seule</summary>
+        public string? ClaimedTable { get; set; }
     }
 }

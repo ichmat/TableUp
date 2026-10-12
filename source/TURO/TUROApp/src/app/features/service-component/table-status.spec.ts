@@ -69,8 +69,15 @@ describe('zones and marks', () => {
   it('should hand the canvas each table status, its guest and time, and the allergy', () => {
     const marks = tableMarks(zone, at('20:30'), at('20:30'), true, 'UTC');
 
-    expect(marks['t1']).toEqual({ status: 'Reserved', late: true, label: 'Moreau · 20:00', allergy: true });
-    expect(marks['t2']).toEqual({ status: 'Occupied', late: false, label: 'Client de passage · 19:30', allergy: false });
-    expect(marks['t3']).toEqual({ status: 'ToClean', late: false, label: null, allergy: false });
+    expect(marks['t1']).toEqual({ status: 'Reserved', late: true, label: 'Moreau · 20:00', allergy: true, reminder: false });
+    expect(marks['t2']).toEqual({ status: 'Occupied', late: false, label: 'Client de passage · 19:30', allergy: false, reminder: false });
+    expect(marks['t3']).toEqual({ status: 'ToClean', late: false, label: null, allergy: false, reminder: false });
+  });
+
+  it('should flag the tables a reminder waits on', () => {
+    const marks = tableMarks(serviceZone({ tables: [serviceTable({ id: 't12' }), serviceTable({ id: 't5' })] }),
+      new Date(utc('20:00')), new Date(utc('20:00')), false, 'UTC', new Set(['t12']));
+    expect(marks['t12'].reminder).toBeTrue();
+    expect(marks['t5'].reminder).toBeFalse();
   });
 });

@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { twMerge } from 'tailwind-merge';
 import { PlacementLevel } from '../../../models';
 
@@ -19,17 +18,18 @@ export interface ZoneTab {
   total: number,
 }
 
-/** §5.5 : une pastille par salle, l'active en orange ; « Éditer le plan » poussé à droite, admin seulement */
+/** §5.5 : une pastille par salle, l'active en orange ; « Éditer le plan » poussé à droite */
 @Component({
   selector: 'app-zone-tabs',
-  imports: [RouterLink],
   templateUrl: './zone-tabs.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ZoneTabs {
   tabs = input.required<ZoneTab[]>();
   activeId = input<string | null>(null);
-  canEdit = input(false);
+  /** « ✎ Éditer le plan » ouvre le mode édition sur place, pour les deux rôles (§5.5) */
+  editing = input(false);
+  editToggle = output<void>();
   selected = output<string>();
   /** Pendant un placement : le meilleur niveau de chaque salle, `null` si rien n'y convient. `null` : aucun placement */
   levels = input<Readonly<Record<string, PlacementLevel | null>> | null>(null);

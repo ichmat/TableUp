@@ -11,21 +11,25 @@
                 Le service n'a pas pu être rechargé : les tables affichées datent du dernier chargement.
             </p>
         }
-        <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [canEdit]="isAdmin()" [levels]="zoneLevels()" (selected)="zoneId.set($event)" />
+        <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [editing]="editing()" [levels]="zoneLevels()" (selected)="zoneId.set($event)" (editToggle)="toggleEditing()" />
 
         <div class="flex flex-row grow min-h-0 gap-2">
             <div #planArea class="relative grow min-w-0 flex flex-col gap-2">
                 @if (zone(); as z) {
-                    <app-floor-plan-canvas class="grow min-h-0 rounded-xl" theme="slate" [showGrid]="false"
-                        [zone]="z" [tables]="z.tables" [decors]="z.decors" [combinations]="z.combinations"
-                        [tableMarks]="marks()" [selectedIds]="selectedTableIds()" [placementMarks]="placementMarks()"
-                        (tablePointerDown)="onTable($event)" (combinationPointerDown)="onCombination($event)" (backgroundClick)="closeAll()" />
+                    <app-floor-plan-canvas class="grow min-h-0 rounded-xl" theme="slate" [showGrid]="editing()"
+                        [zone]="z" [tables]="planTables()" [contactIds]="layoutEdit.contactIds()" [decors]="z.decors" [combinations]="z.combinations"
+                        [tableMarks]="marks()" [selectedIds]="selectedTableIds()" [placementMarks]="placementMarks()" [approachLine]="approachLine()"
+                        (tablePointerDown)="onTable($event)" (combinationPointerDown)="onCombination($event)" (backgroundClick)="editing() || closeAll()" />
                 } @else {
                     <p class="grow rounded-xl bg-slate p-6 text-plan-free-text">
                         Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.
                     </p>
                 }
                 <app-plan-legend [trackCleaning]="s.trackTableCleaning" />
+                @if (reminders().length > 0) {
+                    <app-combination-reminders class="absolute right-2 top-2 z-10" [reminders]="reminders()" [timeZone]="timeZone()"
+                        (answered)="answerReminder($event)" />
+                }
 
                 @if (seatBubble(); as b) {
                     <div data-seat-bubble class="absolute z-10 flex w-64 flex-col gap-2 rounded-xl bg-surface p-3 shadow-2xl"
@@ -60,13 +64,19 @@
                     @if (entry.kind === 'reservation') {
                         <app-reservation-sheet [placeHere]="true" [origin]="origin()" (placeRequested)="startPlacing($event)"
                             (back)="back()" (closed)="close()" (openClient)="openClient($event)" (edit)="startEdit($event)" />
+                        @if (placing()?.placement; as placement) {
+                            @if (placement.approaches.length > 0) {
+                                <app-approach-list [approaches]="placement.approaches" [selectedKey]="selectedApproachKey()" [timeZone]="timeZone()"
+                                    (selected)="selectApproach($event)" (placed)="dropApproach($event)" />
+                            }
+                        }
                     } @else {
                         <app-client-sheet [client]="client()" [failed]="clientFailed()" [readOnly]="true" [origin]="origin()"
                             (back)="back()" (closed)="close()" (openReservation)="openReservation($event)" (openInClients)="openInClients(entry.id)" />
                     }
                 </aside>
             } @else {
-                <app-to-place-column [toPlace]="s.toPlace" [pending]="s.pending" [timeZone]="timeZone()" (opened)="startPlacing($event)" (pressed)="onPillPressed($event)" />
+                <app-to-place-column [class.pointer-events-none]="editing()" [class.opacity-40]="editing()" [toPlace]="s.toPlace" [pending]="s.pending" [timeZone]="timeZone()" (opened)="startPlacing($event)" (pressed)="onPillPressed($event)" />
             }
         </div>
     } @else if (failed()) {
@@ -86,5 +96,21 @@
         <aside data-form class="absolute right-0 top-0 z-20 h-full w-[322px] bg-surface rounded-xl shadow-2xl overflow-y-auto">
             <app-reservation-form [mode]="mode" (saved)="onSaved($event)" (cancelled)="form.set(null)" />
         </aside>
+    }
+
+    @if (approachDialog(); as dialog) {
+        <app-approach-dialog [approach]="dialog.approach" [guest]="dialog.guest" [covers]="dialog.covers" [message]="dialog.message"
+            [tables]="allTables()" [combinations]="allCombinations()" (confirmed)="confirmApproach($event)" (cancelled)="approachDialog.set(null)" />
+    }
+
+    <!-- ACCOLAGE et SÉPARATION : les fenêtres de l'éditeur ; la réponse part tout de suite à l'API -->
+    @if (accolageView(); as view) {
+        <app-accolage-dialog-component [members]="view.members" [existing]="view.existing" [deactivated]="view.deactivated"
+            [tables]="allTables()" [combinations]="allCombinations()"
+            (create)="createCombination($event)" (reactivate)="reactivateCombination()" (dismiss)="dismissAccolage()" />
+    }
+    @if (separationView(); as view) {
+        <app-separation-dialog-component [combination]="view.combination" [reactivated]="view.reactivated"
+            (separate)="separateCombination()" (dismiss)="dismissSeparation()" />
     }
 </div>
