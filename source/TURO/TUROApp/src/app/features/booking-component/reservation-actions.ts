@@ -42,13 +42,14 @@ export class ReservationActions {
   }
 
   /**
+   * `suffix` : « (à rapprocher) » quand les tables doivent encore être poussées l'une contre l'autre
    * §5.8 : le dépôt sur une table. Le bandeau propose de défaire ; les refus sont rendus à l'écran Service,
    * qui sait recalculer les halos (`PlacementUnavailable`)
    */
-  async placeOn(id: string, target: PlaceTarget, wasPending: boolean): Promise<ApiResult<ReservationActionResult>> {
+  async placeOn(id: string, target: PlaceTarget, wasPending: boolean, suffix = ''): Promise<ApiResult<ReservationActionResult>> {
     const result = await this._reservations.place(id, target);
     if (result.error === null && result.value.eventId !== null) {
-      this._undo.offer({ message: placedMessage(result.value.reservation, wasPending), reservationId: id, eventId: result.value.eventId });
+      this._undo.offer({ message: placedMessage(result.value.reservation, wasPending) + suffix, reservationId: id, eventId: result.value.eventId });
     }
     return result;
   }

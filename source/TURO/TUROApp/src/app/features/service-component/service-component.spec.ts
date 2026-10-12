@@ -62,7 +62,7 @@ type Page = {
 };
 
 const PLACEMENT = (levels: Record<string, PlacementLevel>, reasons: PlacementReason[] = []): Placement => ({
-  reservationId: 'r-to-place', guestName: 'Moreau', start: '2026-10-10T18:00:00Z', end: '2026-10-10T20:00:00Z', covers: 4, note: null, preferredZoneId: null,
+  reservationId: 'r-to-place', guestName: 'Moreau', start: '2026-10-10T18:00:00Z', end: '2026-10-10T20:00:00Z', covers: 4, note: null, preferredZoneId: null, approaches: [],
   entities: Object.entries(levels).map(([tableId, level]) => ({
     tableId, combinationId: null, zoneId: 'z1', name: tableId, capacity: 4, level, reasons: level === 'Perfect' ? [] : reasons, next: null,
   })),

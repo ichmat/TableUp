@@ -193,5 +193,70 @@ namespace TUROAPI.Test
             // Une table assise qui déborde déjà se cherche pour le quart d'heure à venir
             Assert.AreEqual((Eight.AddMinutes(200), Eight.AddMinutes(215)), IntervalOf(Eight, 120, Eight.AddMinutes(200)));
         }
+
+        private static Approach PairOf(Candidate a, Candidate b, double distance, Guid? combinationId = null) =>
+            new(combinationId, Salle, $"{a.Name}-{b.Name}", a.Capacity + b.Capacity, [a.TableIds[0], b.TableIds[0]], [a.Name, b.Name], distance, null, null);
+
+        [TestMethod]
+        public void An_approach_is_never_perfect_and_names_its_tables()
+        {
+            Candidate t12 = TableOf("12", 4);
+            Candidate t13 = TableOf("13", 4);
+
+            ApproachVerdict verdict = JudgeApproaches(For(8), [PairOf(t12, t13, 1.5)], [t12, t13], [], Default).Single();
+
+            Assert.AreEqual(PlacementLevel.WithReserve, verdict.Level);
+            Assert.AreEqual(PlacementReasonKind.Approach, verdict.Reasons[0].Kind);
+            CollectionAssert.AreEqual(new[] { "12", "13" }, verdict.Reasons[0].With!.ToArray());
+        }
+
+        [TestMethod]
+        public void An_approach_beyond_the_tolerance_is_not_advised()
+        {
+            Candidate t12 = TableOf("12", 4);
+            Candidate t13 = TableOf("13", 4);
+
+            Assert.AreEqual(PlacementLevel.NotAdvised, JudgeApproaches(For(2), [PairOf(t12, t13, 1.5)], [t12, t13], [], Default).Single().Level);
+        }
+
+        [TestMethod]
+        public void An_approach_with_a_taken_or_too_small_set_is_left_out()
+        {
+            Candidate t12 = TableOf("12", 4);
+            Candidate t13 = TableOf("13", 4);
+            Candidate t2 = TableOf("2", 2);
+
+            List<ApproachVerdict> verdicts = JudgeApproaches(For(8), [PairOf(t12, t13, 1.5), PairOf(t2, t13, 1)], [t12, t13, t2],
+                [On(t12, Eight.AddMinutes(-30), Eight.AddMinutes(60))], Default);
+
+            Assert.AreEqual(0, verdicts.Count);
+        }
+
+        [TestMethod]
+        public void Approaches_come_nearest_first()
+        {
+            Candidate t12 = TableOf("12", 4);
+            Candidate t13 = TableOf("13", 4);
+            Candidate t14 = TableOf("14", 4);
+
+            List<ApproachVerdict> verdicts = JudgeApproaches(For(8), [PairOf(t12, t14, 3), PairOf(t12, t13, 1.5), PairOf(t13, t14, 1.5)],
+                [t12, t13, t14], [], Default);
+
+            CollectionAssert.AreEqual(new[] { "12-13", "13-14", "12-14" }, verdicts.Select(v => v.Approach.Name).ToArray());
+        }
+
+        [TestMethod]
+        public void The_last_table_of_its_size_is_counted_on_glued_tables_only()
+        {
+            Candidate t6 = TableOf("6", 6);
+            Candidate t2 = TableOf("2", 2);
+            Candidate t4 = TableOf("4", 4);
+
+            ApproachVerdict verdict = JudgeApproaches(For(5), [PairOf(t2, t4, 1)], [t6, t2, t4], [], Default).Single();
+
+            // 2 + 4 = 6 pour 5 : une place de trop seulement, mais la table de 6, elle, reste libre
+            Assert.AreEqual(PlacementLevel.WithReserve, verdict.Level);
+            Assert.IsFalse(verdict.Reasons.Any(r => r.Kind == PlacementReasonKind.ExtraSeats && r.NoneLeftOfCapacity == true));
+        }
     }
 }

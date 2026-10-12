@@ -31,9 +31,6 @@ namespace TUROAPI.Controllers
         private const double MaxTableSize = 4.00;
         private const int MaxDecorLabelLength = 30;
         private const double MinDecorSize = 0.10;
-        private const int MaxCombinationNameLength = 20;
-        private const int MinCombinationCapacity = 1;
-        private const int MaxCombinationCapacity = 100;
 
         public FloorPlanController(TuroDBContext context) : base(context)
         {
@@ -395,9 +392,7 @@ namespace TUROAPI.Controllers
                 else if (combination.IsActive != item.IsActive)
                 {
                     // Coller ou séparer dans l'éditeur annule le rapprochement ou la séparation que le service avait prévus
-                    combination.IsActive = item.IsActive;
-                    combination.ActivateAt = null;
-                    combination.DeactivateAt = null;
+                    CombinationFloor.SetActive(combination, item.IsActive);
                 }
                 combination.Name = item.Name.Trim();
                 combination.Capacity = item.Capacity;
@@ -411,6 +406,9 @@ namespace TUROAPI.Controllers
             context.FloorPlanDrafts.Remove(draft);
 
             // Un seul SaveChanges : tout est publié, ou rien
+            await context.SaveChangesAsync();
+            // Les dates suivent le plan publié : une combinaison collée ou séparée ici se replanifie
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
             await context.SaveChangesAsync();
             await NotifyChangedAsync(DataScope.FloorPlan);
             return Ok(await LoadPublishedAsync());
@@ -570,13 +568,13 @@ namespace TUROAPI.Controllers
                 {
                     throw new ApiErrorException(ApiError.InvalidModification, $"{label}: a combination needs a name.");
                 }
-                if (name.Length > MaxCombinationNameLength)
+                if (name.Length > CombinationRules.MaxNameLength)
                 {
-                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: name cannot exceed {MaxCombinationNameLength} characters.");
+                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: name cannot exceed {CombinationRules.MaxNameLength} characters.");
                 }
-                if (combination.Capacity < MinCombinationCapacity || combination.Capacity > MaxCombinationCapacity)
+                if (combination.Capacity < CombinationRules.MinCapacity || combination.Capacity > CombinationRules.MaxCapacity)
                 {
-                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: seats must be between {MinCombinationCapacity} and {MaxCombinationCapacity}.");
+                    throw new ApiErrorException(ApiError.InvalidModification, $"{label}: seats must be between {CombinationRules.MinCapacity} and {CombinationRules.MaxCapacity}.");
                 }
             }
 

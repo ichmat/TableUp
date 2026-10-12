@@ -1,11 +1,19 @@
 import { Placement, PlacementEntity, PlacementReason } from '../../models';
-import { entityId, nextText, reasonsMessage, reasonText, targetOf } from './placement-reasons';
+import { entityId, nextText, reasonsMessage, reasonText, tableList, targetOf } from './placement-reasons';
 
 const TZ = 'Europe/Paris';
 const context = { guest: 'Moreau', covers: 4, name: '6', capacity: 6, zoneName: 'Terrasse', end: '2026-10-10T19:50:00Z' };
 const reason = (r: Partial<PlacementReason> & Pick<PlacementReason, 'kind'>): PlacementReason => r;
 
 describe('placement-reasons', () => {
+  it('should name the tables to push together', () => {
+    expect(reasonText(reason({ kind: 'Approach', with: ['12', '13'] }), context, TZ)).toEqual({
+      title: 'Rapprochement nécessaire',
+      detail: "les tables 12 et 13 devront être poussées l'une contre l'autre avant l'arrivée.",
+    });
+    expect(tableList(['12', '13', '14'])).toBe('12, 13 et 14');
+  });
+
   it('should say extra seats, and that no table of that size is left', () => {
     expect(reasonText(reason({ kind: 'ExtraSeats', count: 2, tolerance: 2, noneLeftOfCapacity: true }), context, TZ)).toEqual({
       title: '2 places de trop',

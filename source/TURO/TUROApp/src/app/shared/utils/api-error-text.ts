@@ -11,6 +11,7 @@ const FRENCH: Partial<Record<ApiError, string>> = {
   [ApiError.TableAlreadyClean]: 'Cette table est déjà propre.',
   [ApiError.PlacementUnavailable]: "Cette table n'est plus libre pour cette réservation : elle vient d'être prise sur un autre poste.",
   [ApiError.TableBookedLater]: 'Cette table est réservée plus tard, pendant la durée du repas.',
+  [ApiError.ReminderChanged]: 'Ce rappel a changé entre-temps sur un autre poste.',
   [ApiError.TableCleaningDisabled]: 'Le suivi du nettoyage est désactivé dans Paramètres › Placement.',
 };
 

@@ -23,6 +23,7 @@ export enum ApiError{
     TableAlreadyClean = 'TableAlreadyClean',
     PlacementUnavailable = 'PlacementUnavailable',
     TableBookedLater = 'TableBookedLater',
+    ReminderChanged = 'ReminderChanged',
 }
 
 export interface ApiErrorResponse{

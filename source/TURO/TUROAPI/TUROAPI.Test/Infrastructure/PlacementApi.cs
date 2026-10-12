@@ -15,6 +15,10 @@ namespace TUROAPI.Test.Infrastructure
         public static async Task<ReservationActionResponse> PlacedAsync(HttpClient client, Guid reservationId, Guid? tableId = null, Guid? combinationId = null) =>
             await ApiAssert.OkAsync<ReservationActionResponse>(await PlaceAsync(client, reservationId, tableId, combinationId));
 
+        public static Task<HttpResponseMessage> PlaceNewAsync(HttpClient client, Guid reservationId, Guid[] tableIds, string name, int capacity) =>
+            client.PostAsJsonAsync($"api/reservations/{reservationId}/place",
+                new PlaceRequest { NewCombination = new NewCombinationRequest { TableIds = [.. tableIds], Name = name, Capacity = capacity } }, TestJson.Options);
+
         public static Task<HttpResponseMessage> SeatAsync(HttpClient client, Guid tableId, int covers, bool acceptBookedLater = false) =>
             client.PostAsJsonAsync($"api/service/tables/{tableId}/seat", new SeatRequest { Covers = covers, AcceptBookedLater = acceptBookedLater }, TestJson.Options);
 

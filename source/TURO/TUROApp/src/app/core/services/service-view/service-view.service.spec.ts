@@ -2,33 +2,39 @@ import { TestBed } from '@angular/core/testing';
 import { ApplicationRef } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
-import { DataScope } from '../../../models';
+import { CombinationReminder, DataScope } from '../../../models';
 import { RealtimeService } from '../realtime/realtime.service';
 import { serviceSnapshot } from '../../../features/service-component/testing/service-fixtures';
-import { SERVICE_SCOPES, ServiceViewService } from './service-view.service';
+import { REMINDER_SCOPES, REMINDER_TICK_MS, SERVICE_SCOPES, ServiceViewService } from './service-view.service';
 
 describe('ServiceViewService', () => {
   let service: ServiceViewService;
   let http: HttpTestingController;
-  const handlers = new Map<DataScope, () => void>();
+  const handlers = new Map<DataScope, (() => void)[]>();
+  const fire = (scope: DataScope) => handlers.get(scope)!.forEach((reload) => reload());
   const snapshotCall = (): TestRequest => http.expectOne((r) => r.url === '/api/service' && r.method === 'GET');
   const settle = async () => {
     TestBed.tick();
     await TestBed.inject(ApplicationRef).whenStable();
   };
 
-  beforeEach(() => {
+  const setup = () => {
     localStorage.setItem('jwt', 'token');
     handlers.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
-        { provide: RealtimeService, useValue: { onDataChanged: (scope: DataScope, reload: () => void) => { handlers.set(scope, reload); return () => undefined; } } },
+        { provide: RealtimeService, useValue: { onDataChanged: (scope: DataScope, reload: () => void) => { handlers.set(scope, [...(handlers.get(scope) ?? []), reload]); return () => undefined; } } },
       ],
     });
     service = TestBed.inject(ServiceViewService);
     http = TestBed.inject(HttpTestingController);
     TestBed.tick();
+  };
+
+  beforeEach(() => {
+    setup();
+    http.expectOne('/api/service/reminders').flush([]);
   });
 
   afterEach(() => {
@@ -93,9 +99,12 @@ describe('ServiceViewService', () => {
     await settle();
 
     for (const scope of SERVICE_SCOPES) {
-      handlers.get(scope)!();
+      fire(scope);
       TestBed.tick();
       snapshotCall().flush(serviceSnapshot());
+      if (REMINDER_SCOPES.includes(scope)) {
+        http.expectOne('/api/service/reminders').flush([]);
+      }
       await settle();
     }
   });
@@ -175,5 +184,86 @@ describe('ServiceViewService', () => {
     const current = service.current();
     http.expectOne((r) => r.url === '/api/service' && r.params.keys().length === 0).flush(serviceSnapshot());
     expect((await current).value?.service?.state).toBe('InProgress');
+  });
+
+  const REMINDER = (dueAt: string): CombinationReminder => ({
+    combinationId: 'c1', name: '12-13', kind: 'Approach', dueAt, tableIds: ['t12', 't13'], tableNames: ['12', '13'],
+    reservation: { id: 'r1', start: dueAt, guestName: 'Nguyen', covers: 8 }, separates: [],
+  });
+
+  it('should show a reminder once its time has come, without asking again', async () => {
+    // L'horloge du service naît au constructeur : le service est recréé sous l'horloge simulée
+    http.verify();
+    TestBed.resetTestingModule();
+    jasmine.clock().install();
+    try {
+      const now = Date.now();
+      jasmine.clock().mockDate(new Date(now));
+      setup();
+      http.expectOne('/api/service/reminders').flush([REMINDER(new Date(now - 1000).toISOString()), REMINDER(new Date(now + 20_000).toISOString())]);
+      await settle();
+      expect(service.reminders().length).toBe(2);
+      expect(service.dueReminders().length).toBe(1);
+
+      jasmine.clock().tick(REMINDER_TICK_MS);
+      expect(service.dueReminders().length).toBe(2);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('should show at once a reminder already due when the list arrives', async () => {
+    http.verify();
+    TestBed.resetTestingModule();
+    jasmine.clock().install();
+    try {
+      const start = Date.now();
+      jasmine.clock().mockDate(new Date(start));
+      setup();
+      const read = http.expectOne('/api/service/reminders');
+      // La réponse arrive quelques secondes après la construction, sans que l'horloge du service ait battu
+      jasmine.clock().mockDate(new Date(start + 5000));
+      read.flush([REMINDER(new Date(Date.now() - 1000).toISOString())]);
+      await settle();
+      expect(service.dueReminders().length).toBe(1);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('should reload the reminders on the floor plan and the reservations', async () => {
+    for (const scope of REMINDER_SCOPES) {
+      await settle();
+      fire(scope);
+      TestBed.tick();
+      const call = http.expectOne('/api/service/reminders');
+      expect(call.request.method).toBe('GET');
+      call.flush([]);
+    }
+  });
+
+  it('should answer a reminder, then reload what it changed', async () => {
+    const answered = service.answerReminder('c1', 'Approach', 'Done');
+    const call = http.expectOne('/api/service/combinations/c1/reminder');
+    expect(call.request.body).toEqual({ kind: 'Approach', answer: 'Done' });
+    call.flush({ undoId: 'u1' });
+
+    expect((await answered).value).toEqual({ undoId: 'u1' });
+    TestBed.tick();
+    http.expectOne('/api/service/reminders').flush([]);
+  });
+
+  it('should post a layout and undo it', async () => {
+    const laid = service.layout({ moves: [{ tableId: 't1', x: 2, y: 3 }] });
+    http.expectOne((r) => r.url === '/api/service/layout' && r.method === 'POST').flush({ undoId: 'u2' });
+    expect((await laid).value).toEqual({ undoId: 'u2' });
+    TestBed.tick();
+    http.expectOne('/api/service/reminders').flush([]);
+
+    const undone = service.undo('u2');
+    http.expectOne((r) => r.url === '/api/service/undo/u2' && r.method === 'POST').flush(null);
+    expect((await undone).error).toBeNull();
+    TestBed.tick();
+    http.expectOne('/api/service/reminders').flush([]);
   });
 });

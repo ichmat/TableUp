@@ -53,5 +53,7 @@ namespace TUROAPI.Models.Enums
         PlacementUnavailable = 20,
         [ApiErrorInfo(HttpStatusCode.Conflict, "Table {0} is booked at {1}.")]
         TableBookedLater = 21,
+        [ApiErrorInfo(HttpStatusCode.Conflict, "The reminder of {0} has changed.")]
+        ReminderChanged = 22,
     }
 }

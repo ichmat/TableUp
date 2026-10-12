@@ -53,6 +53,16 @@ namespace TUROAPI.Services
 
         public sealed record Verdict(Candidate Candidate, PlacementLevel Level, IReadOnlyList<Reason> Reasons, NextBooking? Next);
 
+        /// <summary>Un rapprochement : une combinaison en sommeil, ou une paire de tables qu'aucune combinaison ne réunit (RAPP-01)</summary>
+        public sealed record Approach(Guid? CombinationId, Guid ZoneId, string Name, int Capacity, IReadOnlyList<Guid> TableIds,
+            IReadOnlyList<string> TableNames, double Distance, DateTime? NeedsCleaningSince, Glue? GluedIn);
+
+        public sealed record ApproachVerdict(Approach Approach, PlacementLevel Level, IReadOnlyList<Reason> Reasons, NextBooking? Next);
+
+        public static Candidate CandidateOf(Approach approach) =>
+            new(null, approach.CombinationId, approach.ZoneId, approach.Name, approach.Capacity, approach.TableIds,
+                approach.NeedsCleaningSince, approach.GluedIn);
+
         /// <summary>
         /// `[max(début, maintenant), max(fin prévue, ce début + 15 min))` : le passé ne compte plus, et une table assise qui
         /// déborde déjà se cherche pour le quart d'heure à venir
@@ -78,66 +88,92 @@ namespace TUROAPI.Services
         {
             // La réservation qu'on déplace ne se bloque pas elle-même
             List<Occupied> others = occupations.Where(o => o.ReservationId != request.ReservationId).ToList();
-            bool IsTaken(Candidate c) => c.Capacity < request.Covers
-                || others.Any(o => c.TableIds.Contains(o.TableId) && o.Start < request.End && request.Start < o.End);
-            List<Candidate> open = candidates.Where(c => !IsTaken(c)).ToList();
-
+            List<Candidate> open = candidates.Where(c => !IsTaken(c, request, others)).ToList();
             return candidates
-                .Select(c => open.Contains(c) ? Judged(c) : new Verdict(c, PlacementLevel.Excluded, [], null))
+                .Select(c => open.Contains(c) ? JudgeOne(request, c, open, others, settings) : new Verdict(c, PlacementLevel.Excluded, [], null))
                 .ToList();
+        }
 
-            Verdict Judged(Candidate candidate)
+        /// <summary>
+        /// RAPP-01 à 03 : les rapprochements possibles, du plus proche au plus loin. Jamais ✓ : pousser des tables est un travail.
+        /// Les écartés ne sont pas rendus ; « il ne te restera plus de table de 6 » ne compte que les tables et les combinaisons collées
+        /// </summary>
+        public static List<ApproachVerdict> JudgeApproaches(Request request, IReadOnlyList<Approach> approaches, IReadOnlyList<Candidate> candidates,
+            IReadOnlyList<Occupied> occupations, Settings settings)
+        {
+            List<Occupied> others = occupations.Where(o => o.ReservationId != request.ReservationId).ToList();
+            List<Candidate> open = candidates.Where(c => !IsTaken(c, request, others)).ToList();
+            var verdicts = new List<ApproachVerdict>();
+            foreach (Approach approach in approaches.OrderBy(a => a.Distance).ThenBy(a => a.Name, StringComparer.Ordinal))
             {
-                var reasons = new List<Reason>();
-                int extra = candidate.Capacity - request.Covers;
-                switch (PlacementVerdict.Of(request.Covers, candidate.Capacity, settings.Tolerance))
+                Candidate candidate = CandidateOf(approach);
+                if (IsTaken(candidate, request, others))
                 {
-                    case PlacementFit.WithinTolerance:
-                        reasons.Add(new Reason(PlacementReasonKind.ExtraSeats)
-                        {
-                            Count = extra,
-                            Tolerance = settings.Tolerance,
-                            // « Il ne te restera plus de table de 6 ce soir »
-                            NoneLeftOfCapacity = !open.Any(o => o != candidate && o.Capacity == candidate.Capacity),
-                        });
-                        break;
-                    case PlacementFit.NotAdvised:
-                        reasons.Add(new Reason(PlacementReasonKind.BeyondTolerance) { Count = extra, Tolerance = settings.Tolerance });
-                        break;
+                    continue;
                 }
-
-                List<Occupied> onIt = others.Where(o => candidate.TableIds.Contains(o.TableId)).ToList();
-                if (settings.TrackCleaning && candidate.NeedsCleaningSince is DateTime since)
-                {
-                    Occupied? last = onIt.Where(o => o.Status == ReservationStatus.Finished).MaxBy(o => o.End);
-                    reasons.Add(new Reason(PlacementReasonKind.NeedsCleaning) { Since = since, Guest = last?.Guest, LeftAt = last?.End });
-                }
-                if (request.PreferredZoneId is Guid wanted && wanted != candidate.ZoneId)
-                {
-                    reasons.Add(new Reason(PlacementReasonKind.OtherZone) { RequestedZone = request.PreferredZoneName, Note = request.Note });
-                }
-
-                Occupied? following = onIt.Where(o => o.Start >= request.End).MinBy(o => o.Start);
-                NextBooking? next = following == null
-                    ? null
-                    : new NextBooking(following.Start, (int)(following.Start - request.End).TotalMinutes, following.Guest);
-                if (next != null && next.Margin < SoonMinutes)
-                {
-                    reasons.Add(new Reason(PlacementReasonKind.NextSoon)
-                    {
-                        Start = next.Start, Margin = next.Margin, Guest = next.Guest, DefaultRotation = settings.DefaultRotation,
-                    });
-                }
-                if (candidate.GluedIn is Glue glue)
-                {
-                    reasons.Add(new Reason(PlacementReasonKind.Glued) { Combination = glue.Combination, With = glue.With });
-                }
-
-                PlacementLevel level = reasons.Count == 0 ? PlacementLevel.Perfect
-                    : reasons.Any(r => r.Kind == PlacementReasonKind.BeyondTolerance) ? PlacementLevel.NotAdvised
-                    : PlacementLevel.WithReserve;
-                return new Verdict(candidate, level, reasons, next);
+                Verdict judged = JudgeOne(request, candidate, open, others, settings);
+                List<Reason> reasons = [new Reason(PlacementReasonKind.Approach) { With = approach.TableNames }, .. judged.Reasons];
+                PlacementLevel level = reasons.Any(r => r.Kind == PlacementReasonKind.BeyondTolerance) ? PlacementLevel.NotAdvised : PlacementLevel.WithReserve;
+                verdicts.Add(new ApproachVerdict(approach, level, reasons, judged.Next));
             }
+            return verdicts;
+        }
+
+        private static bool IsTaken(Candidate candidate, Request request, List<Occupied> others) =>
+            candidate.Capacity < request.Covers
+            || others.Any(o => candidate.TableIds.Contains(o.TableId) && o.Start < request.End && request.Start < o.End);
+
+        private static Verdict JudgeOne(Request request, Candidate candidate, List<Candidate> open, List<Occupied> others, Settings settings)
+        {
+            var reasons = new List<Reason>();
+            int extra = candidate.Capacity - request.Covers;
+            switch (PlacementVerdict.Of(request.Covers, candidate.Capacity, settings.Tolerance))
+            {
+                case PlacementFit.WithinTolerance:
+                    reasons.Add(new Reason(PlacementReasonKind.ExtraSeats)
+                    {
+                        Count = extra,
+                        Tolerance = settings.Tolerance,
+                        // « Il ne te restera plus de table de 6 ce soir »
+                        NoneLeftOfCapacity = !open.Any(o => o != candidate && o.Capacity == candidate.Capacity),
+                    });
+                    break;
+                case PlacementFit.NotAdvised:
+                    reasons.Add(new Reason(PlacementReasonKind.BeyondTolerance) { Count = extra, Tolerance = settings.Tolerance });
+                    break;
+            }
+
+            List<Occupied> onIt = others.Where(o => candidate.TableIds.Contains(o.TableId)).ToList();
+            if (settings.TrackCleaning && candidate.NeedsCleaningSince is DateTime since)
+            {
+                Occupied? last = onIt.Where(o => o.Status == ReservationStatus.Finished).MaxBy(o => o.End);
+                reasons.Add(new Reason(PlacementReasonKind.NeedsCleaning) { Since = since, Guest = last?.Guest, LeftAt = last?.End });
+            }
+            if (request.PreferredZoneId is Guid wanted && wanted != candidate.ZoneId)
+            {
+                reasons.Add(new Reason(PlacementReasonKind.OtherZone) { RequestedZone = request.PreferredZoneName, Note = request.Note });
+            }
+
+            Occupied? following = onIt.Where(o => o.Start >= request.End).MinBy(o => o.Start);
+            NextBooking? next = following == null
+                ? null
+                : new NextBooking(following.Start, (int)(following.Start - request.End).TotalMinutes, following.Guest);
+            if (next != null && next.Margin < SoonMinutes)
+            {
+                reasons.Add(new Reason(PlacementReasonKind.NextSoon)
+                {
+                    Start = next.Start, Margin = next.Margin, Guest = next.Guest, DefaultRotation = settings.DefaultRotation,
+                });
+            }
+            if (candidate.GluedIn is Glue glue)
+            {
+                reasons.Add(new Reason(PlacementReasonKind.Glued) { Combination = glue.Combination, With = glue.With });
+            }
+
+            PlacementLevel level = reasons.Count == 0 ? PlacementLevel.Perfect
+                : reasons.Any(r => r.Kind == PlacementReasonKind.BeyondTolerance) ? PlacementLevel.NotAdvised
+                : PlacementLevel.WithReserve;
+            return new Verdict(candidate, level, reasons, next);
         }
     }
 }

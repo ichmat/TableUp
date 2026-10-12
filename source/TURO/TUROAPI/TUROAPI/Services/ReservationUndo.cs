@@ -60,6 +60,8 @@ namespace TUROAPI.Services
         public Guid? AssignmentId { get; init; }
         /// <summary>La ligne « acceptée » d'une demande déposée sur une table, effacée avec celle du placement</summary>
         public Guid? AcceptanceEventId { get; init; }
+        /// <summary>La combinaison née d'un dépôt sur une paire inédite : défaire la retire, si rien d'autre ne s'en sert</summary>
+        public Guid? CreatedCombinationId { get; init; }
     }
 
     /// <summary>

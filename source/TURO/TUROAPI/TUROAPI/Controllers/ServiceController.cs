@@ -25,8 +25,11 @@ namespace TUROAPI.Controllers
         // ALRG : une allergie compte tant que le convive peut encore venir ou est à table
         private static readonly ReservationStatus[] WithAllergies = [ReservationStatus.Pending, ReservationStatus.Confirmed, ReservationStatus.Seated];
 
-        public ServiceController(TuroDBContext context) : base(context)
+        private readonly ServiceUndo _undo;
+
+        public ServiceController(TuroDBContext context, ServiceUndo undo) : base(context)
         {
+            _undo = undo;
         }
 
         /// <summary>
@@ -297,8 +300,9 @@ namespace TUROAPI.Controllers
             bool forNow = reservation.ServiceDay == await CurrentServiceDayAsync(restaurant, now);
             PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, reservation.ServiceDay, now);
             PlacementEngine.Request request = PlacementEngine.RequestOf(reservation, reservation.PreferredZone?.Name, now);
-            List<PlacementEngine.Verdict> verdicts = PlacementEngine.Judge(request, floor.Candidates, floor.Occupations,
-                PlacementEngine.SettingsOf(restaurant) with { TrackCleaning = restaurant.TrackTableCleaning && forNow });
+            PlacementEngine.Settings settings = PlacementEngine.SettingsOf(restaurant) with { TrackCleaning = restaurant.TrackTableCleaning && forNow };
+            List<PlacementEngine.Verdict> verdicts = PlacementEngine.Judge(request, floor.Candidates, floor.Occupations, settings);
+            List<PlacementEngine.ApproachVerdict> approaches = PlacementEngine.JudgeApproaches(request, floor.Approaches, floor.Candidates, floor.Occupations, settings);
 
             return Ok(new PlacementResponse
             {
@@ -310,8 +314,357 @@ namespace TUROAPI.Controllers
                 Note = reservation.Note,
                 PreferredZoneId = reservation.PreferredZoneId,
                 Entities = verdicts.Select(ToEntityResponse).ToList(),
+                Approaches = approaches.Select(ToApproachResponse).ToList(),
             });
         }
+
+        /// <summary>COMB-06 : les rappels en cours ou à venir du restaurant — ils parlent de la salle maintenant, quel que soit le service affiché</summary>
+        [HttpGet("reminders")]
+        [ProducesResponseType<List<CombinationReminderResponse>>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetReminders()
+        {
+            DateTime now = DateTime.UtcNow;
+            CombinationFloor.Floor floor = await CombinationFloor.LoadAsync(context, CurrentRestaurantId, now);
+            return Ok(floor.Combinations
+                .Select(c => CombinationFloor.ReminderOf(c, floor, now))
+                .OfType<CombinationReminderResponse>()
+                .OrderBy(r => r.DueAt).ThenBy(r => r.Name)
+                .ToList());
+        }
+
+        /// <summary>
+        /// COMB-07 : la réponse à un rappel dû. Deux tablettes qui répondent au même rappel : la seconde trouve un rappel changé.
+        /// Le logiciel ne bascule `IsActive` que sur cette réponse humaine
+        /// </summary>
+        [HttpPost("combinations/{id:guid}/reminder")]
+        [ProducesResponseType<ServiceUndoResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> AnswerReminder([FromRoute] Guid id, [FromBody] ReminderAnswerRequest request)
+        {
+            bool fits = request.Kind == CombinationReminderKind.Approach
+                ? request.Answer is ReminderAnswer.Done or ReminderAnswer.Later or ReminderAnswer.Abandon
+                : request.Answer is ReminderAnswer.Separate or ReminderAnswer.KeepTogether;
+            if (!fits)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, $"{request.Answer} does not answer a {request.Kind} reminder.");
+            }
+
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Combinations\" WHERE \"Id\" = {id} FOR UPDATE");
+            DateTime now = DateTime.UtcNow;
+            CombinationFloor.Floor floor = await CombinationFloor.LoadAsync(context, CurrentRestaurantId, now);
+            Combination combination = floor.Combinations.FirstOrDefault(c => c.Id == id)
+                ?? throw new ApiErrorException(ApiError.NotFound, "Combination not found.");
+            CombinationReminderResponse? current = CombinationFloor.ReminderOf(combination, floor, now);
+            if (current == null || current.Kind != request.Kind || current.DueAt > now)
+            {
+                throw new ApiErrorException(ApiError.ReminderChanged, combination.Name);
+            }
+
+            Dictionary<Guid, CombinationFields> before = floor.Combinations.ToDictionary(c => c.Id, CombinationFields.Of);
+            var removed = new List<AssignmentCopy>();
+            var lines = new List<Guid>();
+            bool touchesClients = false;
+            switch (request.Answer)
+            {
+                case ReminderAnswer.Done:
+                    // COMB-04 : une table n'est que dans une combinaison collée ; les tables poussées ici quittent l'autre
+                    foreach (Combination other in floor.Combinations.Where(o => o.Id != id && o.IsActive && o.Tables.Any(t => combination.Tables.Any(m => m.Id == t.Id))))
+                    {
+                        CombinationFloor.SetActive(other, false);
+                    }
+                    CombinationFloor.SetActive(combination, true);
+                    break;
+                case ReminderAnswer.Later:
+                    combination.SnoozedUntil = TruncateToMicroseconds(now.AddMinutes(CombinationFloor.SnoozeMinutes));
+                    break;
+                case ReminderAnswer.Abandon:
+                    // Seulement celle du rappel : les autres réservations de la combinaison gardent leur place
+                    List<Guid> waiting = current.Reservation is { } asked ? [asked.Id] : [];
+                    // Toutes les affectations : la précédente redeviendrait sinon la plus récente. L'historique reste au journal
+                    List<Assignment> assignments = await context.Assignments.Where(a => waiting.Contains(a.ReservationId)).ToListAsync();
+                    removed.AddRange(assignments.Select(AssignmentCopy.Of));
+                    context.Assignments.RemoveRange(assignments);
+                    touchesClients = await context.Reservations.AnyAsync(r => waiting.Contains(r.Id) && r.ClientId != null);
+                    foreach (Guid reservationId in waiting)
+                    {
+                        var line = new EventLog
+                        {
+                            Id = Guid.NewGuid(), ReservationId = reservationId, Timestamp = now, Type = EventType.Placement,
+                            AuthorId = CurrentUserId, Details = $"Rapprochement {combination.Name} abandonné",
+                        };
+                        context.EventLogs.Add(line);
+                        lines.Add(line.Id);
+                    }
+                    break;
+                case ReminderAnswer.Separate:
+                    CombinationFloor.SetActive(combination, false);
+                    break;
+                case ReminderAnswer.KeepTogether:
+                    if (request.Kind == CombinationReminderKind.Separate)
+                    {
+                        combination.KeepGluedFor = current.Reservation?.Id;
+                    }
+                    else
+                    {
+                        combination.SeparateAfterNoShowOf = null;
+                    }
+                    break;
+            }
+            await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, now);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            Guid undoId = Guid.NewGuid();
+            Dictionary<Guid, CombinationFields> changed = floor.Combinations
+                .Where(c => before[c.Id] != CombinationFields.Of(c))
+                .ToDictionary(c => c.Id, CombinationFields.Of);
+            _undo.Remember(undoId, new ServiceUndoEntry(CurrentUserId, CurrentRestaurantId)
+            {
+                CombinationsBefore = changed.Keys.ToDictionary(k => k, k => before[k]),
+                CombinationsAfter = changed,
+                RemovedAssignments = removed,
+                EventIds = lines,
+                TouchesReservations = removed.Count > 0,
+            });
+            await NotifyChangedAsync(DataScope.FloorPlan);
+            if (removed.Count > 0)
+            {
+                await NotifyChangedAsync(DataScope.Reservations);
+            }
+            if (touchesClients)
+            {
+                await NotifyChangedAsync(DataScope.Clients);
+            }
+            return Ok(new ServiceUndoResponse { UndoId = undoId });
+        }
+
+        /// <summary>
+        /// Le mode édition du service, pour les deux rôles (§4.7) : la position est définitive et passe aussi dans le brouillon.
+        /// Coller ou séparer est la réponse humaine que les rappels attendent : le logiciel ne le décide jamais seul
+        /// </summary>
+        [HttpPost("layout")]
+        [ProducesResponseType<ServiceUndoResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Layout([FromBody] LayoutRequest request)
+        {
+            if (request.Glue != null && request.Separate != null)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, "glue or separate, not both.");
+            }
+            if (request.Moves.Count == 0 && request.Glue == null && request.Separate == null)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, "nothing to change.");
+            }
+            List<Guid> movedIds = request.Moves.Select(m => m.TableId).Distinct().ToList();
+            if (movedIds.Count != request.Moves.Count)
+            {
+                throw new ApiErrorException(ApiError.InvalidRequest, "a table is moved twice.");
+            }
+
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            DateTime now = DateTime.UtcNow;
+            Dictionary<Guid, Table> moved = await context.Tables
+                .Include(t => t.Zone)
+                .Where(t => movedIds.Contains(t.Id) && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
+                .ToDictionaryAsync(t => t.Id);
+            if (moved.Count != movedIds.Count)
+            {
+                throw new ApiErrorException(ApiError.NotFound, "Table not found.");
+            }
+            var positionsBefore = new Dictionary<Guid, TablePosition>();
+            foreach (TableMoveRequest move in request.Moves)
+            {
+                Table table = moved[move.TableId];
+                if (!FloorPlanRules.FitsIn(move.X, move.Y, table.Width, table.Height, table.Rotation, table.Zone.Width, table.Zone.Height))
+                {
+                    throw new ApiErrorException(ApiError.InvalidModification, $"table {table.Name}: the table goes beyond room {table.Zone.Name}.");
+                }
+                positionsBefore[table.Id] = new TablePosition(table.X, table.Y);
+                table.X = move.X;
+                table.Y = move.Y;
+            }
+
+            CombinationFloor.Floor floor = await CombinationFloor.LoadAsync(context, CurrentRestaurantId, now);
+            Dictionary<Guid, CombinationFields> before = floor.Combinations.ToDictionary(c => c.Id, CombinationFields.Of);
+            Combination? created = null;
+            if (request.Glue is GlueRequest glue)
+            {
+                Combination target;
+                if (glue.CombinationId is Guid combinationId)
+                {
+                    target = floor.Combinations.FirstOrDefault(c => c.Id == combinationId)
+                        ?? throw new ApiErrorException(ApiError.NotFound, "Combination not found.");
+                }
+                else
+                {
+                    // Une table collée contre une combinaison active : trois tables, comme dans l'éditeur
+                    List<Table> members = await CombinationRules.CheckPairAsync(context, CurrentRestaurantId, glue.TableIds, 2);
+                    string name = await CombinationRules.CheckNewAsync(context, CurrentRestaurantId, glue.Name, glue.Capacity);
+                    created = new Combination { Id = Guid.NewGuid(), ZoneId = members[0].ZoneId, Name = name, Capacity = glue.Capacity, Tables = members };
+                    context.Combinations.Add(created);
+                    floor.Combinations.Add(created);
+                    target = created;
+                }
+                if (target.Tables.Any(t => !t.IsActive) || target.Tables.Select(t => t.ZoneId).Distinct().Count() > 1)
+                {
+                    throw new ApiErrorException(ApiError.InvalidRequest, "glued tables must be active tables of one room.");
+                }
+                Glue(floor, target);
+            }
+            if (request.Separate is SeparateRequest separate)
+            {
+                Combination target = floor.Combinations.FirstOrDefault(c => c.Id == separate.CombinationId)
+                    ?? throw new ApiErrorException(ApiError.NotFound, "Combination not found.");
+                CombinationFloor.SetActive(target, false);
+                if (separate.ReactivateId is Guid reactivateId)
+                {
+                    Combination rest = floor.Combinations.FirstOrDefault(c => c.Id == reactivateId)
+                        ?? throw new ApiErrorException(ApiError.NotFound, "Combination not found.");
+                    if (!rest.Tables.All(t => target.Tables.Any(m => m.Id == t.Id)))
+                    {
+                        throw new ApiErrorException(ApiError.InvalidRequest, "only the tables left glued can stay together.");
+                    }
+                    Glue(floor, rest);
+                }
+            }
+
+            await DraftSync.ApplyAsync(context, CurrentRestaurantId, draft =>
+            {
+                foreach (DraftTableItem item in draft.Tables.Where(t => moved.ContainsKey(t.Id)))
+                {
+                    (item.X, item.Y) = (moved[item.Id].X, moved[item.Id].Y);
+                }
+                foreach (DraftCombinationItem item in draft.Combinations)
+                {
+                    Combination? live = floor.Combinations.FirstOrDefault(c => c.Id == item.Id);
+                    if (live != null && before.TryGetValue(item.Id, out CombinationFields? was) && was.IsActive != live.IsActive)
+                    {
+                        item.IsActive = live.IsActive;
+                    }
+                }
+                if (created != null)
+                {
+                    draft.Combinations.Add(new DraftCombinationItem
+                    {
+                        Id = created.Id, Name = created.Name, Capacity = created.Capacity, TableIds = created.Tables.Select(t => t.Id).ToList(), IsActive = true,
+                    });
+                }
+            });
+            await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, now);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            Guid undoId = Guid.NewGuid();
+            Dictionary<Guid, CombinationFields> changed = floor.Combinations
+                .Where(c => c != created && before[c.Id] != CombinationFields.Of(c))
+                .ToDictionary(c => c.Id, CombinationFields.Of);
+            if (created != null)
+            {
+                // Née du geste : défaire la remet en sommeil, puis la retire
+                before[created.Id] = new CombinationFields(false, null, null, null);
+                changed[created.Id] = CombinationFields.Of(created);
+            }
+            _undo.Remember(undoId, new ServiceUndoEntry(CurrentUserId, CurrentRestaurantId)
+            {
+                PositionsBefore = positionsBefore,
+                PositionsAfter = moved.Values.ToDictionary(t => t.Id, t => new TablePosition(t.X, t.Y)),
+                CombinationsBefore = changed.Keys.ToDictionary(k => k, k => before[k]),
+                CombinationsAfter = changed,
+                CreatedCombinationId = created?.Id,
+            });
+            await NotifyChangedAsync(DataScope.FloorPlan);
+            return Ok(new ServiceUndoResponse { UndoId = undoId });
+        }
+
+        /// <summary>COMB-04 : coller ces tables sépare la combinaison collée qui en partage une</summary>
+        private static void Glue(CombinationFloor.Floor floor, Combination target)
+        {
+            foreach (Combination other in floor.Combinations.Where(o => o != target && o.IsActive && o.Tables.Any(t => target.Tables.Any(m => m.Id == t.Id))))
+            {
+                CombinationFloor.SetActive(other, false);
+            }
+            CombinationFloor.SetActive(target, true);
+        }
+
+        /// <summary>Le bandeau « Annuler » des gestes du service : refusé si une table ou une combinaison touchée a changé depuis</summary>
+        [HttpPost("undo/{undoId:guid}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType<ApiErrorResponse>(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> Undo([FromRoute] Guid undoId)
+        {
+            ServiceUndoEntry entry = _undo.Find(undoId) is ServiceUndoEntry found && found.UserId == CurrentUserId && found.RestaurantId == CurrentRestaurantId
+                ? found
+                : throw new ApiErrorException(ApiError.UndoExpired);
+
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            Guid[] tableIds = [.. entry.PositionsAfter.Keys];
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Tables\" WHERE \"Id\" = ANY({tableIds}) ORDER BY \"Id\" FOR UPDATE");
+            Guid[] combinationIds = [.. entry.CombinationsAfter.Keys];
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Combinations\" WHERE \"Id\" = ANY({combinationIds}) ORDER BY \"Id\" FOR UPDATE");
+
+            List<Table> tables = await context.Tables.Where(t => tableIds.Contains(t.Id)).ToListAsync();
+            List<Combination> combinations = await context.Combinations.Where(c => combinationIds.Contains(c.Id)).ToListAsync();
+            const double epsilon = 1e-6;
+            bool moved = tables.Any(t => Math.Abs(t.X - entry.PositionsAfter[t.Id].X) > epsilon || Math.Abs(t.Y - entry.PositionsAfter[t.Id].Y) > epsilon);
+            bool changed = combinations.Count != combinationIds.Length || combinations.Any(c => CombinationFields.Of(c) != entry.CombinationsAfter[c.Id]);
+            Guid[] reservations = [.. entry.RemovedAssignments.Select(a => a.ReservationId).Distinct().Order()];
+            // Un second « Annuler » simultané attend ici, puis voit les affectations déjà remises
+            await context.Database.ExecuteSqlAsync($"SELECT 1 FROM \"Reservations\" WHERE \"Id\" = ANY({reservations}) ORDER BY \"Id\" FOR UPDATE");
+            bool replaced = await context.Assignments.AnyAsync(a => reservations.Contains(a.ReservationId));
+            if (moved || changed || replaced)
+            {
+                throw new ApiErrorException(ApiError.UndoExpired);
+            }
+
+            foreach (Table table in tables)
+            {
+                (table.X, table.Y) = (entry.PositionsBefore[table.Id].X, entry.PositionsBefore[table.Id].Y);
+            }
+            foreach (Combination combination in combinations)
+            {
+                entry.CombinationsBefore[combination.Id].ApplyTo(combination);
+            }
+            context.Assignments.AddRange(entry.RemovedAssignments.Select(a => a.ToAssignment()));
+            await context.EventLogs.Where(e => entry.EventIds.Contains(e.Id)).ExecuteDeleteAsync();
+            if (entry.CreatedCombinationId is Guid createdId
+                && await context.Combinations.Include(c => c.Assignments).FirstOrDefaultAsync(c => c.Id == createdId) is Combination born
+                && born.Assignments.Count == 0)
+            {
+                context.Combinations.Remove(born);
+            }
+            await DraftSync.ApplyAsync(context, CurrentRestaurantId, draft =>
+            {
+                foreach (DraftTableItem item in draft.Tables.Where(t => entry.PositionsBefore.ContainsKey(t.Id)))
+                {
+                    (item.X, item.Y) = (entry.PositionsBefore[item.Id].X, entry.PositionsBefore[item.Id].Y);
+                }
+                foreach (DraftCombinationItem item in draft.Combinations.Where(c => entry.CombinationsBefore.ContainsKey(c.Id)))
+                {
+                    item.IsActive = entry.CombinationsBefore[item.Id].IsActive;
+                }
+                draft.Combinations.RemoveAll(c => c.Id == entry.CreatedCombinationId);
+            });
+            await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _undo.Forget(undoId);
+            await NotifyChangedAsync(DataScope.FloorPlan);
+            if (entry.TouchesReservations)
+            {
+                await NotifyChangedAsync(DataScope.Reservations);
+            }
+            return NoContent();
+        }
+
+        /// <summary>PostgreSQL garde la microseconde : ce qu'on retient pour l'annulation doit être ce qu'il relira</summary>
+        private static DateTime TruncateToMicroseconds(DateTime value) => new(value.Ticks - value.Ticks % 10, value.Kind);
 
         /// <summary>Le jour de service en cours : la veille tant qu'une de ses plages passe minuit et dure encore (§4.3)</summary>
         private async Task<DateOnly> CurrentServiceDayAsync(Restaurant restaurant, DateTime now)
@@ -325,6 +678,14 @@ namespace TUROAPI.Controllers
             return ServiceView.ServiceDayAt(now, timeZone, ReservationClock.WindowsOf(yesterday, restaurant.Services, closures, restaurant.DefaultRotation));
         }
 
+        private static PlacementReasonResponse ToReasonResponse(PlacementEngine.Reason r) => new()
+        {
+            Kind = r.Kind, Count = r.Count, Tolerance = r.Tolerance, NoneLeftOfCapacity = r.NoneLeftOfCapacity,
+            Since = r.Since, Guest = r.Guest, LeftAt = r.LeftAt, RequestedZone = r.RequestedZone, Note = r.Note,
+            Start = r.Start, Margin = r.Margin, DefaultRotation = r.DefaultRotation, Combination = r.Combination,
+            With = r.With?.ToList(),
+        };
+
         private static PlacementEntityResponse ToEntityResponse(PlacementEngine.Verdict verdict) => new()
         {
             TableId = verdict.Candidate.TableId,
@@ -333,14 +694,21 @@ namespace TUROAPI.Controllers
             Name = verdict.Candidate.Name,
             Capacity = verdict.Candidate.Capacity,
             Level = verdict.Level,
-            Reasons = verdict.Reasons.Select(r => new PlacementReasonResponse
-            {
-                Kind = r.Kind, Count = r.Count, Tolerance = r.Tolerance, NoneLeftOfCapacity = r.NoneLeftOfCapacity,
-                Since = r.Since, Guest = r.Guest, LeftAt = r.LeftAt, RequestedZone = r.RequestedZone, Note = r.Note,
-                Start = r.Start, Margin = r.Margin, DefaultRotation = r.DefaultRotation, Combination = r.Combination,
-                With = r.With?.ToList(),
-            }).ToList(),
+            Reasons = verdict.Reasons.Select(ToReasonResponse).ToList(),
             Next = verdict.Next == null ? null : new PlacementNextResponse { Start = verdict.Next.Start, Margin = verdict.Next.Margin, Guest = verdict.Next.Guest },
+        };
+
+        private static PlacementApproachResponse ToApproachResponse(PlacementEngine.ApproachVerdict verdict) => new()
+        {
+            CombinationId = verdict.Approach.CombinationId,
+            TableIds = [.. verdict.Approach.TableIds],
+            ZoneId = verdict.Approach.ZoneId,
+            Name = verdict.Approach.Name,
+            Capacity = verdict.Approach.Capacity,
+            Level = verdict.Level,
+            Reasons = verdict.Reasons.Select(ToReasonResponse).ToList(),
+            Next = verdict.Next == null ? null : new PlacementNextResponse { Start = verdict.Next.Start, Margin = verdict.Next.Margin, Guest = verdict.Next.Guest },
+            Distance = verdict.Approach.Distance,
         };
 
         private static string? PlaceNameOf(Reservation reservation)

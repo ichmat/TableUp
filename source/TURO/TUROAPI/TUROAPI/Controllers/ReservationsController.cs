@@ -288,6 +288,8 @@ namespace TUROAPI.Controllers
             EventLog line = NewEvent(id, EventType.Modification, changes);
             context.EventLogs.Add(line);
             await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
+            await context.SaveChangesAsync();
             await transaction.CommitAsync();
 
             _undo.Remember(line.Id, new UndoEntry(id, CurrentUserId, UndoKind.Modification) { ValuesBefore = before });
@@ -333,9 +335,31 @@ namespace TUROAPI.Controllers
         [ProducesResponseType<ReservationActionResponse>(StatusCodes.Status200OK)]
         public async Task<IActionResult> Place([FromRoute] Guid id, [FromBody] PlaceRequest request)
         {
-            if ((request.TableId == null) == (request.CombinationId == null))
+            int targets = (request.TableId != null ? 1 : 0) + (request.CombinationId != null ? 1 : 0) + (request.NewCombination != null ? 1 : 0);
+            if (targets != 1)
             {
-                throw new ApiErrorException(ApiError.InvalidRequest, "give either a table or a combination.");
+                throw new ApiErrorException(ApiError.InvalidRequest, "give either a table, a combination or a new combination.");
+            }
+
+            // Les tables visées, avant le verrou. Une combinaison n'a pas besoin d'être active, mais toutes ses tables doivent l'être.
+            // Les vérifications d'une paire inédite sont refaites sous le verrou des tables, plus bas
+            string? newName = null;
+            List<Guid> tableIds;
+            if (request.NewCombination is NewCombinationRequest wanted)
+            {
+                tableIds = (await CombinationRules.CheckPairAsync(context, CurrentRestaurantId, wanted.TableIds, 2)).Select(t => t.Id).ToList();
+                newName = await CombinationRules.CheckNewAsync(context, CurrentRestaurantId, wanted.Name, wanted.Capacity);
+            }
+            else if (request.TableId is Guid tableId)
+            {
+                tableIds = await context.Tables.Where(t => t.Id == tableId && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
+                    .Select(t => t.Id).ToListAsync();
+            }
+            else
+            {
+                tableIds = await context.Combinations
+                    .Where(c => c.Id == request.CombinationId && c.Zone.RestaurantId == CurrentRestaurantId && c.Tables.All(t => t.IsActive))
+                    .SelectMany(c => c.Tables.Select(t => t.Id)).ToListAsync();
             }
 
             await using var transaction = await context.Database.BeginTransactionAsync();
@@ -344,17 +368,12 @@ namespace TUROAPI.Controllers
             {
                 throw new ApiErrorException(ApiError.ReservationActionNotAllowed, $"a {reservation.Status} reservation cannot be placed.");
             }
-            List<Guid> tableIds = request.TableId is Guid tableId
-                ? await context.Tables.Where(t => t.Id == tableId && t.Zone.RestaurantId == CurrentRestaurantId && t.IsActive)
-                    .Select(t => t.Id).ToListAsync()
-                : await context.Combinations.Where(c => c.Id == request.CombinationId && c.Zone.RestaurantId == CurrentRestaurantId && c.IsActive)
-                    .SelectMany(c => c.Tables.Select(t => t.Id)).ToListAsync();
             if (tableIds.Count == 0)
             {
                 throw new ApiErrorException(ApiError.NotFound, "Table not found.");
             }
             Assignment? current = reservation.LatestAssignment();
-            if (reservation.Status != ReservationStatus.Pending && current != null
+            if (request.NewCombination == null && reservation.Status != ReservationStatus.Pending && current != null
                 && (request.TableId is Guid same ? current.TableId == same : current.CombinationId == request.CombinationId))
             {
                 // Lâchée sur sa propre table : le geste est abandonné, rien ne change et rien n'est à défaire
@@ -365,6 +384,12 @@ namespace TUROAPI.Controllers
                 ? TablesOf(current).Select(t => t.Id).Except(tableIds).ToList()
                 : [];
             await LockTablesAsync([.. tableIds, .. left]);
+            if (request.NewCombination is NewCombinationRequest recheck)
+            {
+                // Sous verrou : deux dépôts sur la même paire passent l'un après l'autre. Un même nom sur deux paires différentes reste toléré
+                await CombinationRules.CheckPairAsync(context, CurrentRestaurantId, recheck.TableIds, 2);
+                newName = await CombinationRules.CheckNewAsync(context, CurrentRestaurantId, recheck.Name, recheck.Capacity);
+            }
 
             // Relu après le verrou : un placement concurrent sur ces tables est maintenant visible
             Restaurant restaurant = await LoadRestaurantAsync();
@@ -372,9 +397,13 @@ namespace TUROAPI.Controllers
             // DISPO-02 ne vaut que pour le service en cours : une table sale maintenant reste sale pour demain
             bool forNow = reservation.ServiceDay == await ServiceDayAsync(restaurant, TimeZoneInfo.FindSystemTimeZoneById(restaurant.TimeZone));
             PlacementFloor.Floor floor = await PlacementFloor.LoadAsync(context, CurrentRestaurantId, reservation.ServiceDay, now);
-            PlacementEngine.Candidate target = floor.Candidates.FirstOrDefault(c =>
-                    request.TableId is Guid t ? c.TableId == t : c.CombinationId == request.CombinationId)
-                ?? throw new ApiErrorException(ApiError.NotFound, "Table not found.");
+            PlacementEngine.Candidate target = request.NewCombination is NewCombinationRequest asked
+                ? new PlacementEngine.Candidate(null, null, await context.Tables.Where(t => t.Id == tableIds[0]).Select(t => t.ZoneId).FirstAsync(),
+                    newName!, asked.Capacity, tableIds, null, null)
+                : floor.Candidates.FirstOrDefault(c => request.TableId is Guid t ? c.TableId == t : c.CombinationId == request.CombinationId)
+                    ?? floor.Approaches.Where(a => a.CombinationId != null && a.CombinationId == request.CombinationId)
+                        .Select(PlacementEngine.CandidateOf).FirstOrDefault()
+                    ?? throw new ApiErrorException(ApiError.NotFound, "Table not found.");
             string? zoneName = reservation.PreferredZoneId is Guid zoneId
                 ? await context.Zones.Where(z => z.Id == zoneId).Select(z => z.Name).FirstOrDefaultAsync()
                 : null;
@@ -400,12 +429,29 @@ namespace TUROAPI.Controllers
                 acceptance.Timestamp = line.Timestamp.AddTicks(-10);
                 context.EventLogs.Add(acceptance);
             }
+            Combination? created = null;
+            if (request.NewCombination != null)
+            {
+                created = new Combination
+                {
+                    Id = Guid.NewGuid(),
+                    ZoneId = target.ZoneId,
+                    Name = target.Name,
+                    Capacity = target.Capacity,
+                    Tables = await context.Tables.Where(t => tableIds.Contains(t.Id)).ToListAsync(),
+                };
+                context.Combinations.Add(created);
+                await DraftSync.ApplyAsync(context, CurrentRestaurantId, draft => draft.Combinations.Add(new DraftCombinationItem
+                {
+                    Id = created.Id, Name = created.Name, Capacity = created.Capacity, TableIds = [.. tableIds], IsActive = false,
+                }));
+            }
             var assignment = new Assignment
             {
                 Id = Guid.NewGuid(),
                 ReservationId = id,
                 TableId = target.TableId,
-                CombinationId = target.CombinationId,
+                CombinationId = target.CombinationId ?? created?.Id,
                 AssignedById = CurrentUserId,
                 AssignedAt = now,
             };
@@ -422,6 +468,8 @@ namespace TUROAPI.Controllers
             }
             context.EventLogs.Add(line);
             await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
+            await context.SaveChangesAsync();
             await ApplyCountersAsync(reservation.ClientId, ClientCounters.Delta(before.Status, reservation.Status));
             await transaction.CommitAsync();
 
@@ -431,6 +479,7 @@ namespace TUROAPI.Controllers
                 TablesBefore = tablesBefore,
                 AssignmentId = assignment.Id,
                 AcceptanceEventId = acceptance?.Id,
+                CreatedCombinationId = created?.Id,
             });
             await NotifyAsync(reservation.ClientId != null);
             return Ok(new ReservationActionResponse { Reservation = await DetailAsync(id), EventId = line.Id });
@@ -499,6 +548,8 @@ namespace TUROAPI.Controllers
                 $"{ReservationJournal.SourceLabel(ReservationSource.WalkIn)}, assis sur {table.Name}");
             context.EventLogs.Add(creation);
             Dictionary<Guid, DateTime?> tablesBefore = await CleanImplicitlyAsync(restaurant, [tableId]);
+            await context.SaveChangesAsync();
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
             await context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -570,6 +621,13 @@ namespace TUROAPI.Controllers
                         await CheckStillFreeAsync(reservation, previous);
                     }
                     context.Assignments.Remove(placed);
+                    if (entry.CreatedCombinationId is Guid createdId
+                        && await context.Combinations.Include(c => c.Assignments).FirstOrDefaultAsync(c => c.Id == createdId) is Combination born
+                        && !born.IsActive && born.Assignments.All(a => a.Id == assignmentId))
+                    {
+                        context.Combinations.Remove(born);
+                        await DraftSync.ApplyAsync(context, CurrentRestaurantId, draft => draft.Combinations.RemoveAll(c => c.Id == createdId));
+                    }
                 }
                 await RestoreTablesAsync(entry.TablesBefore);
                 if (entry.AcceptanceEventId is Guid acceptanceId)
@@ -584,6 +642,8 @@ namespace TUROAPI.Controllers
                 await ApplyCountersAsync(reservation.ClientId, delta);
                 clientId = reservation.ClientId;
             }
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, DateTime.UtcNow);
+            await context.SaveChangesAsync();
             await transaction.CommitAsync();
 
             _undo.Forget(eventId);
@@ -670,6 +730,10 @@ namespace TUROAPI.Controllers
                 : null;
             EventLog line = NewEvent(id, ReservationTransitions.EventOf(gesture), details);
             context.EventLogs.Add(line);
+            await context.SaveChangesAsync();
+            // COMB-07 : des tables collées pour un client qui ne viendra pas — on demandera s'il faut les séparer
+            await CombinationFloor.ApplyAsync(context, CurrentRestaurantId, now,
+                gesture == ReservationGesture.NoShow ? reservation : null);
             await context.SaveChangesAsync();
 
             (int Visits, int NoShows) delta = ClientCounters.Delta(from, to);

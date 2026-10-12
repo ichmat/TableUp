@@ -18,6 +18,11 @@ const hhmm = (iso: string | null | undefined, timeZone: string) => (iso ? timeIn
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 const margin = (minutes: number) => (minutes < 60 ? `${minutes} min` : formatDuration(minutes));
 
+/** « 12 et 13 », « 12, 13 et 14 » */
+export function tableList(names: readonly string[]): string {
+  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} et ${names.at(-1)}`;
+}
+
 /** Le catalogue du §3.5 : un titre court en gras, puis ce qu'on ne voit pas sur le plan */
 export function reasonText(reason: PlacementReason, context: ReasonContext, timeZone: string): { title: string, detail: string } {
   switch (reason.kind) {
@@ -54,6 +59,11 @@ export function reasonText(reason: PlacementReason, context: ReasonContext, time
       return {
         title: 'Table collée',
         detail: `la ${context.name} est collée à la ${(reason.with ?? []).join(' et la ')} (${reason.combination}) : il faudra les séparer.`,
+      };
+    case 'Approach':
+      return {
+        title: 'Rapprochement nécessaire',
+        detail: `les tables ${tableList(reason.with ?? [])} devront être poussées l'une contre l'autre avant l'arrivée.`,
       };
   }
 }

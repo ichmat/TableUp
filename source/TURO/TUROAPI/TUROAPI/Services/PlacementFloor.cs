@@ -15,7 +15,7 @@ namespace TUROAPI.Services
     {
         private static readonly ReservationStatus[] Occupying = [ReservationStatus.Confirmed, ReservationStatus.Seated, ReservationStatus.Finished];
 
-        public sealed record Floor(List<Candidate> Candidates, List<Occupied> Occupations);
+        public sealed record Floor(List<Candidate> Candidates, List<Occupied> Occupations, List<Approach> Approaches);
 
         public static async Task<Floor> LoadAsync(TuroDBContext context, Guid restaurantId, DateOnly serviceDay, DateTime now)
         {
@@ -48,6 +48,32 @@ namespace TUROAPI.Services
                 }
             }
 
+            // RAPP-02 : aucun filtre de proximité — les combinaisons en sommeil, et toute paire de tables qu'aucune ne réunit
+            var approaches = new List<Approach>();
+            foreach (Zone zone in zones)
+            {
+                List<Table> active = zone.Tables.Where(t => t.IsActive).OrderBy(t => t.Name).ToList();
+                foreach (Combination dormant in zone.Combinations
+                    .Where(c => !c.IsActive && c.Tables.Count >= 2 && c.Tables.All(t => t.IsActive && t.ZoneId == zone.Id))
+                    .OrderBy(c => c.Name))
+                {
+                    approaches.Add(ApproachOf(dormant.Id, zone.Id, dormant.Name, dormant.Capacity, dormant.Tables, glued));
+                }
+                for (int i = 0; i < active.Count; i++)
+                {
+                    for (int j = i + 1; j < active.Count; j++)
+                    {
+                        Table a = active[i];
+                        Table b = active[j];
+                        bool declared = zone.Combinations.Any(c => c.Tables.Count == 2 && c.Tables.Any(t => t.Id == a.Id) && c.Tables.Any(t => t.Id == b.Id));
+                        if (!declared)
+                        {
+                            approaches.Add(ApproachOf(null, zone.Id, CombinationNames.Default([a.Name, b.Name]), a.Capacity + b.Capacity, [a, b], glued));
+                        }
+                    }
+                }
+            }
+
             List<Reservation> near = await context.Reservations
                 .Where(r => r.RestaurantId == restaurantId
                     && r.ServiceDay >= serviceDay.AddDays(-1) && r.ServiceDay <= serviceDay.AddDays(1)
@@ -69,7 +95,33 @@ namespace TUROAPI.Services
                 occupations.AddRange(held.Select(id =>
                     new Occupied(reservation.Id, id, interval.Start, interval.End, reservation.Status, reservation.Client?.Name)));
             }
-            return new Floor(candidates, occupations);
+            return new Floor(candidates, occupations, approaches);
+        }
+
+        private static Approach ApproachOf(Guid? combinationId, Guid zoneId, string name, int capacity, IReadOnlyList<Table> tables, List<Combination> glued)
+        {
+            Combination? within = glued.FirstOrDefault(c => c.Id != combinationId && c.Tables.Any(t => tables.Any(m => m.Id == t.Id)));
+            Table? held = within == null ? null : tables.First(m => within.Tables.Any(t => t.Id == m.Id));
+            return new Approach(combinationId, zoneId, name, capacity,
+                tables.Select(t => t.Id).ToList(), tables.Select(t => t.Name).ToList(), Spread(tables),
+                tables.Select(t => t.NeedsCleaningSince).Where(s => s != null).Min(),
+                within == null ? null : new Glue(within.Name, within.Tables.Where(t => t.Id != held!.Id).Select(t => t.Name).OrderBy(n => n).ToList()));
+        }
+
+        /// <summary>RAPP-03 : la plus grande distance entre les centres de deux tables du groupe, en mètres (la rotation ne déplace pas le centre)</summary>
+        private static double Spread(IReadOnlyList<Table> tables)
+        {
+            double spread = 0;
+            foreach (Table a in tables)
+            {
+                foreach (Table b in tables)
+                {
+                    double dx = a.X + a.Width / 2 - (b.X + b.Width / 2);
+                    double dy = a.Y + a.Height / 2 - (b.Y + b.Height / 2);
+                    spread = Math.Max(spread, Math.Sqrt(dx * dx + dy * dy));
+                }
+            }
+            return Math.Round(spread, 2);
         }
     }
 }

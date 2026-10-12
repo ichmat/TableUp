@@ -10,6 +10,8 @@ namespace TUROAPI.Models.Enums
         // Réservée juste après : moins de 15 min de marge
         NextSoon,
         // Table seule, collée dans une combinaison active : il faudra les séparer
-        Glued
+        Glued,
+        // Rapprochement nécessaire : des tables à pousser l'une contre l'autre avant l'arrivée (RAPP-01)
+        Approach
     }
 }

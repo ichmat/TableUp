@@ -1,6 +1,6 @@
-import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
+import { computed, DestroyRef, inject, linkedSignal, Service, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
-import { DataScope, Placement, ReservationActionResult, ServiceQuery, ServiceSnapshot, TableCleaned } from '../../../models';
+import { CombinationReminder, CombinationReminderKind, DataScope, LayoutRequest, Placement, ReminderAnswer, ReservationActionResult, ServiceQuery, ServiceSnapshot, ServiceUndoResult, TableCleaned } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
@@ -9,6 +9,11 @@ const SERVICE_URL = '/api/service';
 
 /** Ce qui change l'instantané : un geste, un nettoyage, le plan publié, un réglage, une fermeture */
 export const SERVICE_SCOPES: DataScope[] = [DataScope.Service, DataScope.Reservations, DataScope.FloorPlan, DataScope.Restaurant, DataScope.Closures];
+
+/** Ce qui change les rappels : un geste sur une réservation, un collage, un plan publié */
+export const REMINDER_SCOPES: DataScope[] = [DataScope.FloorPlan, DataScope.Reservations];
+/** Un rappel échu apparaît dans la demi-minute, sans nouvel appel : l'API donne l'heure, le poste la guette */
+export const REMINDER_TICK_MS = 30_000;
 
 function params(query: ServiceQuery): Record<string, string> {
   return {
@@ -47,11 +52,24 @@ export class ServiceViewService {
   /** Vrai pendant un chargement : l'instantané affiché peut encore être celui d'avant */
   isLoading = this._resource.isLoading;
 
+  // Les rappels parlent de la salle maintenant : lus dès la connexion, quel que soit l'écran (le rail les signale)
+  private _reminders = httpResource<CombinationReminder[]>(() => (this._auth.isConnected() ? `${SERVICE_URL}/reminders` : undefined));
+  reminders = computed(() => (this._reminders.hasValue() ? this._reminders.value() : []));
+  // L'horloge est relue à chaque nouvelle liste : un rappel déjà échu à l'arrivée s'affiche sans attendre le pas suivant
+  private _clock = linkedSignal<CombinationReminder[], number>({ source: () => this.reminders(), computation: () => Date.now() });
+  /** Ceux dont l'heure est venue ; aucun n'expire (COMB-06) */
+  dueReminders = computed(() => this.reminders().filter((reminder) => Date.parse(reminder.dueAt) <= this._clock()));
+
   constructor() {
     const realtime = inject(RealtimeService);
     for (const scope of SERVICE_SCOPES) {
       realtime.onDataChanged(scope, () => this.reload());
     }
+    for (const scope of REMINDER_SCOPES) {
+      realtime.onDataChanged(scope, () => this._reminders.reload());
+    }
+    const tick = setInterval(() => this._clock.set(Date.now()), REMINDER_TICK_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 
   setQuery(query: ServiceQuery | null) {
@@ -94,6 +112,34 @@ export class ServiceViewService {
   /** WALK-01 : « Asseoir maintenant » */
   seat(tableId: string, covers: number, acceptBookedLater: boolean): Promise<ApiResult<ReservationActionResult>> {
     return this.thenReload(toApiResult(this._http.post<ReservationActionResult>(`${SERVICE_URL}/tables/${tableId}/seat`, { covers, acceptBookedLater })));
+  }
+
+  reloadReminders() {
+    this._reminders.reload();
+  }
+
+  /** COMB-07 : la réponse à un rappel échu */
+  answerReminder(combinationId: string, kind: CombinationReminderKind, answer: ReminderAnswer): Promise<ApiResult<ServiceUndoResult>> {
+    return this.thenRefresh(toApiResult(this._http.post<ServiceUndoResult>(`${SERVICE_URL}/combinations/${combinationId}/reminder`, { kind, answer })));
+  }
+
+  /** Le mode édition : déplacer, coller, séparer */
+  layout(request: LayoutRequest): Promise<ApiResult<ServiceUndoResult>> {
+    return this.thenRefresh(toApiResult(this._http.post<ServiceUndoResult>(`${SERVICE_URL}/layout`, request)));
+  }
+
+  /** Le bandeau « Annuler » d'un geste du service */
+  undo(undoId: string): Promise<ApiResult<null>> {
+    return this.thenRefresh(toApiResult(this._http.post<null>(`${SERVICE_URL}/undo/${undoId}`, null)));
+  }
+
+  /** Un collage change les rappels autant que le plan : les deux se relisent */
+  private async thenRefresh<T>(request: Promise<ApiResult<T>>): Promise<ApiResult<T>> {
+    const result = await this.thenReload(request);
+    if (result.error === null) {
+      this._reminders.reload();
+    }
+    return result;
   }
 
   /** L'écran montre le résultat sans attendre la notification SignalR */

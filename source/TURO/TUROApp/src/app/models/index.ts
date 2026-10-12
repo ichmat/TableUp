@@ -17,3 +17,4 @@ export * from './data-scope.model';
 export * from './floor-plan.model';
 export * from './placement.model';
 export * from './service-view.model';
+export * from './combination-reminder.model';

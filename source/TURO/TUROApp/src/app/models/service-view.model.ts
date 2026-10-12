@@ -133,4 +133,6 @@ export interface TableMark {
     /** « Moreau · 20:00 » ; `null` pour une table sans occupation à cette heure */
     label: string | null,
     allergy: boolean,
+    /** Un rappel attend une réponse sur cette table (COMB-06) */
+    reminder?: boolean,
 }

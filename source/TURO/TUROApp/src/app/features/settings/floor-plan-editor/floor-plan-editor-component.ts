@@ -8,18 +8,18 @@ import { FloorPlanCanvasComponent, PlanPointerEvent } from '../../../shared/comp
 import { DecorPalettePick, TablePaletteComponent, PalettePick } from './table-palette-component';
 import { DecorPanelComponent } from './decor-panel-component';
 import { TablePanelComponent } from './table-panel-component';
-import { AccolageDialogComponent } from './accolage-dialog-component';
+import { AccolageDialogComponent } from '../../../shared/components/floor-plan/accolage-dialog-component';
 import { CombinationPanelComponent } from './combination-panel-component';
-import { SeparationDialogComponent } from './separation-dialog-component';
-import { AccolageProposal, proposeAccolage, proposeSeparation, SeparationProposal } from './logic/accolage';
-import { tableSetKey } from './logic/table-set';
+import { SeparationDialogComponent } from '../../../shared/components/floor-plan/separation-dialog-component';
+import { AccolageProposal, proposeAccolage, proposeSeparation, SeparationProposal } from '../../../shared/components/floor-plan/logic/accolage';
+import { tableSetKey } from '../../../shared/components/floor-plan/logic/table-set';
 import { countChanges, draftFromPublished } from './logic/draft-diff';
 import { DraftStore } from './logic/draft-store';
-import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, placeCentredAt, Point, Rect, roundMetres } from './logic/geometry';
+import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, placeCentredAt, Point, Rect, roundMetres } from '../../../shared/components/floor-plan/logic/geometry';
 import { buildTablePalette, DECOR_PALETTE, DecorPaletteEntry, TablePaletteEntry } from './logic/palette';
-import { combinationErrors, decorErrors, tableErrors } from './logic/plan-rules';
+import { combinationErrors, decorErrors, tableErrors } from '../../../shared/components/floor-plan/logic/plan-rules';
 import { nextTableName } from './logic/table-naming';
-import { trackPointer } from './logic/pointer-tracking';
+import { trackPointer } from '../../../shared/components/floor-plan/logic/pointer-tracking';
 import { formatMetres } from './logic/units';
 
 /** Ce qui est sélectionné sur le plan : une table, un décor, ou une combinaison */

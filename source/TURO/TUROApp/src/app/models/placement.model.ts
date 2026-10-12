@@ -47,7 +47,7 @@ export const PLACEMENT_LIMITS = {
 /** §3.5 : le verdict d'une table ou d'une combinaison pour une réservation */
 export type PlacementLevel = 'Excluded' | 'Perfect' | 'WithReserve' | 'NotAdvised';
 
-export type PlacementReasonKind = 'ExtraSeats' | 'BeyondTolerance' | 'NeedsCleaning' | 'OtherZone' | 'NextSoon' | 'Glued';
+export type PlacementReasonKind = 'ExtraSeats' | 'BeyondTolerance' | 'NeedsCleaning' | 'OtherZone' | 'NextSoon' | 'Glued' | 'Approach';
 
 /** Une raison et ses données, rédigée par `placement-reasons.ts` ; seuls les champs de son `kind` sont remplis */
 export interface PlacementReason {
@@ -85,6 +85,22 @@ export interface PlacementEntity {
     next: PlacementNext | null,
 }
 
+/** RAPP-01 : une combinaison en sommeil (`combinationId`) ou une paire inédite ; jamais ✓ */
+export interface PlacementApproach {
+    combinationId: string | null,
+    tableIds: string[],
+    zoneId: string,
+    /** Le nom de la combinaison, ou celui qu'on proposera (« 12-13 ») */
+    name: string,
+    capacity: number,
+    level: PlacementLevel,
+    /** La première est toujours `Approach`, avec les noms des tables dans `with` */
+    reasons: PlacementReason[],
+    next: PlacementNext | null,
+    /** Mètres entre les centres les plus éloignés */
+    distance: number,
+}
+
 /** GET /api/service/placement/{id} */
 export interface Placement {
     reservationId: string,
@@ -96,10 +112,14 @@ export interface Placement {
     note: string | null,
     preferredZoneId: string | null,
     entities: PlacementEntity[],
+    approaches: PlacementApproach[],
 }
 
 /** POST /api/reservations/{id}/place */
-export type PlaceTarget = { tableId: string } | { combinationId: string };
+export type PlaceTarget =
+    | { tableId: string }
+    | { combinationId: string }
+    | { newCombination: { tableIds: string[], name: string, capacity: number } };
 
 /** Ce que le canevas dessine d'une entité pendant un placement */
 export interface PlacementMark {

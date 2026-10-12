@@ -15,6 +15,8 @@ namespace TUROAPI.Models.Responses
         public string? Note { get; set; }
         public Guid? PreferredZoneId { get; set; }
         public List<PlacementEntityResponse> Entities { get; set; } = [];
+        /// <summary>RAPP-01 : combinaisons en sommeil et paires inédites, du plus proche au plus loin ; jamais ✓</summary>
+        public List<PlacementApproachResponse> Approaches { get; set; } = [];
     }
 
     public class PlacementEntityResponse
@@ -46,6 +48,22 @@ namespace TUROAPI.Models.Responses
         public int? DefaultRotation { get; set; }
         public string? Combination { get; set; }
         public List<string>? With { get; set; }
+    }
+
+    public class PlacementApproachResponse
+    {
+        /// <summary>`null` : une paire de tables qu'aucune combinaison ne réunit encore</summary>
+        public Guid? CombinationId { get; set; }
+        public List<Guid> TableIds { get; set; } = [];
+        public Guid ZoneId { get; set; }
+        /// <summary>« 12-13 » : le nom de la combinaison, ou celui qu'on proposera de lui donner</summary>
+        public string Name { get; set; } = string.Empty;
+        public int Capacity { get; set; }
+        public PlacementLevel Level { get; set; }
+        public List<PlacementReasonResponse> Reasons { get; set; } = [];
+        public PlacementNextResponse? Next { get; set; }
+        /// <summary>En mètres, entre les centres les plus éloignés (RAPP-03)</summary>
+        public double Distance { get; set; }
     }
 
     public class PlacementNextResponse

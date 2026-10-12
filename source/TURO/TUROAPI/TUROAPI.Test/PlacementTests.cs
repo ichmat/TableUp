@@ -307,5 +307,25 @@ namespace TUROAPI.Test
 
             Assert.AreEqual(DataScope.Reservations, await screen.NextAsync());
         }
+
+        [TestMethod]
+        public async Task Dormant_combinations_and_new_pairs_are_proposed_nearest_first()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            // AddTablesAsync aligne les tables tous les 1,50 m : 5, 12, 13, 14
+            (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("5", 2), ("12", 4), ("13", 4), ("14", 4));
+            Guid dormant = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[1].Id, tables[2].Id);
+            Reservation nguyen = await restaurant.AddReservationAsync(Dates.Today.AddDays(1), 20, covers: 8, clientName: "Nguyen");
+
+            PlacementResponse placement = await PlacementApi.VerdictsAsync(staff, nguyen.Id);
+
+            CollectionAssert.AreEqual(new[] { "12-13", "13-14", "12-14" }, placement.Approaches.Select(a => a.Name).ToArray());
+            Assert.AreEqual(dormant, placement.Approaches[0].CombinationId);
+            Assert.IsNull(placement.Approaches[1].CombinationId);
+            CollectionAssert.AreEqual(new[] { tables[2].Id, tables[3].Id }, placement.Approaches[1].TableIds);
+            Assert.IsTrue(placement.Approaches.All(a => a.Level == PlacementLevel.WithReserve && a.Reasons[0].Kind == PlacementReasonKind.Approach));
+            Assert.AreEqual(1.5, placement.Approaches[0].Distance, 0.01);
+        }
     }
 }
