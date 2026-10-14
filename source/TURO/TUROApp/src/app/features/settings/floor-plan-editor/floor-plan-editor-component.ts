@@ -1,25 +1,26 @@
-import { Component, computed, effect, inject, OnDestroy, signal, untracked, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, OnDestroy, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, CanDeactivateFn, Router } from '@angular/router';
-import { ApiError, DraftCombination, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanDraftContent, FloorPlanZone, PlanCombination, PlanDecor, PlanTable } from '../../../models';
+import { ApiError, DataScope, DraftCombination, DraftDecor, DraftTable, FloorPlanDraft, FloorPlanDraftContent, FloorPlanZone, PlanCombination, PlanDecor, PlanTable } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
+import { RealtimeService } from '../../../core/services/realtime/realtime.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { Button } from '../../../shared/components/button/button';
 import { FloorPlanCanvasComponent, PlanPointerEvent } from '../../../shared/components/floor-plan/floor-plan-canvas-component';
 import { DecorPalettePick, TablePaletteComponent, PalettePick } from './table-palette-component';
 import { DecorPanelComponent } from './decor-panel-component';
 import { TablePanelComponent } from './table-panel-component';
-import { AccolageDialogComponent } from './accolage-dialog-component';
+import { AccolageDialogComponent } from '../../../shared/components/floor-plan/accolage-dialog-component';
 import { CombinationPanelComponent } from './combination-panel-component';
-import { SeparationDialogComponent } from './separation-dialog-component';
-import { AccolageProposal, proposeAccolage, proposeSeparation, SeparationProposal } from './logic/accolage';
-import { tableSetKey } from './logic/table-set';
+import { SeparationDialogComponent } from '../../../shared/components/floor-plan/separation-dialog-component';
+import { AccolageProposal, proposeAccolage, proposeSeparation, SeparationProposal } from '../../../shared/components/floor-plan/logic/accolage';
+import { tableSetKey } from '../../../shared/components/floor-plan/logic/table-set';
 import { countChanges, draftFromPublished } from './logic/draft-diff';
 import { DraftStore } from './logic/draft-store';
-import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, placeCentredAt, Point, Rect, roundMetres } from './logic/geometry';
+import { boundsOf, boundsOfAll, clampToZone, findFreeSpot, placeCentredAt, Point, Rect, roundMetres } from '../../../shared/components/floor-plan/logic/geometry';
 import { buildTablePalette, DECOR_PALETTE, DecorPaletteEntry, TablePaletteEntry } from './logic/palette';
-import { combinationErrors, decorErrors, tableErrors } from './logic/plan-rules';
+import { combinationErrors, decorErrors, tableErrors } from '../../../shared/components/floor-plan/logic/plan-rules';
 import { nextTableName } from './logic/table-naming';
-import { trackPointer } from './logic/pointer-tracking';
+import { trackPointer } from '../../../shared/components/floor-plan/logic/pointer-tracking';
 import { formatMetres } from './logic/units';
 
 /** Ce qui est sélectionné sur le plan : une table, un décor, ou une combinaison */
@@ -30,6 +31,9 @@ export interface PlanSelection {
 
 /** En dessous, un appui sur une table la sélectionne sans la déplacer */
 const DRAG_THRESHOLD_PX = 4;
+
+/** Ni ajout, ni retrait, ni modification, dans un sens comme dans l'autre */
+const sameContent = (a: FloorPlanDraftContent, b: FloorPlanDraftContent) => countChanges(a, b) === 0 && countChanges(b, a) === 0;
 
 /**
  * L'éditeur de plan (§12) : plein écran, admin seulement. On modifie un brouillon, enregistré tout seul,
@@ -490,8 +494,14 @@ export class FloorPlanEditorComponent implements OnDestroy {
     this.selection.set(null);
   }
 
+  /** Le brouillon que le service vient de modifier, quand la saisie en cours n'est pas encore enregistrée */
+  protected changedInService = signal<FloorPlanDraftContent | null>(null);
+
   constructor() {
     void this.loadDraft();
+    // Un déplacement fait en service passe aussi dans le brouillon (§5.5) : l'éditeur ouvert le reprend, ou prévient
+    const stop = inject(RealtimeService).onDataChanged(DataScope.FloorPlan, () => void this.onPlanChanged());
+    inject(DestroyRef).onDestroy(stop);
     // Le brouillon de départ ne se pose qu'une fois : un rechargement du plan publié (SignalR) ne l'écrase pas
     effect(() => {
       if (this.loadState() !== 'loading') {
@@ -528,6 +538,60 @@ export class FloorPlanEditorComponent implements OnDestroy {
         }
       });
     });
+  }
+
+  async onPlanChanged() {
+    if (this.loadState() !== 'ready' || this.publishing()) {
+      return;
+    }
+    // Le plan publié d'avant la notification : sans brouillon, la saisie s'y compare
+    const before = this.published();
+    const result = await this._floorPlan.getDraft();
+    if (result.error !== null || this.loadState() !== 'ready' || this.publishing()) {
+      return;
+    }
+    if (result.value === null) {
+      await this.followPublished(before);
+      return;
+    }
+    const { tables, decors, combinations } = result.value;
+    this.takeFromService({ tables, decors, combinations }, this.store.saveState() === 'saved');
+  }
+
+  /** Sans brouillon, le service a écrit le plan publié lui-même : l'éditeur le reprend s'il n'y a rien touché */
+  private async followPublished(before: FloorPlanDraftContent) {
+    const result = await this._floorPlan.refresh();
+    if (result.value === null || this.loadState() !== 'ready' || this.publishing()) {
+      return;
+    }
+    const untouched = this.store.saveState() === 'saved' && sameContent(before, this.store.content());
+    this.takeFromService(draftFromPublished(result.value), untouched);
+  }
+
+  /** Repris tel quel si rien n'attend, sinon le bandeau « Le plan a été modifié en service » */
+  private takeFromService(draft: FloorPlanDraftContent, untouched: boolean) {
+    if (sameContent(draft, this.store.content())) {
+      return;
+    }
+    if (untouched) {
+      this.store.reset(draft);
+      return;
+    }
+    this.changedInService.set(draft);
+  }
+
+  /** « Recharger » : la saisie non enregistrée est perdue, le plan du service est repris */
+  reloadFromService() {
+    const draft = this.changedInService();
+    if (draft !== null) {
+      this.store.reset(draft);
+    }
+    this.changedInService.set(null);
+  }
+
+  /** « Garder la mienne » : la publication réécrira les positions du service */
+  keepMine() {
+    this.changedInService.set(null);
   }
 
   ngOnDestroy() {
@@ -837,6 +901,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
         return;
       }
       this.store.reset(draftFromPublished(result.value));
+      this.changedInService.set(null);
     } finally {
       this.publishing.set(false);
     }
@@ -865,6 +930,7 @@ export class FloorPlanEditorComponent implements OnDestroy {
     }
     this.selection.set(null);
     this.store.reset(this.published());
+    this.changedInService.set(null);
   }
 
   /** La garde de la route s'occupe d'enregistrer et de demander confirmation */

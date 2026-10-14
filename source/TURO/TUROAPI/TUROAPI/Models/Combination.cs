@@ -26,6 +26,15 @@ namespace TUROAPI.Models
         public DateTime? ActivateAt { get; set; }
         public DateTime? DeactivateAt { get; set; }
 
+        // « Pas encore, me redemander dans 10 minutes » : le rappel de rapprochement revient à cette heure (COMB-07)
+        public DateTime? SnoozedUntil { get; set; }
+
+        // « Non, les laisser ensemble » : cette réservation ne redemande plus la séparation ; une autre, si
+        public Guid? KeepGluedFor { get; set; }
+
+        // Le no-show d'une réservation posée sur ces tables collées : « Séparer 12 et 13 ? » (COMB-07)
+        public Guid? SeparateAfterNoShowOf { get; set; }
+
         public List<Assignment> Assignments { get; set; } = [];
     }
 }

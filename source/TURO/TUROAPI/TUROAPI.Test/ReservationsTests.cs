@@ -60,6 +60,29 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task After_midnight_the_service_still_running_since_yesterday_can_be_booked_and_counts_as_today()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            if (local.Hour >= 22)
+            {
+                Assert.Inconclusive("La plage d'hier doit passer minuit et contenir maintenant : impossible après 22 h");
+            }
+            DateOnly yesterday = Dates.Today.AddDays(-1);
+            // Comme à 00:20 le dimanche, le dîner du samedi (hier, jusqu'à h+1 aujourd'hui) est encore en cours
+            await ReservationApi.AddServiceAsync(restaurant.Id, yesterday.DayOfWeek, local.Hour + 2, local.Hour + 1);
+
+            ReservationActionResponse created = await ReservationApi.CreateAsync(staff, ReservationApi.Request(yesterday, local.Hour));
+
+            Assert.AreEqual(yesterday, created.Reservation.ServiceDay);
+            Assert.AreEqual(Dates.ToUtc(Dates.Today, new TimeOnly(local.Hour, 0)), created.Reservation.Start);
+            // « Aujourd'hui » est le jour du service en cours, pas la date du calendrier
+            ReservationPageResponse today = await ReservationApi.ListAsync(staff, "?period=Today");
+            Assert.AreEqual(yesterday, today.Days.Single().ServiceDay);
+        }
+
+        [TestMethod]
         public async Task Closed_days_past_days_and_hours_outside_service_are_refused()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();

@@ -8,7 +8,7 @@ import { ClosureService } from '../../../core/services/closure/closure.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { todayIn } from '../../../shared/utils/calendar-date';
 import { ReservationFormMode, ReservationSaved } from '../reservation-draft';
-import { ReservationForm } from './reservation-form';
+import { ReservationForm, SUGGEST_DELAY_MS } from './reservation-form';
 
 const DINNER: ServiceWindow = { opening: '19:00:00', closing: '21:00:00', slotStep: 30, duration: 105, slots: ['19:00:00', '19:30:00', '20:00:00', '20:30:00'] };
 const BOOKED = (change: Partial<ReservationDetail> = {}): ReservationDetail => ({
@@ -65,7 +65,7 @@ describe('ReservationForm', () => {
         { provide: ClientService, useValue: clients },
         { provide: RestaurantService, useValue: { model: signal({
           timeZone: 'Europe/Paris', defaultRotation: 120, zones: [{ id: 'z1', name: 'Terrasse' }],
-          services: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => ({ day })),
+          services: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => ({ day, opening: '19:00:00', closing: '23:00:00' })),
         }) } },
         { provide: ClosureService, useValue: { closures: signal([]) } },
         { provide: ModalService, useValue: modal },
@@ -127,18 +127,27 @@ describe('ReservationForm', () => {
     fixture.detectChanges();
     flushMicrotasks();
 
-    type('phone', '06 1');
-    tick(300);
+    type('phone', '06');
+    tick(SUGGEST_DELAY_MS);
     flushMicrotasks();
     fixture.detectChanges();
     expect(clients.suggest).not.toHaveBeenCalled();
+    expect(element().querySelector('[data-suggestions-pending]')).toBeNull();
 
+    // Dès 3 chiffres, la jauge annonce la liste ; elle n'arrive qu'après 2 s sans frappe
+    type('phone', '06 1');
+    fixture.detectChanges();
+    expect(element().querySelector('[data-field="phone"] [data-suggestions-pending]')!.textContent).toContain('2 s');
+    tick(SUGGEST_DELAY_MS - 1);
     type('phone', '06 12');
-    tick(300);
+    tick(SUGGEST_DELAY_MS - 1);
+    expect(clients.suggest).not.toHaveBeenCalled();
+    tick(1);
     flushMicrotasks();
     fixture.detectChanges();
 
     expect(clients.suggest).toHaveBeenCalledOnceWith('06 12');
+    expect(element().querySelector('[data-suggestions-pending]')).toBeNull();
     const offer = element().querySelector('[data-field="phone"] [data-suggestion]') as HTMLButtonElement;
     expect(offer.textContent).toContain('Sophie Marchand');
     expect(offer.textContent).toContain('06 12 34 56 78');
@@ -148,7 +157,7 @@ describe('ReservationForm', () => {
     expect((element().querySelector('[data-field="phone"] input') as HTMLInputElement).value).toBe('06 12 34 56 78');
     expect(element().querySelector('[data-known]')!.textContent).toContain('Sophie Marchand');
     expect(element().querySelector('[data-suggestion]')).toBeNull();
-    tick(300);
+    tick(SUGGEST_DELAY_MS);
     flushMicrotasks();
   }));
 
@@ -159,8 +168,11 @@ describe('ReservationForm', () => {
     fixture.detectChanges();
     flushMicrotasks();
 
+    type('identity', 'ma');
+    tick(SUGGEST_DELAY_MS);
+    expect(clients.suggest).not.toHaveBeenCalled();
     type('identity', 'mar');
-    tick(300);
+    tick(SUGGEST_DELAY_MS);
     flushMicrotasks();
     fixture.detectChanges();
 
@@ -169,8 +181,34 @@ describe('ReservationForm', () => {
     fixture.detectChanges();
     expect((element().querySelector('[data-field="phone"] input') as HTMLInputElement).value).toBe('06 12 34 56 78');
     expect(element().querySelector('[data-known]')!.textContent).toContain('Sophie Marchand');
-    tick(300);
+    tick(SUGGEST_DELAY_MS);
     flushMicrotasks();
+  }));
+
+  it('should close the list, or drop the one on its way, when the field is left', fakeAsync(() => {
+    clients.suggest.and.resolveTo([{ ...SOPHIE, phone: '0612345678' }]);
+    fixture = TestBed.createComponent(ReservationForm);
+    fixture.componentRef.setInput('mode', { kind: 'create' });
+    fixture.detectChanges();
+    flushMicrotasks();
+    const field = () => element().querySelector('[data-field="identity"] .relative')!;
+
+    type('identity', 'mar');
+    tick(SUGGEST_DELAY_MS);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(element().querySelector('[data-suggestion]')).not.toBeNull();
+    field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(element().querySelector('[data-suggestions]')).toBeNull();
+
+    type('identity', 'marc');
+    field().dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    tick(SUGGEST_DELAY_MS);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(clients.suggest).toHaveBeenCalledTimes(1);
+    expect(element().querySelector('[data-suggestions-pending]')).toBeNull();
   }));
 
   it('should send nothing without a time, a number and, for an unknown caller, a name', async () => {
@@ -244,6 +282,17 @@ describe('ReservationForm', () => {
 
     expect(modal.infoModal).toHaveBeenCalledOnceWith('Déjà réservé',
       "Julien a déjà une réservation sur ce créneau. Ouvrez-la depuis la liste pour la modifier plutôt que d'en créer une deuxième.");
+  });
+
+  it('should say, while modifying, that the new time falls on another reservation of the client', async () => {
+    reservations.update.and.resolveTo({ value: null, error: 'Moreau already has a reservation at 21:00 on 2026-08-20.', code: ApiError.ClientAlreadyBooked });
+    await open({ kind: 'edit', reservation: BOOKED() });
+
+    button('Enregistrer').click();
+    await fixture.whenStable();
+
+    expect(modal.infoModal).toHaveBeenCalledOnceWith('Déjà réservé',
+      "Moreau a déjà une autre réservation à ce moment-là. Choisissez une autre heure, ou modifiez d'abord l'autre réservation.");
   });
 
   it('should offer to reload when another device changed the reservation', async () => {

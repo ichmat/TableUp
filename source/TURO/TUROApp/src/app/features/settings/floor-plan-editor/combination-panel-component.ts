@@ -4,7 +4,7 @@ import { DraftCombination } from '../../../models';
 import { Button } from '../../../shared/components/button/button';
 import { Input } from '../../../shared/components/inputs/input/input';
 import { NumberInput } from '../../../shared/components/inputs/number-input/number-input';
-import { PlanError, PlanField } from './logic/plan-rules';
+import { PlanError, PlanField } from '../../../shared/components/floor-plan/logic/plan-rules';
 
 /** Le panneau d'une combinaison : nom et places ; ses tables ne changent jamais */
 @Component({

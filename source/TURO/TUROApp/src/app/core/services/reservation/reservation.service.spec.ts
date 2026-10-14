@@ -146,6 +146,16 @@ describe('ReservationService', () => {
     expect((await result).value?.eventId).toBe('e2');
   });
 
+  it('should place on a table or a combination', async () => {
+    listCall().flush(PAGE);
+    const result = service.place('r1', { tableId: 't5' });
+
+    const call = http.expectOne((r) => r.url === '/api/reservations/r1/place' && r.method === 'POST');
+    expect(call.request.body).toEqual({ tableId: 't5' });
+    call.flush({ reservation: { ...DETAIL, place: { name: '5', capacity: 4 } }, eventId: 'e3' });
+    expect((await result).value?.eventId).toBe('e3');
+  });
+
   it('should create and update with the request as is', async () => {
     listCall().flush(PAGE);
     const created = service.create(REQUEST);

@@ -1,3 +1,4 @@
+import { ClosureService } from '../../../core/services/closure/closure.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { ReservationListItem, ReservationPage, ReservationQuery } from '../../../models';
@@ -52,6 +53,7 @@ describe('ReservationList', () => {
         { provide: ReservationService, useValue: { page, query, listFailed: signal(false), setQuery, showMore } },
         { provide: RestaurantService, useValue: { model: signal({ timeZone: 'Europe/Paris', zones: [{ id: 'z1', name: 'Terrasse' }] }) } },
         { provide: ReservationActions, useValue: actions },
+        { provide: ClosureService, useValue: { closures: signal([]) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ReservationList);

@@ -64,10 +64,10 @@
     } @else {
         <section data-field="phone" class="flex flex-col gap-1">
             <p class="text-xs font-bold text-text-muted">4 · TÉLÉPHONE</p>
-            <app-input type="tel" inputClass="w-full" [formField]="reservationForm.phone" />
-            @if (lookupField() === 'phone') {
-                <ng-container [ngTemplateOutlet]="offers" />
-            }
+            <div class="relative" (focusout)="dismissOffers('phone')" (keydown.escape)="dismissOffers('phone')">
+                <app-input type="tel" inputClass="w-full" [formField]="reservationForm.phone" />
+                <ng-container [ngTemplateOutlet]="offers" [ngTemplateOutletContext]="{ field: 'phone' }" />
+            </div>
             @if (submitted()) {
                 @for (error of reservationForm.phone().errors(); track $index) {
                     <p class="text-sm text-red-700">{{ error.message }}</p>
@@ -91,10 +91,10 @@
         } @else {
             <section data-field="identity" class="flex flex-col gap-1">
                 <p class="text-xs font-bold text-text-muted">NOM</p>
-                <app-input inputClass="w-full" [formField]="reservationForm.name" />
-                @if (lookupField() === 'name') {
-                    <ng-container [ngTemplateOutlet]="offers" />
-                }
+                <div class="relative" (focusout)="dismissOffers('name')" (keydown.escape)="dismissOffers('name')">
+                    <app-input inputClass="w-full" [formField]="reservationForm.name" />
+                    <ng-container [ngTemplateOutlet]="offers" [ngTemplateOutletContext]="{ field: 'name' }" />
+                </div>
                 @if (submitted()) {
                     @for (error of reservationForm.name().errors(); track $index) {
                         <p class="text-sm text-red-700">{{ error.message }}</p>
@@ -161,18 +161,37 @@
     </div>
 </div>
 
-<!-- FORM-10 : les fiches connues, proposées dès un morceau de numéro ou de nom ; en choisir une l'attache -->
-<ng-template #offers>
-    <div data-suggestions class="flex flex-col rounded-lg border-2 border-border-soft bg-surface overflow-hidden">
-        <p class="text-xs font-bold text-text-muted px-2 pt-1">Clients connus</p>
-        @for (client of suggestions(); track client.id) {
-            <button type="button" data-suggestion class="flex flex-row items-center gap-2 px-2 py-1.5 text-left cursor-pointer hover:bg-app" (click)="choose(client)">
-                <span class="font-bold grow min-w-0 truncate">{{ client.name }}</span>
-                @if (client.hasAllergy) {
-                    <span class="text-[0.65rem] font-bold px-1.5 rounded bg-coral-soft text-coral-ink">ALLERGIE</span>
-                }
-                <span class="text-sm text-text-muted tabular-nums">{{ formatPhone(client.phone ?? '') }}</span>
-            </button>
+<!--
+    FORM-10 : les fiches connues, proposées dès 3 caractères de numéro ou de nom, 2 s après la dernière touche ;
+    en choisir une l'attache. La liste se pose par-dessus le formulaire, qui ne bouge pas
+-->
+<ng-template #offers let-field="field">
+    @if (pendingLookup(); as pending) {
+        @if (pending.field === field) {
+            <div data-suggestions-pending class="flex flex-row items-center gap-2 pt-1 text-xs text-text-muted" role="status">
+                <div class="h-1 w-16 rounded-full bg-border-soft overflow-hidden">
+                    <!-- Un élément neuf à chaque touche : la jauge repart de zéro -->
+                    @for (keystroke of [pending.keystroke]; track keystroke) {
+                        <div class="h-full rounded-full bg-slate animate-fill" [style.animation-duration.ms]="suggestDelay"></div>
+                    }
+                </div>
+                <span>Suggestions de clients dans 2 s…</span>
+            </div>
         }
-    </div>
+    }
+    @if (lookupField() === field) {
+        <!-- Le doigt sur la liste ne retire pas le focus du champ : elle ne se ferme pas avant le choix -->
+        <div data-suggestions (mousedown)="$event.preventDefault()" class="absolute left-0 right-0 top-full z-20 mt-1 flex max-h-72 flex-col overflow-y-auto rounded-lg border-2 border-border-soft bg-surface shadow-lg">
+            <p class="text-xs font-bold text-text-muted px-2 pt-1">Clients connus</p>
+            @for (client of suggestions(); track client.id) {
+                <button type="button" data-suggestion class="flex flex-row items-center gap-2 px-2 py-1.5 text-left cursor-pointer hover:bg-app" (click)="choose(client)">
+                    <span class="font-bold grow min-w-0 truncate">{{ client.name }}</span>
+                    @if (client.hasAllergy) {
+                        <span class="text-[0.65rem] font-bold px-1.5 rounded bg-coral-soft text-coral-ink">ALLERGIE</span>
+                    }
+                    <span class="text-sm text-text-muted tabular-nums">{{ formatPhone(client.phone ?? '') }}</span>
+                </button>
+            }
+        </div>
+    }
 </ng-template>

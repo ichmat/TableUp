@@ -14,6 +14,8 @@ namespace TUROAPI.Models.Enums
         /// <summary>GET /api/clients (liste et fiche)</summary>
         Clients,
         /// <summary>GET /api/reservations (liste et fiche)</summary>
-        Reservations
+        Reservations,
+        /// <summary>GET /api/service (l'écran Service)</summary>
+        Service
     }
 }

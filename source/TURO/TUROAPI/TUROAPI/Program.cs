@@ -107,6 +107,7 @@ namespace TUROAPI
             // L'état d'avant des écritures de réservation, le temps du bandeau « Annuler »
             builder.Services.AddMemoryCache();
             builder.Services.AddSingleton<ReservationUndo>();
+            builder.Services.AddSingleton<ServiceUndo>();
 
             builder.Logging.ClearProviders();
             builder.Services.AddHttpContextAccessor();

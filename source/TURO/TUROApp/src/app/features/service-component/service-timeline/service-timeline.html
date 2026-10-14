@@ -1,0 +1,16 @@
+<div class="flex flex-row gap-1 overflow-x-auto pb-1">
+    @for (slot of slots(); track slot.time; let i = $index) {
+        <button type="button" [attr.data-slot]="time(slot)" [attr.data-active]="i === activeIndex() ? '' : null"
+            [class]="slotClass(i)" (click)="picked.emit(i)">
+            <span class="font-bold tabular-nums">{{ time(slot) }}</span>
+            <span class="text-sm">{{ slot.covers }}c</span>
+            <span class="block h-1.5 w-full rounded bg-border overflow-hidden">
+                <span data-fill class="block h-full bg-slate" [style.width.%]="fill(slot)"></span>
+            </span>
+            @if (slot.hasUnplaced) {
+                <!-- Violet : l'orange est déjà pris par le créneau actif ; pas de compteur, « À placer » le porte (§5.4) -->
+                <span data-unplaced class="absolute -top-1 -right-1 size-6 rounded-full bg-violet text-surface text-xs font-bold flex items-center justify-center">!</span>
+            }
+        </button>
+    }
+</div>

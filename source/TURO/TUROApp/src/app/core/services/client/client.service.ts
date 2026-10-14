@@ -7,6 +7,8 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
 
 const CLIENTS_URL = '/api/clients';
+/** La liste déroulante du formulaire de réservation : au-delà, il vaut mieux taper une lettre de plus */
+export const MAX_SUGGESTIONS = 20;
 
 export const DEFAULT_CLIENT_QUERY: ClientQuery = { search: '', sort: 'Recent', tag: null, atRisk: false, pageSize: CLIENT_LIMITS.pageSize };
 
@@ -130,8 +132,9 @@ export class ClientService {
      * Sans numéro, une fiche n'est pas proposée : la réservation l'exige, et en saisir un créerait une autre fiche
      */
     async suggest(search: string): Promise<ClientListItem[]> {
-        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL, { params: { search, pageSize: 5 } }));
-        return (result.value?.items ?? []).filter((item) => item.phone !== null);
+        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL,
+            { params: { search, withPhone: true, pageSize: MAX_SUGGESTIONS } }));
+        return result.value?.items ?? [];
     }
 
     exportCsv(): Promise<ApiResult<CsvFile>> {

@@ -1,6 +1,6 @@
 @if (authService.isConnected()) {
 <nav #mainNav (mouseenter)="openNavBar()" (mouseleave)="closeNavBar()" 
-    class="absolute left-0 top-0
+    class="absolute left-0 top-0 z-30
     flex flex-col gap-2 h-dvh px-1 py-2 text-xl border-r-2 bg-surface border-border text-text w-14 overflow-hidden
     transition-all duration-300 ease-in-out
 
@@ -15,7 +15,7 @@
             />
         Accueil
     </a>
-    <a routerLink="service" routerLinkActive="bg-interactive text-surface">
+    <a routerLink="service" routerLinkActive="bg-interactive text-surface" class="relative">
         <hugeicons-icon
             [icon]="table"
             [size]="30"
@@ -23,6 +23,9 @@
             [strokeWidth]="1.5"
             />
         Service
+        @if (reminderDot()) {
+            <span data-reminder-dot class="absolute left-7 top-1 size-2.5 rounded-full bg-violet ring-2 ring-surface"></span>
+        }
     </a>
     <a routerLink="reservation" routerLinkActive="bg-interactive text-surface">
         <hugeicons-icon

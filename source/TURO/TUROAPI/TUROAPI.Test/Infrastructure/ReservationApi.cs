@@ -143,6 +143,11 @@ namespace TUROAPI.Test.Infrastructure
             return id;
         }
 
+        /// <summary>Le suivi du nettoyage est désactivé par défaut : les tests de « à nettoyer » l'activent</summary>
+        public static Task TrackCleaningAsync(Guid restaurantId, bool track = true) =>
+            TestApi.WithDbAsync(db => db.Restaurants.Where(r => r.Id == restaurantId)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.TrackTableCleaning, track)));
+
         public static Task AssignAsync(Guid reservationId, Guid? tableId = null, Guid? combinationId = null) =>
             TestApi.WithDbAsync(db =>
             {

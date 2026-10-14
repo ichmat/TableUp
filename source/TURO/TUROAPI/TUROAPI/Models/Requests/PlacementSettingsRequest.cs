@@ -7,5 +7,6 @@ namespace TUROAPI.Models.Requests
         public int SeatTolerance { get; set; }
         public int LateGrace { get; set; }
         public bool SuggestCombinations { get; set; }
+        public bool TrackTableCleaning { get; set; }
     }
 }

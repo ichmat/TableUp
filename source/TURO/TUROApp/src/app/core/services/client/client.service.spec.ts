@@ -184,11 +184,13 @@ describe('ClientService', () => {
     expect((await owner)?.id).toBe('c2');
   });
 
-  it('should suggest the clients matching a piece of a number or a name, only those who can be called back', async () => {
+  it('should suggest up to 20 clients matching a piece of a number or a name, only those who can be called back', async () => {
     listCall().flush(PAGE);
     const found = service.suggest('march');
-    http.expectOne((r) => r.url === '/api/clients' && r.params.get('search') === 'march' && r.params.get('pageSize') === '5')
-      .flush({ ...PAGE, items: [item('c2', 'Sophie Marchand'), { ...item('c3', 'Marchal'), phone: null }] });
+    // L'API écarte les fiches sans numéro : la page reste pleine
+    http.expectOne((r) => r.url === '/api/clients' && r.params.get('search') === 'march'
+      && r.params.get('withPhone') === 'true' && r.params.get('pageSize') === '20')
+      .flush({ ...PAGE, items: [item('c2', 'Sophie Marchand')] });
 
     expect((await found).map((c) => c.id)).toEqual(['c2']);
   });

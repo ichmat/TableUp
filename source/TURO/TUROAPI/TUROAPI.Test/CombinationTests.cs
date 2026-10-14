@@ -162,23 +162,24 @@ namespace TUROAPI.Test
         [TestMethod]
         public async Task Changing_the_activity_clears_the_planned_dates_and_keeping_it_keeps_them()
         {
-            (HttpClient admin, _, DraftTableItem t1, DraftTableItem t2) = await ArrangeAsync();
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient admin = restaurant.AdminClient();
+            ZoneResponse salle = await PlanApi.AddZoneAsync(admin, "Salle", 8, 6);
+            DraftTableItem t1 = PlanApi.Table(salle.Id, "T1", x: 1, y: 1);
+            DraftTableItem t2 = PlanApi.Table(salle.Id, "T2", x: 1.8, y: 1);
             DraftCombinationItem banquette = PlanApi.Combination("Banquette", 7, false, t1.Id, t2.Id);
             await PlanApi.SaveAndPublishAsync(admin, new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] });
-            DateTime planned = DateTime.UtcNow.AddHours(2);
-            // Les rappels n'ont pas encore d'écran (service) : on pose les dates en base
-            Task PlanDatesAsync() => TestApi.WithDbAsync(db => db.Combinations
-                .Where(c => c.Id == banquette.Id)
-                .ExecuteUpdateAsync(s => s.SetProperty(c => c.ActivateAt, planned).SetProperty(c => c.DeactivateAt, planned)));
+            // Les dates se déduisent des réservations (COMB-01) : une réservation sur la combinaison planifie le rapprochement
+            Reservation nguyen = await restaurant.AddReservationAsync(Dates.Today.AddDays(1), 20, covers: 7, clientName: "Nguyen");
+            await ReservationApi.AssignAsync(nguyen.Id, combinationId: banquette.Id);
             async Task<CombinationResponse> PublishAsync() => (await PlanApi.SaveAndPublishAsync(admin,
                 new FloorPlanDraftContent { Tables = [t1, t2], Combinations = [banquette] })).Single().Combinations.Single();
 
             // Même activité, autre nom : ce que le service avait prévu reste
-            await PlanDatesAsync();
             banquette.Name = "Grande";
             CombinationResponse renamed = await PublishAsync();
             Assert.IsNotNull(renamed.ActivateAt);
-            Assert.IsNotNull(renamed.DeactivateAt);
+            Assert.IsNull(renamed.DeactivateAt);
 
             // Collées dans l'éditeur : active, plus rien de prévu
             banquette.IsActive = true;
@@ -187,8 +188,14 @@ namespace TUROAPI.Test
             Assert.IsNull(glued.ActivateAt);
             Assert.IsNull(glued.DeactivateAt);
 
+            // Même activité (active), autre nom : la séparation prévue reste (la réservation passe sur une seule table)
+            await ReservationApi.AssignAsync(nguyen.Id, tableId: t1.Id);
+            banquette.Name = "Grande salle";
+            CombinationResponse keptGlued = await PublishAsync();
+            Assert.IsTrue(keptGlued.IsActive);
+            Assert.IsNotNull(keptGlued.DeactivateAt);
+
             // Séparées dans l'éditeur : inactive, plus rien de prévu
-            await PlanDatesAsync();
             banquette.IsActive = false;
             CombinationResponse separated = await PublishAsync();
             Assert.IsFalse(separated.IsActive);

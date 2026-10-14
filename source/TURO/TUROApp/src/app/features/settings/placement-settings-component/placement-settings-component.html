@@ -120,6 +120,21 @@
             </p>
         </section>
 
+        <!-- SUIVRE LE NETTOYAGE (NET-01) : aucun réglage posé nu, la conséquence s'écrit sous lui -->
+        <section class="flex flex-col gap-2">
+            <label class="flex flex-row items-center gap-2 cursor-pointer font-bold">
+                <input type="checkbox" data-track-cleaning class="size-4 accent-interactive cursor-pointer" [formField]="settingsForm.trackTableCleaning" />
+                Suivre le nettoyage des tables
+            </label>
+            <p data-track-cleaning-effect class="text-sm">
+                @if (draft().trackTableCleaning) {
+                    Une table libérée passe « à nettoyer » (contour pointillé) jusqu'à ce qu'on la touche sur le plan → « Nettoyée ».
+                } @else {
+                    Une table libérée redevient libre aussitôt.
+                }
+            </p>
+        </section>
+
         <div class="flex flex-row gap-2">
             <app-button text="Enregistrer" (click)="hasChanges() && !isSaving() && save()" [disabled]="!hasChanges() || isSaving()" />
             <app-button text="Annuler" type="Secondary" (click)="hasChanges() && cancel()" [disabled]="!hasChanges()" />

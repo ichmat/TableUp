@@ -59,4 +59,15 @@ describe('FloorPlanService', () => {
 
     expect((await result).error).toBeNull();
   });
+
+  it('should read the published plan again and show it at once', async () => {
+    const zones = [{ id: 'z', restaurantId: 'r', name: 'Salle', order: 0, width: 8, height: 5, tables: [], decors: [], combinations: [] }];
+    const result = service.refresh();
+    const call = http.expectOne('/api/restaurant/floor-plan');
+    expect(call.request.method).toBe('GET');
+    call.flush(zones);
+
+    expect((await result).value).toEqual(zones);
+    expect(service.zones()).toEqual(zones);
+  });
 });

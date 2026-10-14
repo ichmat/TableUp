@@ -1,0 +1,55 @@
+@if (collapsed()) {
+    <aside class="w-10 shrink-0 h-full bg-surface rounded-xl shadow-xl flex flex-col items-center gap-3 py-2 text-xs font-bold">
+        <button type="button" data-collapse aria-label="Déplier la colonne" class="cursor-pointer" (click)="collapsed.set(false)">‹</button>
+        <span title="À placer">{{ toPlace().length }}</span>
+        <span title="En attente" class="text-violet">{{ pending().length }}</span>
+    </aside>
+} @else {
+    <aside class="w-[189px] shrink-0 h-full bg-surface rounded-xl shadow-xl flex flex-col gap-3 p-2 overflow-y-auto text-xs">
+        <button type="button" data-collapse aria-label="Replier la colonne" class="self-end cursor-pointer font-bold" (click)="collapsed.set(true)">›</button>
+        <section data-group="to-place" class="flex flex-col gap-1">
+            <p class="font-bold text-text-muted">À PLACER · {{ toPlace().length }}</p>
+            @for (item of toPlace(); track item.id) {
+                <ng-container [ngTemplateOutlet]="pill" [ngTemplateOutletContext]="{ $implicit: item, request: false }" />
+            }
+        </section>
+        <section data-group="pending" class="flex flex-col gap-1">
+            <p class="font-bold text-violet">EN ATTENTE · {{ pending().length }}</p>
+            @for (item of pending(); track item.id) {
+                <ng-container [ngTemplateOutlet]="pill" [ngTemplateOutletContext]="{ $implicit: item, request: true }" />
+            }
+        </section>
+    </aside>
+}
+
+<ng-template #pill let-item let-request="request">
+    <button type="button" [attr.data-pill]="item.id" (click)="opened.emit(item.id)"
+        (pointerdown)="pressed.emit({ id: item.id, label: guestName(item.client) + ' · ' + item.covers + 'p', event: $event })"
+        [class]="'flex flex-col items-start gap-0.5 rounded-lg border-2 px-2 py-1 text-left cursor-pointer touch-none hover:bg-app ' + (request ? 'border-violet' : 'border-border-soft')">
+        <span class="font-bold truncate w-full">{{ guestName(item.client) }}</span>
+        <span class="tabular-nums">{{ item.covers }}p · {{ time(item) }}</span>
+        <span class="flex flex-row flex-wrap items-center gap-1">
+            @for (mark of marks(item.client); track $index) {
+                @switch (mark.kind) {
+                    @case ('allergy') {
+                        <span data-mark="allergy" title="Allergie" class="inline-flex size-4 items-center justify-center rounded-full bg-coral text-surface">
+                            <svg viewBox="0 0 24 24" class="size-2.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <path d="M7 3v7M5 3v4a2 2 0 0 0 4 0V3M7 10v11M16 3c-1.7 1.2-2.5 3.5-2.5 7H16v11" />
+                            </svg>
+                        </span>
+                    }
+                    @case ('tag') {
+                        <span data-mark="tag" class="text-[0.6rem] font-bold uppercase px-1 rounded bg-app text-text-muted">{{ $any(mark).label }}</span>
+                    }
+                    @case ('first') {
+                        <span data-mark="first" class="text-[0.6rem] font-bold px-1 rounded bg-app text-text-muted">1re</span>
+                    }
+                    @case ('risk') {
+                        <span data-mark="risk" class="text-[0.6rem] font-bold px-1 rounded border border-coral text-coral">{{ $any(mark).label }}</span>
+                    }
+                }
+            }
+            <span class="text-[0.6rem] font-bold px-1 rounded bg-app text-text-muted">{{ source(item) }}</span>
+        </span>
+    </button>
+</ng-template>

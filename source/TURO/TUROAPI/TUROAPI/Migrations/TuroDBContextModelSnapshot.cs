@@ -214,9 +214,18 @@ namespace TUROAPI.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("KeepGluedFor")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("SeparateAfterNoShowOf")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SnoozedUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ZoneId")
                         .HasColumnType("uuid");
@@ -225,7 +234,10 @@ namespace TUROAPI.Migrations
 
                     b.HasIndex("ZoneId");
 
-                    b.ToTable("Combinations");
+                    b.ToTable("Combinations", t =>
+                        {
+                            t.HasCheckConstraint("CK_Combinations_OnePendingAction", "(\"IsActive\" AND \"ActivateAt\" IS NULL) OR (NOT \"IsActive\" AND \"DeactivateAt\" IS NULL AND \"SeparateAfterNoShowOf\" IS NULL AND \"KeepGluedFor\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("TUROAPI.Models.Decor", b =>
@@ -466,6 +478,9 @@ namespace TUROAPI.Migrations
                     b.Property<string>("TimeZone")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("TrackTableCleaning")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

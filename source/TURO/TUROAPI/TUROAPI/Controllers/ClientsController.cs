@@ -85,6 +85,10 @@ namespace TUROAPI.Controllers
             {
                 clients = clients.Where(ClientCounters.AtRisk);
             }
+            if (query.WithPhone)
+            {
+                clients = clients.Where(c => c.Phone != null);
+            }
 
             int total = await clients.CountAsync();
             List<ClientRow> rows = await OrderedRows(clients, query.Sort)

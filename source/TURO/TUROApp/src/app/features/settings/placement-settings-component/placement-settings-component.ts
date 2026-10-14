@@ -17,6 +17,7 @@ interface PlacementDraft {
   seatTolerance: number | null,
   lateGrace: number | null,
   suggestCombinations: boolean,
+  trackTableCleaning: boolean,
 }
 
 function toDraft(restaurant: Restaurant | null): PlacementDraft {
@@ -25,6 +26,7 @@ function toDraft(restaurant: Restaurant | null): PlacementDraft {
     seatTolerance: restaurant?.seatTolerance ?? null,
     lateGrace: restaurant?.lateGrace ?? null,
     suggestCombinations: restaurant?.suggestCombinations ?? true,
+    trackTableCleaning: restaurant?.trackTableCleaning ?? false,
   };
 }
 
@@ -94,7 +96,8 @@ export class PlacementSettingsComponent {
     return saved !== null && (saved.defaultRotation !== draft.defaultRotation
       || saved.seatTolerance !== draft.seatTolerance
       || saved.lateGrace !== draft.lateGrace
-      || saved.suggestCombinations !== draft.suggestCombinations);
+      || saved.suggestCombinations !== draft.suggestCombinations
+      || saved.trackTableCleaning !== draft.trackTableCleaning);
   });
 
   // ---- Aperçu de la tolérance, calculé par l'API ----
@@ -166,6 +169,7 @@ export class PlacementSettingsComponent {
       seatTolerance: draft.seatTolerance!,
       lateGrace: draft.lateGrace!,
       suggestCombinations: draft.suggestCombinations,
+      trackTableCleaning: draft.trackTableCleaning,
     };
 
     this.isSaving.set(true);
