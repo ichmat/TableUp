@@ -29,9 +29,6 @@ jobs:
           - csharp
           - javascript-typescript
 
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
-
     steps:
       - uses: actions/checkout@v4
       - if: matrix.language == 'csharp'
