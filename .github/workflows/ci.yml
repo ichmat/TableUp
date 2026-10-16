@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# Une PR mise à jour (ex. rebase par Dependabot) annule le run précédent au lieu de s'empiler.
+# Les pushes sur master/dev ne sont jamais annulés.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   dotnet:
     uses: ./.github/workflows/dotnet.yml
@@ -21,6 +27,8 @@ jobs:
 
   codeql:
     needs: node
+    # Une montée de version ne touche pas notre code : CodeQL repassera au push sur dev
+    if: github.actor != 'dependabot[bot]'
     uses: ./.github/workflows/codeql.yml
     # Un workflow appelé ne peut pas obtenir plus de droits que le job qui l'appelle
     permissions:

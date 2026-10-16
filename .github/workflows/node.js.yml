@@ -19,8 +19,10 @@ jobs:
       GOMEMLIMIT: 2GiB
     strategy:
       matrix:
-        # Angular 22 n'est pas supporté sur Node 18/20
-        node-version: [22.x, 24.x, 26.x]
+        # Angular 22 n'est pas supporté sur Node 18/20.
+        # Sur une PR, une seule version (celle du poste de dev) pour ménager le runner ;
+        # les trois sont vérifiées au push sur dev/master
+        node-version: ${{ fromJSON(github.event_name == 'pull_request' && '["24.x"]' || '["22.x", "24.x", "26.x"]') }}
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
