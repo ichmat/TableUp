@@ -1,3 +1,5 @@
+import { clamp } from '../../utils/number';
+
 /** Marge visible autour de la salle quand elle est ajustée à l'écran, en mètres */
 export const VIEW_MARGIN = 0.5;
 
@@ -35,8 +37,6 @@ export const MIN_SCALE = 0.5;
 export const MAX_SCALE = 8;
 /** Facteur des boutons − / + */
 export const ZOOM_STEP = 1.25;
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 /** Borne la vue : au moins un quart de la salle reste visible, on ne la perd jamais hors de l'écran */
 export function clampView(view: PlanView, zone: Size): PlanView {

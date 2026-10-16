@@ -608,16 +608,21 @@ export class ServiceComponent implements OnDestroy {
         return;
       }
     }
-    const wasPending = this.snapshot()?.pending.some((r) => r.id === placing.reservationId) ?? false;
+    await this.placeOn(placing.reservationId, targetOf(entity), { title: 'Table prise', text: `La table ${entity.name} n'est plus libre pour cette réservation.` });
+  }
+
+  /** Place la réservation ; une cible prise entre-temps rouvre les halos, toute autre erreur est dite telle quelle */
+  private async placeOn(reservationId: string, target: PlaceTarget, taken: { title: string, text: string }, ...suffix: [string?]) {
+    const wasPending = this.snapshot()?.pending.some((r) => r.id === reservationId) ?? false;
     this._dropping = true;
-    const result = await this._actions.placeOn(placing.reservationId, targetOf(entity), wasPending);
+    const result = await this._actions.placeOn(reservationId, target, wasPending, ...suffix);
     this._dropping = false;
     if (result.error === null) {
       this.stopPlacing();
       return;
     }
     if (result.code === ApiError.PlacementUnavailable) {
-      await this._modal.infoModal('Table prise', `La table ${entity.name} n'est plus libre pour cette réservation.`);
+      await this._modal.infoModal(taken.title, taken.text);
       this._placementLoad = this.loadPlacement();
       return;
     }
@@ -672,20 +677,7 @@ export class ServiceComponent implements OnDestroy {
     if (placing === null) {
       return;
     }
-    const wasPending = this.snapshot()?.pending.some((r) => r.id === placing.reservationId) ?? false;
-    this._dropping = true;
-    const result = await this._actions.placeOn(placing.reservationId, target, wasPending, ' (à rapprocher)');
-    this._dropping = false;
-    if (result.error === null) {
-      this.stopPlacing();
-      return;
-    }
-    if (result.code === ApiError.PlacementUnavailable) {
-      await this._modal.infoModal('Tables prises', `${name} n'est plus libre pour cette réservation.`);
-      this._placementLoad = this.loadPlacement();
-      return;
-    }
-    await this._modal.infoModal('Placement impossible', apiErrorText(result));
+    await this.placeOn(placing.reservationId, target, { title: 'Tables prises', text: `${name} n'est plus libre pour cette réservation.` }, ' (à rapprocher)');
   }
 
   private async loadPlacement() {
@@ -775,8 +767,7 @@ export class ServiceComponent implements OnDestroy {
         this.dragToPlace(occupation.reservationId, `${occupation.guestName ?? 'Passage'} · ${occupation.covers}p`, event.event);
       }
     } else if (state.status === 'ToClean') {
-      const box = this._planArea()?.nativeElement.getBoundingClientRect();
-      this.bubble.set({ tableId: table.id, name: table.name, x: event.event.clientX - (box?.left ?? 0), y: event.event.clientY - (box?.top ?? 0) });
+      this.bubble.set({ tableId: table.id, name: table.name, ...this.bubbleAt(event.event) });
     } else {
       this.bubble.set(null);
       const snapshot = this.snapshot();
@@ -786,16 +777,21 @@ export class ServiceComponent implements OnDestroy {
       // WALK-05 : aussi avant le prochain service du jour (celui que l'écran montre par défaut)
       const service = snapshot?.service;
       if (snapshot && service && freeNow && (service.state === 'InProgress' || (service.state === 'Upcoming' && snapshot.isDefault))) {
-        const box = this._planArea()?.nativeElement.getBoundingClientRect();
         const opening = new Date(snapshot.slots[0]?.at ?? now);
         const later = bookedLater(table, now, service.defaultDuration, opening);
         this.seatBubble.set({
           tableId: table.id, name: table.name, capacity: table.capacity,
-          x: event.event.clientX - (box?.left ?? 0), y: event.event.clientY - (box?.top ?? 0),
+          ...this.bubbleAt(event.event),
           later: later === null ? null : bookedLaterText(later, now, this.timeZone()), confirmed: false,
         });
       }
     }
+  }
+
+  /** Où poser une bulle : là où on a touché, dans le repère de la zone du plan */
+  private bubbleAt(event: PointerEvent): { x: number, y: number } {
+    const box = this._planArea()?.nativeElement.getBoundingClientRect();
+    return { x: event.clientX - (box?.left ?? 0), y: event.clientY - (box?.top ?? 0) };
   }
 
   protected async seat(covers: number) {

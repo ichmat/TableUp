@@ -4,6 +4,7 @@ import { CombinationReminder, CombinationReminderKind, DataScope, LayoutRequest,
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { lastValue } from '../resource';
 
 const SERVICE_URL = '/api/service';
 
@@ -41,11 +42,7 @@ export class ServiceViewService {
     return this._auth.isConnected() && query !== null ? { url: SERVICE_URL, params: params(query) } : undefined;
   });
   // L'instantané précédent reste affiché pendant que le suivant se charge : pas de clignotement
-  private _snapshot = linkedSignal<ServiceSnapshot | undefined, ServiceSnapshot | null>({
-    source: () => (this._resource.hasValue() ? this._resource.value() : undefined),
-    computation: (value, previous) => value ?? previous?.value ?? null,
-  });
-  snapshot = this._snapshot.asReadonly();
+  snapshot = lastValue(this._resource);
   failed = computed(() => this._resource.status() === 'error');
   /** Le service demandé n'existe plus (une heure d'ouverture déplacée, un jour fermé entre-temps) */
   notFound = computed(() => { const error = this._resource.error(); return error instanceof HttpErrorResponse && error.status === 404; });

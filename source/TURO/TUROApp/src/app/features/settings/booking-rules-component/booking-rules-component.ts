@@ -7,6 +7,7 @@ import { Button } from '../../../shared/components/button/button';
 import { NumberInput } from '../../../shared/components/inputs/number-input/number-input';
 import { formatLongDate } from '../../../shared/utils/calendar-date';
 import { formatDuration } from '../../../shared/utils/time-of-day';
+import { isFormValid } from '../../../shared/utils/form-errors';
 import { bookingWindow, timeIn } from './booking-window';
 
 interface BookingWindowDraft {
@@ -84,10 +85,7 @@ export class BookingRulesComponent {
   }
 
   async save() {
-    const errors = this.windowForm().errorSummary();
-    if (errors.length > 0) {
-      this.windowForm().markAsTouched();
-      await this._modalService.infoModal('Erreur', errors[0].message ?? 'Un réglage est invalide');
+    if (!(await isFormValid(this.windowForm, this._modalService, 'Un réglage est invalide'))) {
       return;
     }
     const draft = this._draft();

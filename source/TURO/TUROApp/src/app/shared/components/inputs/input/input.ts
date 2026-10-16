@@ -1,7 +1,6 @@
 import { Component, ElementRef, computed, input, model, output, viewChild } from '@angular/core';
 import { IconSvgObject, HugeiconsIconComponent } from '@hugeicons/angular';
-import { twMerge } from 'tailwind-merge';
-import { DEFAULT_INPUT_STYLE, INPUT_DISABLED_STYLE, INPUT_ERROR_STYLE } from '../../constants/input-style';
+import { inputWrapperClass } from '../../constants/input-style';
 import { FormValueControl } from '@angular/forms/signals';
 
 @Component({
@@ -33,11 +32,7 @@ export class Input implements FormValueControl<string> {
 
   showError = computed(() => this.invalid() && this.touched());
 
-  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE,
-    this.inputClass(),
-    this.showError() ? INPUT_ERROR_STYLE : '',
-    this.disabled() ? INPUT_DISABLED_STYLE : '',
-  ));
+  wrapperClass = computed(() => inputWrapperClass(this.showError(), this.disabled(), this.inputClass()));
 
   focus(options?: FocusOptions) {
     if (!this.disabled()) {

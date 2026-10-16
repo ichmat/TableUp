@@ -7,6 +7,7 @@ import { Button } from '../../../shared/components/button/button';
 import { NumberInput } from '../../../shared/components/inputs/number-input/number-input';
 import { DayWeekPipe } from '../../../shared/pipes/day-week/day-week-pipe';
 import { formatDuration, formatMinutes, serviceLength, slotStarts, toMinutes } from '../../../shared/utils/time-of-day';
+import { isFormValid } from '../../../shared/utils/form-errors';
 
 /** État édité des réglages de créneaux. Les seuils désactivés gardent leur valeur pour être réactivés tels quels */
 interface SlotSettingsDraft {
@@ -141,10 +142,7 @@ export class ServiceSlotsEditorComponent {
   }
 
   async save() {
-    const errors = this.settingsForm().errorSummary();
-    if (errors.length > 0) {
-      this.settingsForm().markAsTouched();
-      await this._modalService.infoModal("Erreur", errors[0].message ?? "Un réglage est invalide");
+    if (!(await isFormValid(this.settingsForm, this._modalService, "Un réglage est invalide"))) {
       return;
     }
 
