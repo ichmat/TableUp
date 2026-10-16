@@ -122,6 +122,33 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public void A_combination_dormant_all_service_never_shows_on_the_agenda()
+            => Assert.IsFalse(ShowsOnAgenda(new Combination { Id = Guid.NewGuid() }, BoundsOf(Saturday, Dinner, Paris), true, new HashSet<Guid>()));
+
+        [TestMethod]
+        public void A_glued_combination_shows_only_while_the_service_is_in_progress()
+        {
+            var glued = new Combination { Id = Guid.NewGuid(), IsActive = true };
+            Assert.IsTrue(ShowsOnAgenda(glued, BoundsOf(Saturday, Dinner, Paris), true, new HashSet<Guid>()));
+            Assert.IsFalse(ShowsOnAgenda(glued, BoundsOf(Saturday, Dinner, Paris), false, new HashSet<Guid>()));
+        }
+
+        [TestMethod]
+        public void A_planned_approach_inside_the_service_shows_and_one_outside_does_not()
+        {
+            Bounds bounds = BoundsOf(Saturday, Dinner, Paris);
+            Assert.IsTrue(ShowsOnAgenda(new Combination { Id = Guid.NewGuid(), ActivateAt = At(Saturday, 20, 45) }, bounds, false, new HashSet<Guid>()));
+            Assert.IsFalse(ShowsOnAgenda(new Combination { Id = Guid.NewGuid(), ActivateAt = At(Saturday, 13) }, bounds, false, new HashSet<Guid>()));
+        }
+
+        [TestMethod]
+        public void A_combination_holding_a_reservation_of_the_service_shows()
+        {
+            var held = new Combination { Id = Guid.NewGuid() };
+            Assert.IsTrue(ShowsOnAgenda(held, BoundsOf(Saturday, Dinner, Paris), false, new HashSet<Guid> { held.Id }));
+        }
+
+        [TestMethod]
         public void A_confirmed_reservation_occupies_its_planned_time()
         {
             Interval? interval = OccupationOf(Booked(ReservationStatus.Confirmed, At(Saturday, 20)), At(Saturday, 12));
@@ -191,10 +218,10 @@ namespace TUROAPI.Test
             Reservation request = Booked(ReservationStatus.Pending, At(Saturday, 19), covers: 8);
             List<Booking> bookings =
             [
-                new(placed, OccupationOf(placed, now), true, [t1]),
-                new(group, OccupationOf(group, now), true, [t1, t2]),
-                new(unplaced, OccupationOf(unplaced, now), false, []),
-                new(request, OccupationOf(request, now), false, []),
+                new(placed, OccupationOf(placed, now), true, [t1], null),
+                new(group, OccupationOf(group, now), true, [t1, t2], null),
+                new(unplaced, OccupationOf(unplaced, now), false, [], null),
+                new(request, OccupationOf(request, now), false, [], null),
             ];
 
             List<SlotFigures> slots = SlotsOf(new Choice(Saturday, Dinner), Paris, bookings);

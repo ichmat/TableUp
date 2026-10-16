@@ -9,7 +9,7 @@ export const utc = (time: string) => `${SERVICE_DAY}T${time}:00Z`;
 export function occupation(change: Partial<TableOccupation> = {}): TableOccupation {
   return {
     reservationId: 'r1', start: utc('20:00'), end: utc('22:00'), status: 'Confirmed', lateFrom: utc('20:15'),
-    placeName: 'T1', guestName: 'Moreau', covers: 4, hasAllergy: false, ...change,
+    placeName: 'T1', combinationId: null, guestName: 'Moreau', covers: 4, hasAllergy: false, ...change,
   };
 }
 
@@ -21,7 +21,7 @@ export function serviceTable(change: Partial<ServiceTable> = {}): ServiceTable {
 }
 
 export function serviceZone(change: Partial<ServiceZone> = {}): ServiceZone {
-  return { id: 'z1', name: 'Salle', width: 8, height: 6, tables: [serviceTable()], decors: [], combinations: [], ...change };
+  return { id: 'z1', name: 'Salle', width: 8, height: 6, tables: [serviceTable()], decors: [], combinations: [], agendaCombinations: [], ...change };
 }
 
 export function serviceReservation(change: Partial<ServiceReservation> = {}): ServiceReservation {

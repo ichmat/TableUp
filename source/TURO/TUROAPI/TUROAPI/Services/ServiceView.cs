@@ -23,7 +23,7 @@ namespace TUROAPI.Services
         }
 
         /// <summary>Une réservation du service, son occupation, et les tables physiques actives qu'elle tient</summary>
-        public sealed record Booking(Reservation Reservation, Interval? Interval, bool IsPlaced, IReadOnlyCollection<Guid> TableIds);
+        public sealed record Booking(Reservation Reservation, Interval? Interval, bool IsPlaced, IReadOnlyCollection<Guid> TableIds, Guid? CombinationId);
 
         /// <summary>Un créneau de la frise (§5.4)</summary>
         public sealed record SlotFigures(TimeOnly Time, DateTime At, int Covers, int TakenTables, bool HasUnplaced);
@@ -148,6 +148,15 @@ namespace TUROAPI.Services
             }
             return slots;
         }
+
+        /// <summary>
+        /// Une combinaison est active à un moment du service (AGD-03) : collée pendant que le service est en cours, approche
+        /// planifiée dans la plage, ou portant une réservation du service. Une dormante sans rien n'y figure pas
+        /// </summary>
+        public static bool ShowsOnAgenda(Combination combination, Bounds bounds, bool inProgress, IReadOnlySet<Guid> heldCombinationIds) =>
+            (inProgress && combination.IsActive)
+            || (combination.ActivateAt is DateTime at && at >= bounds.OpeningUtc && at < bounds.ClosingUtc)
+            || heldCombinationIds.Contains(combination.Id);
 
         private static DateOnly TodayOf(DateTime now, TimeZoneInfo timeZone) =>
             DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(now, DateTimeKind.Utc), timeZone));

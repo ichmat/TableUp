@@ -6,7 +6,7 @@ export const DRAG_THRESHOLD_PX = 6;
 /** Le fantôme qui suit le doigt : nom et couverts */
 export interface DragGhost { label: string, x: number, y: number }
 
-export type DropTarget = { tableId?: string, combinationId?: string };
+export type DropTarget = { tableId?: string, combinationId?: string, approachKey?: string };
 
 interface Handlers {
   onStart: () => void,
@@ -20,6 +20,10 @@ interface Handlers {
 export class PlacementDrag {
   private _ghost = signal<DragGhost | null>(null);
   ghost = this._ghost.asReadonly();
+
+  /** La cible sous le pointeur pendant un glisser, null sinon */
+  private _hovered = signal<DropTarget | null>(null);
+  hovered = this._hovered.asReadonly();
 
   private _press: { pointerId: number, x: number, y: number, label: string, handlers: Handlers, dragging: boolean } | null = null;
 
@@ -39,6 +43,7 @@ export class PlacementDrag {
     window.removeEventListener('pointercancel', this.onCancel);
     document.body.classList.remove('placement-dragging');
     this._ghost.set(null);
+    this._hovered.set(null);
     this._press = null;
   }
 
@@ -56,6 +61,7 @@ export class PlacementDrag {
       press.handlers.onStart();
     }
     this._ghost.set({ label: press.label, x: event.clientX, y: event.clientY });
+    this._hovered.set(targetAt(this._hitTest(event.clientX, event.clientY)));
   };
 
   private onUp = (event: PointerEvent) => {
@@ -79,10 +85,14 @@ export class PlacementDrag {
 }
 
 function targetAt(element: Element | null): DropTarget | null {
-  const holder = element?.closest('[data-table-id], [data-combination-id]') ?? null;
+  const holder = element?.closest('[data-table-id], [data-combination-id], [data-approach-key]') ?? null;
   if (holder === null) {
     return null;
   }
   const tableId = holder.getAttribute('data-table-id');
-  return tableId !== null ? { tableId } : { combinationId: holder.getAttribute('data-combination-id')! };
+  if (tableId !== null) {
+    return { tableId };
+  }
+  const combinationId = holder.getAttribute('data-combination-id');
+  return combinationId !== null ? { combinationId } : { approachKey: holder.getAttribute('data-approach-key')! };
 }

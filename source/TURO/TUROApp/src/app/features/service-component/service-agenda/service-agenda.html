@@ -1,0 +1,104 @@
+<div #scroller data-agenda class="relative isolate h-full overflow-auto rounded-xl bg-slate text-xs text-plan-free-text">
+    @if (axis() !== null && snapshot().zones.length === 0) {
+        <p data-no-zone class="p-4 text-sm">Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.</p>
+    } @else if (axis(); as axis) {
+        <div class="relative min-h-full pb-2" [style.width.px]="labelWidth + trackWidth()">
+            <!-- Axe figé en haut ; son coin reste au-dessus de la colonne des libellés -->
+            <div class="sticky top-0 z-20 flex h-6 border-b border-plan-decor bg-slate">
+                <div class="sticky left-0 z-10 w-32 shrink-0 bg-slate"></div>
+                <div class="relative h-full shrink-0" [style.width.px]="trackWidth()">
+                    @for (hour of hours(); track hour.at) {
+                        <span data-hour [class]="'absolute top-1 font-bold tabular-nums ' + (hour.last ? '-translate-x-full pr-1' : 'pl-1')"
+                            [style.left.px]="hour.x">{{ hour.label }}</span>
+                    }
+                    @if (axis.now !== null) {
+                        <span class="absolute bottom-0 h-1.5 w-0.5 bg-interactive" [style.left.px]="x(axis.now)"></span>
+                    }
+                </div>
+            </div>
+
+            <!-- La grille et le présent courent sous les lignes, la colonne des libellés les recouvre -->
+            @for (tick of ticks(); track tick.at) {
+                <div aria-hidden="true" [class]="'pointer-events-none absolute inset-y-0 w-px ' + (tick.hour ? 'bg-plan-decor' : 'bg-plan-free')"
+                    [style.left.px]="labelWidth + tick.x"></div>
+            }
+            @if (axis.now !== null) {
+                <div data-now aria-hidden="true" class="pointer-events-none absolute inset-y-0 z-[5] w-0.5 bg-interactive"
+                    [style.left.px]="labelWidth + x(axis.now)"></div>
+            }
+
+            @for (row of rows(); track row.key) {
+                @switch (row.kind) {
+                    @case ('Zone') {
+                        <div [attr.data-zone-row]="row.name" class="flex h-7 items-end">
+                            <span class="sticky left-0 z-10 w-32 bg-slate px-2 pb-1 text-[0.7rem] font-bold uppercase tracking-wider text-text-muted">{{ row.name }}</span>
+                        </div>
+                    }
+                    @case ('Link') {
+                        <div data-link class="flex h-6 border-b border-plan-free">
+                            <div class="sticky left-0 z-10 flex w-32 shrink-0 items-center bg-slate pl-6 text-[0.7rem] italic text-text-muted">lien physique</div>
+                            <div class="relative h-full shrink-0" [style.width.px]="trackWidth()">
+                                @for (segment of row.segments; track segment.start) {
+                                    <div [attr.data-segment]="segment.kind" [class]="'absolute inset-y-0.5 flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md border-[1.5px] px-1.5 text-[0.7rem] font-semibold ' + linkStyle[segment.kind]"
+                                        [style.left.px]="x(segment.start)" [style.width.px]="x(segment.end) - x(segment.start)">
+                                        {{ segment.kind === 'Glued' ? 'collées' : '!' }}
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @default {
+                        <div [attr.data-table-id]="attr(row, 'tableId')" [attr.data-combination-id]="attr(row, 'combinationId')"
+                            [attr.data-approach-key]="attr(row, 'approachKey')" [class]="rowClass(row)" (click)="press(row)">
+                            <div [class]="labelClass(row)">
+                                @if (row.kind === 'Combination') {
+                                    <button type="button" data-chevron [attr.aria-expanded]="row.expanded"
+                                        [attr.aria-label]="row.expanded ? 'Replier les tables' : 'Déplier les tables'"
+                                        class="inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded bg-plan-free text-[0.6rem] text-plan-free-text"
+                                        (click)="toggle($event, row.key, row.expanded)">{{ row.expanded ? '▾' : '▸' }}</button>
+                                }
+                                <span class="truncate">{{ row.name }} · {{ row.capacity }}p</span>
+                                @if (row.kind === 'Combination' && !row.expanded) {
+                                    <span class="shrink-0 text-[0.6rem] font-normal text-text-muted">{{ row.memberCount }} tables</span>
+                                }
+                                @if (row.level !== null && row.level !== 'Excluded') {
+                                    <span data-level [class]="'ml-auto inline-flex min-w-5 shrink-0 justify-center rounded-full px-1 text-[0.6rem] text-slate ' + levelClass(row.level)">{{ badge[row.level] }}</span>
+                                }
+                            </div>
+                            <div data-track [class]="trackClass(row)" [style.width.px]="trackWidth()">
+                                @if (row.kind === 'Table') {
+                                    @for (ghost of row.ghosts; track ghost.reservationId) {
+                                        <button type="button" data-ghost [title]="ghost.label"
+                                            [class]="'absolute inset-y-1 flex items-center overflow-hidden whitespace-nowrap rounded-md px-1.5 italic text-text-muted cursor-pointer ' + ghostStyle"
+                                            [style.left.px]="x(ghost.start)" [style.width.px]="x(ghost.end) - x(ghost.start)"
+                                            (click)="open(ghost.reservationId)">{{ ghost.label }}</button>
+                                    }
+                                }
+                                @for (block of row.blocks; track block.reservationId) {
+                                    <button type="button" data-block [attr.data-kind]="block.kind" [title]="block.label" [class]="blockClass(block)"
+                                        [style.left.px]="x(block.start)" [style.width.px]="x(block.end) - x(block.start)"
+                                        (click)="open(block.reservationId)">
+                                        <span class="truncate">{{ block.label }}</span>
+                                        @if (block.allergy) {
+                                            <span data-mark="allergy" title="Allergie" class="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-coral text-surface">
+                                                <svg viewBox="0 0 24 24" class="size-2.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                                    <path d="M7 3v7M5 3v4a2 2 0 0 0 4 0V3M7 10v11M16 3c-1.7 1.2-2.5 3.5-2.5 7H16v11" />
+                                                </svg>
+                                            </span>
+                                        }
+                                    </button>
+                                }
+                                @if (previewed(row) && preview(); as preview) {
+                                    <div data-drop-preview class="pointer-events-none absolute inset-y-1 flex items-center overflow-hidden whitespace-nowrap rounded-md border-2 border-dashed border-surface bg-plan-free px-1.5 font-semibold text-surface"
+                                        [style.left.px]="preview.left" [style.width.px]="preview.width">{{ preview.label }}</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        </div>
+    } @else {
+        <p data-empty class="p-4 text-sm">Aucun service à afficher pour ce jour.</p>
+    }
+</div>

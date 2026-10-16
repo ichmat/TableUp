@@ -10,6 +10,13 @@ export function bestLevel(levels: PlacementLevel[]): PlacementLevel | null {
   return best === 'Excluded' ? null : best;
 }
 
+/** La pastille d'un niveau de placement (✓ ~✓ !), partagée par les onglets de salle et les lignes de l'Agenda */
+export const LEVEL_BADGE: Record<PlacementLevel, string> = { Perfect: '✓', WithReserve: '~✓', NotAdvised: '!', Excluded: '' };
+
+export function levelClass(level: PlacementLevel): string {
+  return level === 'Perfect' ? 'bg-place-perfect' : level === 'WithReserve' ? 'bg-place-reserve' : 'bg-place-advised';
+}
+
 /** Un onglet de salle : « Salle 8/12 » à l'heure du plan */
 export interface ZoneTab {
   id: string,
@@ -34,16 +41,13 @@ export class ZoneTabs {
   /** Pendant un placement : le meilleur niveau de chaque salle, `null` si rien n'y convient. `null` : aucun placement */
   levels = input<Readonly<Record<string, PlacementLevel | null>> | null>(null);
 
-  protected readonly badge: Record<PlacementLevel, string> = { Perfect: '✓', WithReserve: '~✓', NotAdvised: '!', Excluded: '' };
+  protected readonly badge = LEVEL_BADGE;
+  protected readonly levelClass = levelClass;
 
   protected tabClass(id: string): string {
     const levels = this.levels();
     return twMerge('px-3 py-1 rounded-full border-2 font-bold cursor-pointer',
       id === this.activeId() ? 'bg-interactive text-surface border-interactive' : 'bg-surface border-border-soft hover:bg-app',
       levels !== null && levels[id] == null ? 'opacity-40' : '');
-  }
-
-  protected levelClass(level: PlacementLevel): string {
-    return level === 'Perfect' ? 'bg-place-perfect' : level === 'WithReserve' ? 'bg-place-reserve' : 'bg-place-advised';
   }
 }

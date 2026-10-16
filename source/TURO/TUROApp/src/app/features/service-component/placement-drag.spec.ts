@@ -65,4 +65,46 @@ describe('PlacementDrag', () => {
     window.dispatchEvent(pointer('pointerup', 20, 0));
     expect(onDrop).toHaveBeenCalledWith(null);
   });
+
+  it('exposes the target under the pointer while dragging', () => {
+    const table = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    table.setAttribute('data-table-id', 't5');
+
+    expect(drag.hovered()).toBeNull();
+    drag.press(pointer('pointerdown', 0, 0), 'x', { onStart, onDrop });
+    hit = table;
+    window.dispatchEvent(pointer('pointermove', 2, 0));
+    expect(drag.hovered()).toBeNull();
+
+    window.dispatchEvent(pointer('pointermove', 20, 0));
+    expect(drag.hovered()).toEqual({ tableId: 't5' });
+
+    hit = document.body;
+    window.dispatchEvent(pointer('pointermove', 30, 0));
+    expect(drag.hovered()).toBeNull();
+
+    hit = table;
+    window.dispatchEvent(pointer('pointermove', 40, 0));
+    expect(drag.hovered()).toEqual({ tableId: 't5' });
+    window.dispatchEvent(pointer('pointerup', 40, 0));
+    expect(drag.hovered()).toBeNull();
+
+    drag.press(pointer('pointerdown', 0, 0), 'x', { onStart, onDrop });
+    window.dispatchEvent(pointer('pointermove', 20, 0));
+    expect(drag.hovered()).toEqual({ tableId: 't5' });
+    window.dispatchEvent(pointer('pointercancel', 20, 0));
+    expect(drag.hovered()).toBeNull();
+  });
+
+  it('drops on a proposed approach', () => {
+    const row = document.createElement('div');
+    row.setAttribute('data-approach-key', 't1|t2');
+
+    drag.press(pointer('pointerdown', 0, 0), 'x', { onStart, onDrop });
+    window.dispatchEvent(pointer('pointermove', 20, 0));
+    hit = row;
+    window.dispatchEvent(pointer('pointerup', 20, 0));
+
+    expect(onDrop).toHaveBeenCalledOnceWith({ approachKey: 't1|t2' });
+  });
 });
