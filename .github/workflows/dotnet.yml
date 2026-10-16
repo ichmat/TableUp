@@ -11,21 +11,8 @@ jobs:
   build:
     name: CI .NET
     runs-on: self-hosted
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: tableup_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Pas de service Postgres ici : les tests créent leur propre base jetable via Testcontainers,
+    # sur le Docker de la VM (socket monté dans le runner)
 
     steps:
     - uses: actions/checkout@v4
@@ -39,5 +26,8 @@ jobs:
       run: dotnet restore source/TURO/TUROAPI/TUROAPI.slnx
     - name: ⚙️ Build
       run: dotnet build source/TURO/TUROAPI/TUROAPI.slnx --no-restore -c Release
+    - name: 🐳 Check Docker access
+      # Échoue tout de suite, avec un message clair, si le runner ne peut pas joindre le Docker de la VM
+      run: docker info --format 'Docker {{.ServerVersion}}'
     - name: 📝 Test
       run: dotnet test source/TURO/TUROAPI/TUROAPI.slnx --no-build -c Release --verbosity normal
