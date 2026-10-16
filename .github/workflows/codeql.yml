@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - if: matrix.language == 'csharp'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         env:
           DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
         with:
