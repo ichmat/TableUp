@@ -5,6 +5,8 @@ updates:
       - "/source/TURO/TUROAPI/TUROAPI"
       - "/source/TURO/TUROAPI/TUROAPI.Test"
     target-branch: "dev"
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
     schedule:
       interval: "weekly"
     groups:
