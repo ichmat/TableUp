@@ -14,6 +14,12 @@ describe('walk-in', () => {
     expect(bookedLater(table(), now, 90)).toBeNull();
   });
 
+  it('should count the meal from the opening when it is still to come', () => {
+    const opening = new Date('2026-10-10T18:30:00Z');
+    expect(bookedLater(table(occupation('2026-10-10T19:45:00Z')), now, 90, opening)).not.toBeNull();
+    expect(bookedLater(table(occupation('2026-10-10T19:45:00Z')), now, 90)).toBeNull();
+  });
+
   it('should say when, who, and how long is left', () => {
     expect(bookedLaterText(occupation('2026-10-10T19:00:00Z'), now, 'Europe/Paris')).toBe('Réservée à 21:00 · Legrand · 4 p — 1 h devant vous');
     expect(bookedLaterText(occupation('2026-10-10T18:40:00Z', null), now, 'Europe/Paris')).toBe('Réservée à 20:40 · client de passage · 4 p — 40 min devant vous');

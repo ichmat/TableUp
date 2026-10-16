@@ -783,9 +783,12 @@ export class ServiceComponent implements OnDestroy {
       const now = new Date(Math.max(this._now(), Date.parse(snapshot?.now ?? '0')));
       // Libre maintenant, pas seulement au créneau regardé
       const freeNow = tableStatusAt(table, now, now, this._track()).status === 'Free';
-      if (snapshot?.service?.state === 'InProgress' && freeNow) {
+      // WALK-05 : aussi avant le prochain service du jour (celui que l'écran montre par défaut)
+      const service = snapshot?.service;
+      if (snapshot && service && freeNow && (service.state === 'InProgress' || (service.state === 'Upcoming' && snapshot.isDefault))) {
         const box = this._planArea()?.nativeElement.getBoundingClientRect();
-        const later = bookedLater(table, now, snapshot.service.defaultDuration);
+        const opening = new Date(snapshot.slots[0]?.at ?? now);
+        const later = bookedLater(table, now, service.defaultDuration, opening);
         this.seatBubble.set({
           tableId: table.id, name: table.name, capacity: table.capacity,
           x: event.event.clientX - (box?.left ?? 0), y: event.event.clientY - (box?.top ?? 0),

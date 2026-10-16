@@ -1,10 +1,13 @@
 import { ServiceTable, TableOccupation } from '../../models';
 import { formatDuration, timeIn } from '../../shared/utils/time-of-day';
 
-/** WALK : la réservation qui arrivera sur cette table pendant le repas d'un walk-in assis maintenant */
-export function bookedLater(table: ServiceTable, now: Date, durationMinutes: number): TableOccupation | null {
+/**
+ * WALK : la réservation qui arrivera sur cette table pendant le repas d'un walk-in assis maintenant. Avant le service
+ * (WALK-05), le repas compte depuis l'ouverture, comme pour une arrivée en avance
+ */
+export function bookedLater(table: ServiceTable, now: Date, durationMinutes: number, opening: Date = now): TableOccupation | null {
   const from = now.getTime();
-  const until = from + durationMinutes * 60_000;
+  const until = Math.max(from, opening.getTime()) + durationMinutes * 60_000;
   return table.occupations
     .filter((o) => Date.parse(o.start) > from && Date.parse(o.start) < until)
     .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0] ?? null;

@@ -88,6 +88,77 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task Before_the_service_a_walk_in_joins_the_next_window_as_an_early_arrival()
+        {
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            if (local.Hour >= 22)
+            {
+                Assert.Inconclusive("Pas de plage possible plus tard aujourd'hui");
+                return;
+            }
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            await ReservationApi.AddServiceAsync(restaurant.Id, local.DayOfWeek, local.Hour + 1, local.Hour + 2, duration: 90);
+            (_, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("5", 4));
+            using HttpClient staff = restaurant.StaffClient();
+            DateTime before = DateTime.UtcNow;
+
+            HttpResponseMessage response = await PlacementApi.SeatAsync(staff, tables[0].Id, 2);
+
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode, await response.Content.ReadAsStringAsync());
+            ReservationActionResponse seated = (await response.Content.ReadFromJsonAsync<ReservationActionResponse>(TestJson.Options))!;
+            Assert.AreEqual(ReservationStatus.Seated, seated.Reservation.Status);
+            // Comme une arrivée en avance : le repas compte depuis l'ouverture, la table est prise depuis maintenant
+            DateTime start = TimeZoneInfo.ConvertTimeFromUtc(seated.Reservation.Start, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            Assert.AreEqual((local.Hour + 1, 0), (start.Hour, start.Minute));
+            Assert.AreEqual(DateOnly.FromDateTime(local), seated.Reservation.ServiceDay);
+            DateTime? seatedAt = await TestApi.WithDbAsync(db => db.Reservations.Where(r => r.Id == seated.Reservation.Id).Select(r => r.SeatedAt).SingleAsync());
+            Assert.IsTrue(seatedAt >= before.AddSeconds(-1) && seatedAt < seated.Reservation.Start, $"{seatedAt:O}");
+            // Prise dès maintenant : un second passage est refusé
+            await ApiAssert.ErrorAsync(await PlacementApi.SeatAsync(staff, tables[0].Id, 2), HttpStatusCode.Conflict, "PlacementUnavailable");
+        }
+
+        [TestMethod]
+        public async Task Before_the_service_a_table_booked_before_the_end_of_the_meal_needs_consent()
+        {
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            if (local.Hour >= 21)
+            {
+                Assert.Inconclusive("Pas de plage possible plus tard aujourd'hui");
+                return;
+            }
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            await ReservationApi.AddServiceAsync(restaurant.Id, local.DayOfWeek, local.Hour + 1, local.Hour + 3, duration: 90);
+            (_, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("5", 4));
+            using HttpClient staff = restaurant.StaffClient();
+            Reservation legrand = await restaurant.AddReservationAsync(Dates.Today, 0, clientName: "Legrand");
+            // Après l'ouverture, avant la fin des 90 min du repas comptées depuis l'ouverture
+            DateTime opening = DateTime.UtcNow.AddMinutes(60 - local.Minute).AddSeconds(-local.Second);
+            await TestApi.WithDbAsync(db => db.Reservations.Where(r => r.Id == legrand.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Start, opening.AddMinutes(80))));
+            await ReservationApi.AssignAsync(legrand.Id, tableId: tables[0].Id);
+
+            await ApiAssert.ErrorAsync(await PlacementApi.SeatAsync(staff, tables[0].Id, 2), HttpStatusCode.Conflict, "TableBookedLater");
+            Assert.AreEqual(HttpStatusCode.Created, (await PlacementApi.SeatAsync(staff, tables[0].Id, 2, acceptBookedLater: true)).StatusCode);
+        }
+
+        [TestMethod]
+        public async Task After_the_last_window_of_the_day_nobody_is_seated()
+        {
+            DateTime local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(Dates.TimeZoneId));
+            if (local.Hour < 2)
+            {
+                Assert.Inconclusive("Pas de plage possible plus tôt aujourd'hui");
+                return;
+            }
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            await ReservationApi.AddServiceAsync(restaurant.Id, local.DayOfWeek, local.Hour - 2, local.Hour - 1);
+            (_, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("5", 4));
+            using HttpClient staff = restaurant.StaffClient();
+
+            await ApiAssert.ErrorAsync(await PlacementApi.SeatAsync(staff, tables[0].Id, 2), HttpStatusCode.BadRequest, "OutsideService");
+        }
+
+        [TestMethod]
         public async Task Seating_cleans_a_dirty_table_and_undo_makes_it_dirty_again()
         {
             if (await OpenNowAsync(("5", 4)) is not var (restaurant, staff, tables))
