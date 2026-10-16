@@ -28,6 +28,9 @@ jobs:
       run: dotnet build source/TURO/TUROAPI/TUROAPI.slnx --no-restore -c Release
     - name: 🐳 Check Docker access
       # Échoue tout de suite, avec un message clair, si le runner ne peut pas joindre le Docker de la VM
-      run: docker info --format 'Docker {{.ServerVersion}}'
+      run: |
+        id
+        ls -ln /var/run/docker.sock
+        docker info --format 'Docker {{.ServerVersion}}'
     - name: 📝 Test
       run: dotnet test source/TURO/TUROAPI/TUROAPI.slnx --no-build -c Release --verbosity normal
