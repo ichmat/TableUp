@@ -1,10 +1,9 @@
 name: CodeQL
 
+# Lancé par ci.yml (job « codeql ») après le succès de la CI Angular,
+# et chaque semaine pour repérer les nouvelles vulnérabilités sur du code inchangé
 on:
-  push:
-    branches: [ master, dev ]
-  pull_request:
-    branches: [ master, dev ]
+  workflow_call:
   schedule:
     - cron: '23 4 * * 1'
 

@@ -3,11 +3,9 @@
 
 name: 🔄️ .NET CI
 
+# Lancé uniquement par ci.yml (job « dotnet »), première étape de la CI
 on:
-  push:
-    branches: [ "master" , "dev" ]
-  pull_request:
-    branches: [ "master" , "dev" ]
+  workflow_call:
 
 jobs:
   build:
@@ -43,8 +41,3 @@ jobs:
       run: dotnet build source/TURO/TUROAPI/TUROAPI.slnx --no-restore -c Release
     - name: 📝 Test
       run: dotnet test source/TURO/TUROAPI/TUROAPI.slnx --no-build -c Release --verbosity normal
-
-  node:
-    needs: build
-    if: always()
-    uses: ./.github/workflows/node.js.yml

@@ -1,0 +1,29 @@
+name: 🔄️ CI
+
+# Point d'entrée de la CI : .NET → Angular → CodeQL.
+# Chaque étape ne part que si la précédente a réussi.
+on:
+  push:
+    branches: [ "master", "dev" ]
+  pull_request:
+    branches: [ "master", "dev" ]
+
+permissions:
+  contents: read
+
+jobs:
+  dotnet:
+    uses: ./.github/workflows/dotnet.yml
+
+  node:
+    needs: dotnet
+    uses: ./.github/workflows/node.js.yml
+
+  codeql:
+    needs: node
+    uses: ./.github/workflows/codeql.yml
+    # Un workflow appelé ne peut pas obtenir plus de droits que le job qui l'appelle
+    permissions:
+      actions: read
+      contents: read
+      security-events: write

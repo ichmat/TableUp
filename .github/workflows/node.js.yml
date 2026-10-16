@@ -3,7 +3,7 @@
 
 name: 🔄️ Angular CI
 
-# Lancé uniquement par dotnet.yml (job « node »), après le succès du build .NET
+# Lancé uniquement par ci.yml (job « node »), après le succès de la CI .NET
 on:
   workflow_call:
 
