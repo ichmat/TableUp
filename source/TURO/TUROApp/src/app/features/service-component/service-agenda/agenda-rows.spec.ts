@@ -1,7 +1,7 @@
 import { Combination, Placement, PlacementApproach, PlacementEntity, ServiceSnapshot } from '../../../models';
 import { approachKey } from '../approach-list/approach-list';
 import { occupation, serviceSnapshot, serviceTable, serviceZone, utc } from '../testing/service-fixtures';
-import { AgendaInput, AgendaRow, agendaAxis, agendaRows } from './agenda-rows';
+import { AgendaInput, AgendaRow, agendaAxis, agendaLabel, agendaRows } from './agenda-rows';
 
 const now = Date.parse(utc('20:40'));
 const ms = (time: string) => Date.parse(utc(time));
@@ -91,6 +91,13 @@ describe('agendaAxis', () => {
 
     expect(agendaAxis(snapshot, late)).toEqual(jasmine.objectContaining({ end: late, now: late }));
     expect(row(agendaRows({ snapshot, now: late, placement: null, toggled: new Map() }), 'Table', 'table:t1').blocks[0].end).toBe(late);
+  });
+});
+
+describe('agendaLabel', () => {
+  it('names the guest and the covers, a walk-in without a name', () => {
+    expect(agendaLabel('Moreau', 4)).toBe('Moreau · 4p');
+    expect(agendaLabel(null, 2)).toBe('Client de passage · 2p');
   });
 });
 

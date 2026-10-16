@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Combination, Placement, PlacementApproach, ServiceSnapshot } from '../../../models';
+import { Combination, Placement, PlacementApproach, PlacementEntity, ServiceSnapshot } from '../../../models';
 import { approachKey } from '../approach-list/approach-list';
 import { DropTarget } from '../placement-drag';
 import { occupation, serviceSnapshot, serviceTable, serviceZone, utc } from '../testing/service-fixtures';
@@ -116,7 +116,30 @@ describe('ServiceAgenda', () => {
     element().querySelector<HTMLElement>('[data-table-id="t1"] [data-track]')!.click();
 
     expect(pressed).toHaveBeenCalledOnceWith({ tableId: 't1' });
+
+    // Le bloc aussi : pendant un placement, c'est la ligne qui compte, la fiche ne s'ouvre pas
+    element().querySelector<HTMLElement>('[data-block]')!.click();
+    expect(pressed).toHaveBeenCalledTimes(2);
+    expect(pressed.calls.mostRecent().args).toEqual([{ tableId: 't1' }]);
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the placement halo on the label and the track', () => {
+    const entity = (tableId: string, level: PlacementEntity['level']): PlacementEntity =>
+      ({ tableId, combinationId: null, zoneId: 'z1', name: tableId, capacity: 4, level, reasons: [], next: null });
+    render(serviceSnapshot({
+      zones: [serviceZone({ tables: [serviceTable({ id: 't1', name: 'T1' }), serviceTable({ id: 't2', name: 'T2' })] })],
+    }), { placement: placement({ entities: [entity('t1', 'Perfect'), entity('t2', 'Excluded')] }) });
+
+    const perfect = element().querySelector<HTMLElement>('[data-table-id="t1"]')!;
+    expect(perfect.querySelector('[data-level]')!.getAttribute('class')).toContain('bg-place-perfect');
+    expect(perfect.querySelector('[data-track]')!.getAttribute('class')).toContain('ring-place-perfect');
+    expect(perfect.getAttribute('class')).not.toContain('opacity-40');
+
+    const excluded = element().querySelector<HTMLElement>('[data-table-id="t2"]')!;
+    expect(excluded.getAttribute('class')).toContain('opacity-40');
+    expect(excluded.querySelector('[data-level]')).toBeNull();
+    expect(excluded.querySelector('[data-track]')!.getAttribute('class')).not.toContain('place-');
   });
 
   it('opens the real reservation from a ghost band', () => {
@@ -164,6 +187,9 @@ describe('ServiceAgenda', () => {
     const temporary = element().querySelector(`[data-approach-key="${approachKey(proposed)}"]`)!;
     expect(temporary).not.toBeNull();
     expect(temporary.hasAttribute('data-combination-id')).toBeFalse();
+    // Un contour pointillé, pas une bordure qui décalerait la piste
+    expect(temporary.getAttribute('class')).toContain('outline-dashed');
+    expect(temporary.getAttribute('class')).not.toContain('border-dashed');
     // La 13 appartient aux deux combinaisons dépliées : sa ligne apparaît sous chacune
     expect(all('[data-table-id="t13"]').length).toBe(2);
     expect(consoleWarn).not.toHaveBeenCalled();

@@ -5,11 +5,10 @@ import {
 import { twMerge } from 'tailwind-merge';
 import { Placement, ServiceSnapshot } from '../../../models';
 import { timeIn, toMinutes } from '../../../shared/utils/time-of-day';
-import { guestName } from '../../booking-component/reservation-display';
 import { DropTarget } from '../placement-drag';
 import { LEVEL_BADGE, levelClass } from '../zone-tabs/zone-tabs';
-import { AgendaBlock, AgendaRow, agendaAxis, agendaRows } from './agenda-rows';
-import { AGENDA_BLOCK_STYLE, AGENDA_GHOST_STYLE, AGENDA_LINK_STYLE } from './agenda-style';
+import { AgendaBlock, AgendaRow, agendaAxis, agendaLabel, agendaRows } from './agenda-rows';
+import { AGENDA_BLOCK_STYLE, AGENDA_GHOST_STYLE, AGENDA_LINK_STYLE, AGENDA_TRACK_LEVEL_STYLE } from './agenda-style';
 
 /** Largeur de la colonne des libellés (`w-32`) */
 const LABEL_WIDTH = 128;
@@ -137,7 +136,7 @@ export class ServiceAgenda {
     return {
       left: this.x(start),
       width: this.x(Date.parse(placement.end)) - this.x(start),
-      label: `${guestName(placement.guestName === null ? null : { name: placement.guestName })} · ${placement.covers}p`,
+      label: agendaLabel(placement.guestName, placement.covers),
     };
   });
 
@@ -186,7 +185,8 @@ export class ServiceAgenda {
 
   protected rowClass(row: TargetRow): string {
     return twMerge('flex h-8 border-b border-plan-free',
-      row.kind === 'Combination' && row.temporary ? 'border border-dashed border-agenda-combination' : '',
+      // Un contour et non une bordure : la piste reste calée sur l'axe
+      row.kind === 'Combination' && row.temporary ? 'outline outline-1 outline-dashed -outline-offset-1 outline-agenda-combination' : '',
       this.previewed(row) ? 'bg-plan-free' : '',
       row.level === 'Excluded' ? 'opacity-40' : '');
   }
@@ -195,6 +195,11 @@ export class ServiceAgenda {
     return twMerge('sticky left-0 z-10 flex w-32 shrink-0 items-center gap-1 bg-slate px-2 font-semibold',
       row.kind === 'Combination' ? 'text-agenda-combination' : '',
       row.kind === 'Table' && row.nested ? 'pl-6 font-medium' : '');
+  }
+
+  /** Le halo du moteur se lit aussi sur la piste (§5.8) ; une ligne `Excluded` est seulement atténuée */
+  protected trackClass(row: TargetRow): string {
+    return twMerge('relative h-full shrink-0', row.level === null || row.level === 'Excluded' ? '' : AGENDA_TRACK_LEVEL_STYLE[row.level]);
   }
 
   /** La ligne visée pendant un placement porte l'aperçu du dépôt */

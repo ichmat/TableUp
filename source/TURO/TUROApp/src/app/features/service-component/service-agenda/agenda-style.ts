@@ -1,3 +1,4 @@
+import { PlacementLevel } from '../../../models';
 import { AgendaBlockKind, AgendaLinkSegment } from './agenda-rows';
 import { TABLE_STATUS_STYLE } from '../../../shared/components/constants/table-status-style';
 
@@ -12,6 +13,13 @@ export const AGENDA_BLOCK_STYLE: Record<AgendaBlockKind, string> = {
 /** Bande fantôme (AGD-01) : la table est prise via une combinaison */
 export const AGENDA_GHOST_STYLE =
   'border border-dashed border-plan-free-line bg-[image:repeating-linear-gradient(45deg,var(--color-plan-free-line)_0_1px,transparent_1px_6px)]';
+
+/** Le halo d'un niveau de placement sur la piste d'une ligne : mêmes teintes que la pastille du libellé, jamais l'orange */
+export const AGENDA_TRACK_LEVEL_STYLE: Record<Exclude<PlacementLevel, 'Excluded'>, string> = {
+  Perfect: 'bg-place-perfect/10 ring-1 ring-inset ring-place-perfect/50',
+  WithReserve: 'bg-place-reserve/10 ring-1 ring-inset ring-place-reserve/50',
+  NotAdvised: 'bg-place-advised/10 ring-1 ring-inset ring-place-advised/50',
+};
 
 /** Lien physique : vert plein « collées », violet pointillé « ! » pour un rapprochement prévu (jamais l'orange) */
 export const AGENDA_LINK_STYLE: Record<AgendaLinkSegment['kind'], string> = {

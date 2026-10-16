@@ -111,6 +111,11 @@ export function agendaAxis(snapshot: ServiceSnapshot, now: number): AgendaAxis |
   return { start, end, now: start <= present && present <= end ? present : null, slotStep: snapshot.service.slotStep };
 }
 
+/** Le texte d'un bloc, et de l'aperçu d'un dépôt : « Nom · Np », « Client de passage · Np » sans client */
+export function agendaLabel(name: string | null, covers: number): string {
+  return `${guestName(name === null ? null : { name })} · ${covers}p`;
+}
+
 function blockOf(occupation: TableOccupation, now: number, overrunEnd: number): AgendaBlock {
   let kind: AgendaBlockKind;
   switch (occupation.status) {
@@ -123,7 +128,7 @@ function blockOf(occupation: TableOccupation, now: number, overrunEnd: number): 
     start: Date.parse(occupation.start),
     end: endOf(occupation, overrunEnd),
     kind,
-    label: `${guestName(occupation.guestName === null ? null : { name: occupation.guestName })} · ${occupation.covers}p`,
+    label: agendaLabel(occupation.guestName, occupation.covers),
     allergy: occupation.hasAllergy,
     open: overruns(occupation),
   };

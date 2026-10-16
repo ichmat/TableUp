@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TABLE_STATUS_STYLE } from '../../../shared/components/constants/table-status-style';
 import { AGENDA_BLOCK_STYLE, AGENDA_GHOST_STYLE, AGENDA_LINK_STYLE } from '../service-agenda/agenda-style';
 
@@ -12,7 +12,10 @@ const ENTRIES: { key: string, label: string, swatch: string }[] = [
   { key: 'Glued', label: 'Collées', swatch: AGENDA_LINK_STYLE.Glued },
 ];
 
-/** La légende de l'Agenda, sous la frise comme celle du plan ; mêmes classes que les blocs qu'elle décrit */
+/**
+ * La légende de l'Agenda, sous la frise comme celle du plan ; mêmes classes que les blocs qu'elle décrit. Pas de « à nettoyer » :
+ * ce statut ne vit que sur le plan
+ */
 @Component({
   selector: 'app-agenda-legend',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,11 +31,5 @@ const ENTRIES: { key: string, label: string, swatch: string }[] = [
   `,
 })
 export class AgendaLegend {
-  /**
-   * Reçu comme la légende du plan, sans effet ici : l'Agenda ne dessine pas « à nettoyer », ce statut ne vit que sur le plan
-   * (spec, « Choix laissés au builder »)
-   */
-  trackCleaning = input(false);
-
   protected readonly entries = ENTRIES;
 }
