@@ -164,6 +164,28 @@ describe('agendaRows', () => {
     expect(row(all, 'Link', 'c:c1213/link').segments).toEqual([{ kind: 'Glued', start: axis.start, end: axis.end }]);
   });
 
+  it('counts only the members present in the zone', () => {
+    const snapshot = serviceSnapshot({
+      zones: [serviceZone({
+        tables: [serviceTable({ id: 't12', name: 'T12' }), serviceTable({ id: 't13', name: 'T13' })],
+        agendaCombinations: [combination({ tableIds: ['t12', 't13', 'tOff'] })],
+      })],
+    });
+
+    expect(row(rows(snapshot), 'Combination', 'c:c1213').memberCount).toBe(2);
+  });
+
+  it('draws no row for a combination with no active member', () => {
+    const snapshot = serviceSnapshot({
+      zones: [serviceZone({
+        tables: [serviceTable({ id: 't1', name: 'T1' })],
+        agendaCombinations: [combination({ tableIds: ['tOff1', 'tOff2'] })],
+      })],
+    });
+
+    expect(rows(snapshot).map((r) => r.key)).toEqual(['zone:z1', 'table:t1']);
+  });
+
   it('does not draw a glued link outside the service in progress', () => {
     const upcoming = serviceSnapshot().service!;
     const snapshot = glued({ t12: [ofCombination()], t13: [ofCombination()] }, {}, { service: { ...upcoming, state: 'Upcoming' } });

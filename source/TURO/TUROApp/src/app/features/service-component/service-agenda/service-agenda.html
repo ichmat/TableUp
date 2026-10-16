@@ -1,5 +1,7 @@
-<div #scroller data-agenda class="relative h-full overflow-auto rounded-xl bg-slate text-xs text-plan-free-text">
-    @if (axis(); as axis) {
+<div #scroller data-agenda class="relative isolate h-full overflow-auto rounded-xl bg-slate text-xs text-plan-free-text">
+    @if (axis() !== null && snapshot().zones.length === 0) {
+        <p data-no-zone class="p-4 text-sm">Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.</p>
+    } @else if (axis(); as axis) {
         <div class="relative min-h-full pb-2" [style.width.px]="labelWidth + trackWidth()">
             <!-- Axe figé en haut ; son coin reste au-dessus de la colonne des libellés -->
             <div class="sticky top-0 z-20 flex h-6 border-b border-plan-decor bg-slate">

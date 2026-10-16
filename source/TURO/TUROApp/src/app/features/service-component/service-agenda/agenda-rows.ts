@@ -202,24 +202,23 @@ export function agendaRows(input: AgendaInput): AgendaRow[] {
     const index = new Map(zone.tables.map((table, i) => [table.id, i]));
     const membersOf = (s: Shown) => zone.tables.filter((table) => s.tableIds.includes(table.id));
     const firstIndex = (s: Shown) => Math.min(...s.tableIds.map((id) => index.get(id) ?? Infinity));
+    // Une combinaison sans aucun membre actif dans la salle n'a rien à montrer
     const shown = shownOf(zone, approaches)
+      .filter((s) => membersOf(s).length > 0)
       .sort((a, b) => firstIndex(a) - firstIndex(b) || a.name.localeCompare(b.name));
 
     // Chaque table revient à la première combinaison qui la réclame ; une combinaison s'ancre sur son premier membre libre
     const claimedBy = new Map<string, Shown>();
     const anchoredAt = new Map<string, Shown[]>();
     const after = new Map<Shown, Shown[]>();
-    const orphans: Shown[] = [];
     for (const s of shown) {
       const members = membersOf(s);
       const anchor = members.find((table) => !claimedBy.has(table.id));
       if (anchor !== undefined) {
         anchoredAt.set(anchor.id, [...(anchoredAt.get(anchor.id) ?? []), s]);
-      } else if (members.length > 0) {
+      } else {
         const host = claimedBy.get(members[0].id)!;
         after.set(host, [...(after.get(host) ?? []), s]);
-      } else {
-        orphans.push(s);
       }
       members.filter((table) => !claimedBy.has(table.id)).forEach((table) => claimedBy.set(table.id, s));
     }
@@ -244,7 +243,7 @@ export function agendaRows(input: AgendaInput): AgendaRow[] {
 
       rows.push({
         kind: 'Combination', key: s.key, combinationId: s.combinationId, approachKey: s.approachKey, name: s.name,
-        capacity: s.capacity, memberCount: s.tableIds.length, expanded, temporary: s.temporary, blocks,
+        capacity: s.capacity, memberCount: members.length, expanded, temporary: s.temporary, blocks,
         level: entityLevel ?? s.approachLevel,
       });
 
@@ -264,7 +263,6 @@ export function agendaRows(input: AgendaInput): AgendaRow[] {
         rows.push(tableRow(table, `table:${table.id}`, false));
       }
     }
-    orphans.forEach(pushGroup);
   }
   return rows;
 }

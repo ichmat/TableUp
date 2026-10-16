@@ -439,6 +439,19 @@ export class ServiceComponent implements OnDestroy {
   }
 
   constructor() {
+    // L'adresse seule décide de la vue (historique du navigateur) : l'Agenda n'a ni édition du plan ni bulle
+    effect(() => {
+      if (this.view() === 'agenda') {
+        untracked(() => {
+          if (this.editing()) {
+            this.stopEditing();
+          }
+          this.bubble.set(null);
+          this.seatBubble.set(null);
+        });
+      }
+    });
+
     // Le plan relu remplace l'aperçu du lâcher, sauf pendant un geste ou une question en attente : l'aperçu y est encore la seule trace
     effect(() => {
       this.snapshot();

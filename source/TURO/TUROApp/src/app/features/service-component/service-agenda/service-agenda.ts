@@ -73,7 +73,7 @@ export class ServiceAgenda {
   /** Largeur visible de la piste, mesurée ; `null` avant le premier rendu */
   private available = signal<number | null>(null);
   private scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
-  /** Le service déjà centré sur le présent : on ne recentre pas à chaque minute */
+  /** Le service dont la vue est déjà placée : on ne la replace pas à chaque minute */
   private centeredOn: string | null = null;
 
   protected axis = computed(() => agendaAxis(this.snapshot(), this.now()));
@@ -151,12 +151,13 @@ export class ServiceAgenda {
       destroyRef.onDestroy(() => observer.disconnect());
     });
 
-    // À l'ouverture d'un service, la vue se centre sur le présent, une seule fois : elle ne saute plus à chaque minute
+    // À chaque service ouvert, la vue se place une seule fois : centrée sur le présent s'il est sur l'axe, au début sinon.
+    // Elle ne saute plus à chaque minute
     afterRenderEffect(() => {
       const axis = this.axis();
       const available = this.available();
       const service = this.snapshot().service;
-      if (axis === null || axis.now === null || available === null || service === null) {
+      if (axis === null || available === null || service === null) {
         return;
       }
       const key = `${this.snapshot().day}|${service.opening}`;
@@ -164,7 +165,11 @@ export class ServiceAgenda {
         return;
       }
       this.centeredOn = key;
-      this.scroller().nativeElement.scrollLeft = Math.max(0, this.x(axis.now) - available / 2);
+      const element = this.scroller().nativeElement;
+      element.scrollLeft = axis.now === null ? 0 : Math.max(0, this.x(axis.now) - available / 2);
+      if (axis.now === null) {
+        element.scrollTop = 0;
+      }
     });
   }
 

@@ -225,4 +225,53 @@ describe('ServiceAgenda', () => {
     expect(element().textContent).toContain('Aucun service à afficher pour ce jour.');
     expect(element().querySelector('[data-table-id]')).toBeNull();
   });
+
+  it('isolates its stacking context so the sticky axis stays under outside overlays', () => {
+    render(serviceSnapshot());
+
+    expect(element().querySelector('[data-agenda]')!.classList).toContain('isolate');
+  });
+
+  it('shows the plan message when the service has no room at all', () => {
+    render(serviceSnapshot({ zones: [] }));
+
+    expect(element().querySelector('[data-no-zone]')!.textContent)
+      .toContain("Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.");
+    expect(element().querySelector('[data-hour]')).toBeNull();
+  });
+
+  it('resets the scroll on another service without a present, and re-centres on one seen again', async () => {
+    fixture = TestBed.createComponent(ServiceAgenda);
+    const host = element();
+    host.style.width = '300px';
+    host.style.height = '200px';
+    document.body.appendChild(host);
+    try {
+      fixture.componentRef.setInput('snapshot', serviceSnapshot());
+      fixture.componentRef.setInput('now', now);
+      fixture.componentRef.setInput('timeZone', 'UTC');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const scroller = host.querySelector<HTMLElement>('[data-agenda]')!;
+      expect(scroller.scrollLeft).toBeGreaterThan(0);
+
+      const base = serviceSnapshot();
+      const finished = serviceSnapshot({ day: '2026-10-12', now: '2026-10-12T12:00:00Z', service: { ...base.service!, state: 'Finished' } });
+      fixture.componentRef.setInput('snapshot', finished);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(scroller.scrollLeft).toBe(0);
+
+      scroller.scrollLeft = 0;
+      fixture.componentRef.setInput('snapshot', serviceSnapshot());
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(scroller.scrollLeft).toBeGreaterThan(0);
+    } finally {
+      host.remove();
+    }
+  });
 });

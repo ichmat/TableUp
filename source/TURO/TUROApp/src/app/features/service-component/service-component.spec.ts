@@ -1131,6 +1131,32 @@ describe('ServiceComponent', () => {
       expect(agenda()!.placement()).toEqual(second);
     });
 
+    it('leaves the edit mode when history brings the agenda back', () => {
+      load(SNAPSHOT);
+      page().editing.set(true);
+      fixture.detectChanges();
+
+      params.next(convertToParamMap({ day: '2026-10-10', opening: '19:00', view: 'agenda' }));
+      fixture.detectChanges();
+
+      expect((page() as unknown as { editing: () => boolean }).editing()).toBeFalse();
+    });
+
+    it('closes the bubbles when the agenda shows', () => {
+      load(SNAPSHOT);
+      const bubbles = page() as unknown as {
+        bubble: { set(value: unknown): void, (): unknown }, seatBubble: { set(value: unknown): void, (): unknown },
+      };
+      bubbles.bubble.set({ tableId: 't1', name: 'T1', x: 0, y: 0 });
+      bubbles.seatBubble.set({ tableId: 't1', name: 'T1', x: 0, y: 0 });
+
+      params.next(convertToParamMap({ day: '2026-10-10', opening: '19:00', view: 'agenda' }));
+      fixture.detectChanges();
+
+      expect(bubbles.bubble()).toBeNull();
+      expect(bubbles.seatBubble()).toBeNull();
+    });
+
     it('does not switch view while editing', () => {
       load(SNAPSHOT);
       page().editing.set(true);
