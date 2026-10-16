@@ -10,7 +10,8 @@ export type EventType =
     | 'Release'
     | 'NoShow'
     | 'Cancellation'
-    | 'Modification';
+    | 'Modification'
+    | 'Reopening';
 
 /** Le journal d'une réservation : une ligne par fait */
 export interface EventLog {

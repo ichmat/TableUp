@@ -2,6 +2,9 @@
     <div class="flex flex-col gap-4 p-3 text-text">
         <!-- 1. IDENTITÉ -->
         <section data-block="identity" class="flex flex-col gap-1">
+            @if (origin(); as from) {
+                <button type="button" class="text-sm text-text-muted cursor-pointer self-start" (click)="back.emit()">← {{ from }}</button>
+            }
             <div class="flex flex-row items-start gap-2">
                 <p class="font-bold text-xl grow">{{ c.name }}</p>
                 <button type="button" aria-label="Fermer la fiche" class="text-text-muted cursor-pointer px-2" (click)="closed.emit()">✕</button>
@@ -10,7 +13,7 @@
                 @for (tag of c.tags; track tag) {
                     <span class="text-[0.65rem] font-bold uppercase px-1.5 rounded bg-app text-text-muted">{{ tagLabel[tag] }}</span>
                 }
-                @if (missingTags().length > 0) {
+                @if (!readOnly() && missingTags().length > 0) {
                     <button type="button" class="text-xs text-text-muted border border-dashed border-border rounded px-1.5 cursor-pointer"
                         (click)="tagMenuOpen.set(!tagMenuOpen())">+ tag</button>
                 }
@@ -59,7 +62,7 @@
         }
 
         <!-- 5. FUSION (administrateur) -->
-        @if (isAdmin() && c.mergeCandidates.length > 0) {
+        @if (!readOnly() && isAdmin() && c.mergeCandidates.length > 0) {
             <section data-block="merge" class="flex flex-col gap-2 rounded-lg border-2 border-dashed border-border p-2">
                 @for (candidate of c.mergeCandidates; track candidate.id) {
                     <div class="flex flex-row items-center gap-2">
@@ -86,7 +89,8 @@
                             <span class="h-px grow bg-border"></span>PASSÉES<span class="h-px grow bg-border"></span>
                         </div>
                     }
-                    <div [attr.data-history-row]="row.item.id" class="flex flex-row items-center gap-2 text-sm py-1">
+                    <div [attr.data-history-row]="row.item.id" class="flex flex-row items-center gap-2 text-sm py-1 cursor-pointer hover:bg-app rounded"
+                        (click)="openReservation.emit(row.item.id)">
                         <span class="grow">{{ historyDate(row) }}</span>
                         <span class="tabular-nums">{{ row.item.covers }}p</span>
                         <span class="w-14 text-text-muted">{{ row.item.placeName ?? '—' }}</span>
@@ -101,13 +105,18 @@
 
         <!-- 7. ACTIONS -->
         <section data-block="actions" class="flex flex-row flex-wrap items-center gap-3">
-            <app-button text="Modifier" type="Secondary" (click)="edit.emit()" />
-            @if (isAdmin()) {
-                <button type="button" class="text-sm text-text-muted underline cursor-pointer" [disabled]="isBusy()" (click)="anonymize()">Supprimer le client</button>
+            @if (readOnly()) {
+                <app-button text="Ouvrir dans Clients" type="Secondary" (click)="openInClients.emit()" />
+            } @else {
+                <app-button text="Nouvelle réservation" (click)="newReservation.emit()" />
+                <app-button text="Modifier" type="Secondary" (click)="edit.emit()" />
+                @if (isAdmin()) {
+                    <button type="button" class="text-sm text-text-muted underline cursor-pointer" [disabled]="isBusy()" (click)="anonymize()">Supprimer le client</button>
+                }
             }
         </section>
     </div>
-} @else if (detailFailed()) {
+} @else if (failed()) {
     <p class="p-3 text-sm text-coral-ink">La fiche n'a pas pu être chargée.</p>
 } @else {
     <p class="p-3 text-sm text-text-muted">Chargement de la fiche…</p>

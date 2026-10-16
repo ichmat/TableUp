@@ -20,6 +20,8 @@
 
         public bool SuggestCombinations { get; set; }
 
+        public bool TrackTableCleaning { get; set; }
+
         public int MinBookingNoticeMinutes { get; set; }
 
         public int BookingHorizonDays { get; set; }

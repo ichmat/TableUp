@@ -62,6 +62,19 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task With_phone_keeps_only_the_clients_who_can_be_called_back()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0612345678");
+            await ClientApi.AddAsync(restaurant.Id, "Marchal", phone: null);
+
+            // Filtré par l'API et non après coup : une page de suggestions reste pleine
+            CollectionAssert.AreEqual(new[] { "Sophie Marchand" }, Names(await ClientApi.ListAsync(staff, "?search=march&withPhone=true")));
+            Assert.AreEqual(2, (await ClientApi.ListAsync(staff, "?search=march")).Total);
+        }
+
+        [TestMethod]
         public async Task Search_treats_percent_and_underscore_literally()
         {
             TestRestaurant restaurant = await TestRestaurant.CreateAsync();
@@ -144,6 +157,25 @@ namespace TUROAPI.Test
             await ClientApi.AddAsync(other.Id, "Ailleurs", phone: "0600000003");
 
             CollectionAssert.AreEqual(new[] { "Présente" }, Names(await ClientApi.ListAsync(staff)));
+        }
+
+        [TestMethod]
+        public async Task Exact_phone_finds_only_the_whole_number_whatever_its_writing()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            Client sophie = await ClientApi.AddAsync(restaurant.Id, "Sophie Marchand", phone: "0699999999;0612345678", allergies: "Fruits à coque");
+            await ClientApi.AddAsync(restaurant.Id, "Autre", phone: "0612345679");
+
+            ClientPageResponse found = await ClientApi.ListAsync(staff, "?phone=%2B33%206%2012%2034%2056%2078");
+            ClientPageResponse fragment = await ClientApi.ListAsync(staff, "?phone=06%2012%2034");
+            ClientPageResponse unreadable = await ClientApi.ListAsync(staff, "?phone=abc");
+
+            // Le formulaire de réservation reconnaît un client au numéro entier, jamais à un morceau (§8.5)
+            Assert.AreEqual(sophie.Id, found.Items.Single().Id);
+            Assert.AreEqual("Fruits à coque", found.Items.Single().Allergies);
+            Assert.AreEqual(0, fragment.Items.Count);
+            Assert.AreEqual(0, unreadable.Items.Count);
         }
     }
 }

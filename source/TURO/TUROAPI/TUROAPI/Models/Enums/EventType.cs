@@ -13,6 +13,8 @@ namespace TUROAPI.Models.Enums
         Release,
         NoShow,
         Cancellation,
-        Modification
+        Modification,
+        // « Rouvrir » une réservation close par erreur (§6.5)
+        Reopening
     }
 }

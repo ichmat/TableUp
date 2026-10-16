@@ -72,6 +72,11 @@ namespace TUROAPI.Controllers
                 string pattern = "%" + search.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
                 clients = clients.Where(c => EF.Functions.ILike(c.Name, pattern));
             }
+            if (query.Phone != null)
+            {
+                string? phone = PhoneNumber.Normalize(query.Phone);
+                clients = phone == null ? clients.Where(c => false) : ClientIdentity.WithPhone(clients, phone);
+            }
             if (query.Tag is ClientTag tag)
             {
                 clients = clients.Where(c => c.Tags.Contains(tag));
@@ -79,6 +84,10 @@ namespace TUROAPI.Controllers
             if (query.AtRisk)
             {
                 clients = clients.Where(ClientCounters.AtRisk);
+            }
+            if (query.WithPhone)
+            {
+                clients = clients.Where(c => c.Phone != null);
             }
 
             int total = await clients.CountAsync();
@@ -210,6 +219,10 @@ namespace TUROAPI.Controllers
             }
 
             await using var transaction = await context.Database.BeginTransactionAsync();
+            // Même ordre que les gestes sur une réservation (réservation, puis client) : jamais d'interblocage
+            Guid[] ids = [id, otherId];
+            await context.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM \"Reservations\" WHERE \"ClientId\" = ANY({ids}) ORDER BY \"Id\" FOR UPDATE");
             await LockAsync(id, otherId);
             Client kept = await LoadActiveAsync(id);
             Client other = await LoadActiveAsync(otherId);

@@ -1,5 +1,5 @@
-import { Component, computed, inject, linkedSignal, output, signal } from '@angular/core';
-import { CLIENT_LIMITS, CLIENT_TAG_LABEL, CLIENT_TAGS, ClientHistoryItem, ClientMergeCandidate, ClientTag } from '../../../models';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { CLIENT_LIMITS, CLIENT_TAG_LABEL, CLIENT_TAGS, ClientDetail, ClientHistoryItem, ClientMergeCandidate, ClientTag } from '../../../models';
 import { ClientService } from '../../../core/services/client/client.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { RestaurantService } from '../../../core/services/restaurant/restaurant-service';
@@ -35,8 +35,16 @@ export class ClientSheet {
   protected readonly formatPhone = formatPhone;
   protected readonly formatCovers = formatCovers;
 
-  protected client = this._clients.detail;
-  protected detailFailed = this._clients.detailFailed;
+  client = input<ClientDetail | null>(null);
+  failed = input(false);
+  /** Hors de l'écran Clients : ni modifier, ni fusionner, ni supprimer ; « Ouvrir dans Clients » */
+  readOnly = input(false);
+  /** D'où l'on vient (§7.6) : « Réservation de jeudi 20:00 » */
+  origin = input<string | null>(null);
+  back = output<void>();
+  openReservation = output<string>();
+  newReservation = output<void>();
+  openInClients = output<void>();
   protected isAdmin = inject(AuthService).isAdmin;
 
   // Chaque fiche s'ouvre sur ses 10 premières réservations et son menu de tags fermé

@@ -5,6 +5,7 @@ import { BookingWindowRequest, DataScope, PlacementPreviewItem, PlacementSetting
 import { RealtimeService } from '../realtime/realtime.service';
 import { RestaurantService as ServiceModel } from '../../../models';
 import { ApiResult, toApiResult } from '../api-result';
+import { valueOrNull } from '../resource';
 
 @Service()
 export class RestaurantService {
@@ -15,8 +16,7 @@ export class RestaurantService {
         this._authService.isConnected() ? '/api/restaurant' : undefined
     );
 
-    // `value()` lève une exception quand la ressource est en erreur : elle figerait tout écran qui la lit
-    model = computed(() => this._restaurant.hasValue() ? this._restaurant.value() : null);
+    model = computed(() => valueOrNull(this._restaurant));
     isLoading = this._restaurant.isLoading;
     error = this._restaurant.error;
 

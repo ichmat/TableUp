@@ -61,4 +61,4 @@
         />
 </div>
 
-<app-date-picker [idFor]="randomId" (validate)="pickerNewDate($event)" />
+<app-date-picker [idFor]="randomId" [isDisabled]="isDisabled()" (validate)="pickerNewDate($event)" />

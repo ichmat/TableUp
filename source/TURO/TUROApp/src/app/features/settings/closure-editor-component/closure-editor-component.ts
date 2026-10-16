@@ -9,6 +9,8 @@ import { ImpactedReservationsComponent } from '../impacted-reservations-componen
 import { TimeInput } from '../../../shared/components/inputs/time-input/time-input';
 import { dayCount, dayOfWeek, formatLongDate } from '../../../shared/utils/calendar-date';
 import { formatMinutes, toMinutes } from '../../../shared/utils/time-of-day';
+import { isFormValid } from '../../../shared/utils/form-errors';
+import { valueOrNull } from '../../../core/services/resource';
 
 interface HoursDraft {
   /** `HH:mm`, chaîne vide tant que non saisie */
@@ -39,6 +41,8 @@ export const CLOSURE_REASONS: readonly { value: ClosureReason, label: string }[]
   { value: 'Private', label: 'Privé' },
   { value: 'Other', label: 'Autre' },
 ];
+
+const totalCovers = (reservations: ImpactedReservation[]) => reservations.reduce((sum, r) => sum + r.covers, 0);
 
 const toHoursDraft = (opening: string, closing: string): HoursDraft =>
   ({ opening: formatMinutes(toMinutes(opening)), closing: formatMinutes(toMinutes(closing)) });
@@ -148,8 +152,7 @@ export class ClosureEditorComponent {
   });
   /** L'aperçu ne trouve aucune réservation : le message aux clients n'aurait aucun destinataire */
   protected hasNoRecipient = computed(() => this.impactPreview.hasValue() && this.impactPreview.value().length === 0);
-  protected previewCovers = computed(() =>
-    this.impactPreview.hasValue() ? this.impactPreview.value().reduce((sum, r) => sum + r.covers, 0) : 0);
+  protected previewCovers = computed(() => totalCovers(valueOrNull(this.impactPreview) ?? []));
 
   /** Réservations à confronter avant d'enregistrer, `null` tant qu'on édite le formulaire */
   protected conflict = signal<ImpactedReservation[] | null>(null);
@@ -157,7 +160,7 @@ export class ClosureEditorComponent {
 
   protected isNew = computed(() => this.closure() === null);
   protected period = computed(() => this.describePeriod(this.draft().from, this.draft().to));
-  protected conflictCovers = computed(() => (this.conflict() ?? []).reduce((sum, r) => sum + r.covers, 0));
+  protected conflictCovers = computed(() => totalCovers(this.conflict() ?? []));
 
   hasChanges = computed(() => {
     const initial = this.initialDraft();
@@ -192,10 +195,7 @@ export class ClosureEditorComponent {
 
   /** Vérifie le formulaire, puis confronte la fermeture aux réservations déjà prises */
   async save() {
-    const errors = this.closureForm().errorSummary();
-    if (errors.length > 0) {
-      this.closureForm().markAsTouched();
-      await this._modalService.infoModal('Erreur', errors[0].message ?? 'Un champ est invalide');
+    if (!(await isFormValid(this.closureForm, this._modalService, 'Un champ est invalide'))) {
       return;
     }
 
@@ -323,11 +323,12 @@ export class ClosureEditorComponent {
     const period = this.describePeriod(draft.from, draft.to);
     const signature = this.restaurantName() === '' ? 'À très bientôt,' : `À très bientôt,\n${this.restaurantName()}`;
 
+    const filledHours = draft.hours.filter((h) => h.opening !== '' && h.closing !== '');
     const announcement = draft.type === 'Closed'
       ? `Nous devons malheureusement fermer le restaurant ${period} et ne pourrons pas vous accueillir comme prévu.`
       : `Nos horaires changent exceptionnellement ${period}`
-        + (draft.hours.some((h) => h.opening !== '' && h.closing !== '')
-          ? ` : nous serons ouverts ${draft.hours.filter((h) => h.opening !== '' && h.closing !== '').map((h) => `de ${h.opening} à ${h.closing}`).join(' et ')}.`
+        + (filledHours.length > 0
+          ? ` : nous serons ouverts ${filledHours.map((h) => `de ${h.opening} à ${h.closing}`).join(' et ')}.`
           : '.')
         + ' Votre réservation ne peut malheureusement pas être maintenue.';
 

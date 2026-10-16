@@ -50,8 +50,6 @@ namespace TUROAPI.Test
             await ApiAssert.OkAsync<ServiceResponse>(await AddAsync(admin, Requests.Service(DayOfWeek.Tuesday, 12, 14)));
         }
 
-        // Bug connu : la comparaison des heures ignore les services qui passent minuit. Ce test reste rouge tant que
-        // SettingsController.CheckModificationValidity n'est pas corrigé
         [TestMethod]
         public async Task Overnight_service_overlap_is_detected()
         {
@@ -61,6 +59,23 @@ namespace TUROAPI.Test
 
             await ApiAssert.ErrorAsync(await AddAsync(admin, Requests.Service(DayOfWeek.Friday, 20, 22)),
                 HttpStatusCode.Forbidden, "InvalidModification", "service time conflicts with existing service.");
+        }
+
+        [TestMethod]
+        public async Task A_service_past_midnight_overlaps_the_next_morning_and_the_week_wraps()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient admin = restaurant.AdminClient();
+            await ApiAssert.OkAsync<ServiceResponse>(await AddAsync(admin, Requests.Service(DayOfWeek.Friday, 19, 2)));
+            await ApiAssert.OkAsync<ServiceResponse>(await AddAsync(admin, Requests.Service(DayOfWeek.Sunday, 22, 3)));
+
+            // Le vendredi soir dure jusqu'à samedi 02:00 ; le dimanche soir, jusqu'à lundi 03:00
+            await ApiAssert.ErrorAsync(await AddAsync(admin, Requests.Service(DayOfWeek.Saturday, 1, 4)),
+                HttpStatusCode.Forbidden, "InvalidModification", "service time conflicts with existing service.");
+            await ApiAssert.ErrorAsync(await AddAsync(admin, Requests.Service(DayOfWeek.Monday, 2, 5)),
+                HttpStatusCode.Forbidden, "InvalidModification", "service time conflicts with existing service.");
+            // Bord à bord après minuit : accepté
+            await ApiAssert.OkAsync<ServiceResponse>(await AddAsync(admin, Requests.Service(DayOfWeek.Saturday, 2, 4)));
         }
 
         [TestMethod]

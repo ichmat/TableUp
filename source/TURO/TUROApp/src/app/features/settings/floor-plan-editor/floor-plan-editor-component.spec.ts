@@ -2,10 +2,11 @@ import { ComponentFixture, fakeAsync, flushMicrotasks, TestBed, tick } from '@an
 import { signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { ApiError, DraftCombination, FloorPlanZone, Table } from '../../../models';
+import { ApiError, DataScope, DraftCombination, FloorPlanZone, Table } from '../../../models';
 import { FloorPlanService } from '../../../core/services/floor-plan/floor-plan.service';
 import { FloorPlanCanvasComponent } from '../../../shared/components/floor-plan/floor-plan-canvas-component';
 import { FloorPlanEditorComponent } from './floor-plan-editor-component';
+import { RealtimeService } from '../../../core/services/realtime/realtime.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { AUTOSAVE_DELAY_MS } from './logic/draft-store';
 import { DECOR_PALETTE, DEFAULT_TABLE_PALETTE } from './logic/palette';
@@ -21,6 +22,7 @@ describe('FloorPlanEditorComponent', () => {
   let component: FloorPlanEditorComponent;
   let floorPlan: jasmine.SpyObj<FloorPlanService>;
   let zones: WritableSignal<FloorPlanZone[]>;
+  const handlers = new Map<DataScope, () => void>();
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
   const canvas = () => fixture.debugElement.query(By.directive(FloorPlanCanvasComponent)).componentInstance as FloorPlanCanvasComponent;
@@ -36,14 +38,18 @@ describe('FloorPlanEditorComponent', () => {
   beforeEach(async () => {
     zones = signal<FloorPlanZone[]>([SALLE]);
     floorPlan = jasmine.createSpyObj<FloorPlanService>('FloorPlanService',
-      ['getDraft', 'saveDraft', 'discardDraft', 'publish', 'reload'],
+      ['getDraft', 'saveDraft', 'discardDraft', 'publish', 'reload', 'refresh'],
       { zones, isLoaded: signal(true), loadFailed: signal(false) });
     floorPlan.getDraft.and.resolveTo({ value: null, error: null });
     floorPlan.saveDraft.and.resolveTo({ value: null, error: null } as never);
 
     await TestBed.configureTestingModule({
       imports: [FloorPlanEditorComponent],
-      providers: [provideRouter([]), { provide: FloorPlanService, useValue: floorPlan }],
+      providers: [
+        provideRouter([]),
+        { provide: FloorPlanService, useValue: floorPlan },
+        { provide: RealtimeService, useValue: { onDataChanged: (scope: DataScope, reload: () => void) => { handlers.set(scope, reload); return () => handlers.delete(scope); } } },
+      ],
     }).compileComponents();
     await create();
   });
@@ -564,6 +570,151 @@ describe('FloorPlanEditorComponent', () => {
     await component.publish();
     expect(floorPlan.publish).not.toHaveBeenCalled();
   });
+
+  describe('when the service moves the plan', () => {
+    const MOVED = { tables: [{ ...T1, x: 3 }], decors: [], combinations: [], updatedAt: '2026-10-12T20:00:00Z' };
+
+    it('should take the draft the service moved, when nothing waits to be saved', async () => {
+      floorPlan.getDraft.and.resolveTo({ value: MOVED, error: null });
+
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(floorPlan.getDraft).toHaveBeenCalledTimes(2);
+      expect(component.store.content().tables[0].x).toBe(3);
+      expect(text()).not.toContain('Le plan a été modifié en service');
+    });
+
+    it('should warn instead of overwriting unsaved changes, then reload on demand', async () => {
+      component.updateTable('t1', { x: 1 });
+      const mine = component.store.content().tables[0].x;
+      expect(mine).not.toBe(3);
+      floorPlan.getDraft.and.resolveTo({ value: MOVED, error: null });
+
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(text()).toContain('Le plan a été modifié en service');
+      expect(component.store.content().tables[0].x).toBe(mine);
+
+      component.reloadFromService();
+      fixture.detectChanges();
+      expect(component.store.content().tables[0].x).toBe(3);
+      expect(text()).not.toContain('Le plan a été modifié en service');
+    });
+
+    it('should keep the unsaved changes on "Garder la mienne"', async () => {
+      component.updateTable('t1', { x: 1 });
+      const mine = component.store.content().tables[0].x;
+      floorPlan.getDraft.and.resolveTo({ value: MOVED, error: null });
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+
+      component.keepMine();
+      fixture.detectChanges();
+
+      expect(text()).not.toContain('Le plan a été modifié en service');
+      expect(component.store.content().tables[0].x).toBe(mine);
+    });
+
+    it('should drop the banner when the editor publishes', async () => {
+      component.updateTable('t1', { x: 1 });
+      floorPlan.getDraft.and.resolveTo({ value: MOVED, error: null });
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(text()).toContain('Le plan a été modifié en service');
+      const published = [{ ...SALLE, tables: [{ ...T1, x: 1 }] }];
+      floorPlan.publish.and.callFake(async () => ({ value: published, error: null }));
+
+      await component.publish();
+      fixture.detectChanges();
+
+      expect(text()).not.toContain('Le plan a été modifié en service');
+    });
+
+    it('should do nothing while publishing', async () => {
+      component.updateTable('t1', { x: 1 });
+      let finish!: () => void;
+      const published = [{ ...SALLE, tables: [{ ...T1, x: 1 }] }];
+      floorPlan.publish.and.callFake(() => new Promise((resolve) => { finish = () => resolve({ value: published, error: null }); }));
+      const publishing = component.publish();
+      await new Promise((resolve) => setTimeout(resolve));
+      floorPlan.getDraft.calls.reset();
+
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(floorPlan.getDraft).not.toHaveBeenCalled();
+      expect(text()).not.toContain('Le plan a été modifié en service');
+      finish();
+      await publishing;
+    });
+
+    it('should warn when the last save failed', async () => {
+      floorPlan.saveDraft.and.resolveTo({ value: null, error: 'boom' } as never);
+      component.updateTable('t1', { x: 1 });
+      await component.store.flush();
+      expect(component.store.saveState()).toBe('failed');
+      floorPlan.getDraft.and.resolveTo({ value: MOVED, error: null });
+
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(text()).toContain('Le plan a été modifié en service');
+    });
+
+    it('should leave the undo history alone when the draft is the same', async () => {
+      component.updateTable('t1', { x: 1 });
+      await component.store.flush();
+      expect(component.store.canUndo()).toBeTrue();
+      floorPlan.getDraft.and.resolveTo({ value: { ...component.store.content(), updatedAt: '2026-10-12T20:00:00Z' }, error: null });
+
+      handlers.get(DataScope.FloorPlan)!();
+      await fixture.whenStable();
+
+      expect(component.store.canUndo()).toBeTrue();
+    });
+
+    const REPUBLISHED = [{ ...SALLE, tables: [{ ...T1, x: 3 }] }];
+    const republish = () => floorPlan.refresh.and.callFake(async () => {
+      zones.set(REPUBLISHED);
+      return { value: REPUBLISHED, error: null };
+    });
+
+    it('should follow the published plan the service moved, when there is no draft and nothing was changed', async () => {
+      floorPlan.getDraft.and.resolveTo({ value: null, error: null });
+      republish();
+
+      handlers.get(DataScope.FloorPlan)!();
+      // Deux allers-retours (brouillon, puis plan publié) : on laisse passer une tâche
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+
+      expect(floorPlan.refresh).toHaveBeenCalled();
+      expect(component.store.content().tables[0].x).toBe(3);
+      expect(text()).not.toContain('Le plan a été modifié en service');
+    });
+
+    it('should warn instead of overwriting local changes when there is no draft', async () => {
+      component.updateTable('t1', { x: 1 });
+      const mine = component.store.content().tables[0].x;
+      floorPlan.getDraft.and.resolveTo({ value: null, error: null });
+      republish();
+
+      handlers.get(DataScope.FloorPlan)!();
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+
+      expect(text()).toContain('Le plan a été modifié en service');
+      expect(component.store.content().tables[0].x).toBe(mine);
+      component.reloadFromService();
+      expect(component.store.content().tables[0].x).toBe(3);
+    });
+  });
 });
 
 describe('FloorPlanEditorComponent when the published plan cannot be loaded', () => {
@@ -573,7 +724,11 @@ describe('FloorPlanEditorComponent when the published plan cannot be loaded', ()
     floorPlan.getDraft.and.resolveTo({ value: null, error: null });
     await TestBed.configureTestingModule({
       imports: [FloorPlanEditorComponent],
-      providers: [provideRouter([]), { provide: FloorPlanService, useValue: floorPlan }],
+      providers: [
+        provideRouter([]),
+        { provide: FloorPlanService, useValue: floorPlan },
+        { provide: RealtimeService, useValue: { onDataChanged: () => () => undefined } },
+      ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(FloorPlanEditorComponent);

@@ -1,0 +1,12 @@
+@if (state(); as s) {
+    <div role="status"
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-row items-center gap-4 rounded-xl bg-slate text-surface px-4 py-3 shadow-xl max-w-[calc(100vw-2rem)]">
+        @if (s.kind === 'offer') {
+            <p class="text-sm">{{ s.offer.message }}</p>
+            <span class="text-xs text-chalk tabular-nums">{{ s.secondsLeft }} s</span>
+            <button type="button" data-undo class="font-bold text-interactive cursor-pointer" (click)="undo.undo()">Annuler</button>
+        } @else {
+            <p class="text-sm">{{ s.message }}</p>
+        }
+    </div>
+}

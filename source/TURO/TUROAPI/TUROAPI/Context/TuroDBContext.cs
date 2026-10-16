@@ -42,6 +42,12 @@ namespace TUROAPI.Context
             // La liste ne lit que les fiches actives (anonymisées exclues)
             modelBuilder.Entity<Client>()
                 .HasIndex(c => new { c.RestaurantId, c.AnonymizedAt });
+
+            // COMB-05 : au plus une action en attente. Sans elle, un bug de recalcul passerait inaperçu jusqu'au rappel qui sonne pour rien
+            modelBuilder.Entity<Combination>()
+                .ToTable(t => t.HasCheckConstraint("CK_Combinations_OnePendingAction",
+                    "(\"IsActive\" AND \"ActivateAt\" IS NULL) OR (NOT \"IsActive\" AND \"DeactivateAt\" IS NULL "
+                    + "AND \"SeparateAfterNoShowOf\" IS NULL AND \"KeepGluedFor\" IS NULL)"));
         }
     }
 }

@@ -6,7 +6,7 @@ import { RestaurantService } from './restaurant-service';
 
 const RESTAURANT: Restaurant = {
   id: 'r', name: 'Chez nous', timeZone: 'Europe/Paris', defaultRotation: 105, seatTolerance: 3, lateGrace: 10,
-  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: false,
+  reminderEnabled: true, reminderDelayHours: 24, autoConfirmation: false, suggestCombinations: false, trackTableCleaning: false,
   minBookingNoticeMinutes: 60, bookingHorizonDays: 60, zones: [], services: [], cancellationConditions: [], users: [],
 };
 
@@ -23,7 +23,7 @@ describe('RestaurantService', () => {
   });
 
   it('should put the placement settings and show the saved restaurant at once', async () => {
-    const request = { defaultRotation: 105, seatTolerance: 3, lateGrace: 10, suggestCombinations: false };
+    const request = { defaultRotation: 105, seatTolerance: 3, lateGrace: 10, suggestCombinations: false, trackTableCleaning: false };
     const result = service.updatePlacement(request);
     const call = http.expectOne('/api/restaurant/settings/placement');
     expect(call.request.method).toBe('PUT');
@@ -45,7 +45,7 @@ describe('RestaurantService', () => {
   });
 
   it('should keep the shown restaurant when a save is refused', async () => {
-    const result = service.updatePlacement({ defaultRotation: 100, seatTolerance: 3, lateGrace: 10, suggestCombinations: true });
+    const result = service.updatePlacement({ defaultRotation: 100, seatTolerance: 3, lateGrace: 10, suggestCombinations: true, trackTableCleaning: false });
     http.expectOne('/api/restaurant/settings/placement').flush(
       { statusCode: 400, message: 'Invalid request : default rotation must be a multiple of 15 minutes.', error: 'InvalidRequest' },
       { status: 400, statusText: 'Bad Request' },

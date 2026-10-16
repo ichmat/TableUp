@@ -5,6 +5,7 @@ import { DataScope, FloorPlanDraft, FloorPlanDraftContent, FloorPlanZone, Zone, 
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { valueOrNull } from '../resource';
 
 const FLOOR_PLAN_URL = '/api/restaurant/floor-plan';
 
@@ -18,8 +19,7 @@ export class FloorPlanService {
         this._authService.isConnected() ? FLOOR_PLAN_URL : undefined
     );
 
-    // `value()` lève une exception quand la ressource est en erreur : elle figerait tout écran qui la lit
-    zones = computed(() => this._plan.hasValue() ? this._plan.value() : []);
+    zones = computed(() => valueOrNull(this._plan) ?? []);
     isLoaded = computed(() => this._plan.hasValue());
     loadFailed = computed(() => this._plan.status() === 'error');
 
@@ -30,6 +30,15 @@ export class FloorPlanService {
 
     reload() {
         this._plan.reload();
+    }
+
+    /** Relit le plan publié et le pose tout de suite : l'appelant travaille sur la version relue */
+    async refresh(): Promise<ApiResult<FloorPlanZone[]>> {
+        const result = await toApiResult(this._http.get<FloorPlanZone[]>(FLOOR_PLAN_URL));
+        if (result.value !== null) {
+            this._plan.set(result.value);
+        }
+        return result;
     }
 
     createZone(request: ZoneRequest): Promise<ApiResult<Zone>> {

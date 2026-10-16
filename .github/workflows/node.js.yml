@@ -1,0 +1,44 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: 🔄️ Angular CI
+
+# Lancé uniquement par ci.yml (job « node »), après le succès de la CI .NET
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: CI Angular
+    runs-on: self-hosted
+    env:
+      NG_BUILD_MAX_WORKERS: 1
+      NODE_OPTIONS: --max-old-space-size=3072
+      # esbuild est un binaire Go : NODE_OPTIONS ne le limite pas
+      GOMAXPROCS: 1
+      GOMEMLIMIT: 2GiB
+    strategy:
+      matrix:
+        # Angular 22 n'est pas supporté sur Node 18/20
+        node-version: [22.x, 24.x, 26.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: ➡️ Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: source/TURO/TUROApp/package-lock.json
+    - name: 🔍 Vérification dépendances
+      run: npm ci
+      working-directory: source/TURO/TUROApp
+    - name: ⚙️ Build Angular
+      run: npm run build --if-present
+      working-directory: source/TURO/TUROApp
+    - name: 📝 Test Karma
+      # CHROME_BIN vient de l'image du runner. Sans sandbox : Chrome ne peut pas en créer une
+      # dans un conteneur Docker sans privilèges (lanceur fourni par @angular/build)
+      run: npm test -- --no-watch --browsers=ChromeHeadlessNoSandbox
+      working-directory: source/TURO/TUROApp

@@ -1,1 +1,16 @@
-<p>booking-component works!</p>
+<div class="flex flex-row h-full w-full gap-3">
+    <app-reservation-list class="flex-1 min-w-0" [selectedId]="selectedId()" (opened)="open($event)" (create)="startCreate()" />
+
+    @if (form() || top()) {
+        <aside class="w-[322px] shrink-0 h-full bg-surface rounded-xl shadow-xl overflow-y-auto">
+            @if (form(); as mode) {
+                <app-reservation-form [mode]="mode" (saved)="onSaved($event)" (cancelled)="form.set(null)" />
+            } @else if (top()?.kind === 'reservation') {
+                <app-reservation-sheet [origin]="origin()" (back)="back()" (closed)="close()" (openClient)="openClient($event)" (edit)="startEdit($event)" />
+            } @else if (top(); as entry) {
+                <app-client-sheet [client]="client()" [failed]="clientFailed()" [readOnly]="true" [origin]="origin()"
+                    (back)="back()" (closed)="close()" (openReservation)="openReservation($event)" (openInClients)="openInClients(entry.id)" />
+            }
+        </aside>
+    }
+</div>

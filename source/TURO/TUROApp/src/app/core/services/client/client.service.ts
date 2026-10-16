@@ -1,12 +1,15 @@
-import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { map } from 'rxjs';
 import { CLIENT_LIMITS, ClientDetail, ClientListItem, ClientPage, ClientQuery, ClientRequest, DataScope } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { detailOf, lastValue } from '../resource';
 
 const CLIENTS_URL = '/api/clients';
+/** La liste déroulante du formulaire de réservation : au-delà, il vaut mieux taper une lettre de plus */
+export const MAX_SUGGESTIONS = 20;
 
 export const DEFAULT_CLIENT_QUERY: ClientQuery = { search: '', sort: 'Recent', tag: null, atRisk: false, pageSize: CLIENT_LIMITS.pageSize };
 
@@ -49,22 +52,14 @@ export class ClientService {
         this._auth.isConnected() ? { url: CLIENTS_URL, params: listParams(this._query()) } : undefined
     );
     // La page précédente reste affichée pendant qu'une recherche se charge : pas de clignotement à chaque frappe
-    private _page = linkedSignal<ClientPage | undefined, ClientPage | null>({
-        source: () => (this._list.hasValue() ? this._list.value() : undefined),
-        computation: (value, previous) => value ?? previous?.value ?? null,
-    });
-    page = this._page.asReadonly();
+    page = lastValue(this._list);
     listFailed = computed(() => this._list.status() === 'error');
 
     private _detail = httpResource<ClientDetail>(() => {
         const id = this._selectedId();
         return this._auth.isConnected() && id !== null ? `${CLIENTS_URL}/${id}` : undefined;
     });
-    // `value()` lève une exception quand la ressource est en erreur ; la fiche d'un autre client ne s'affiche jamais
-    detail = computed(() => {
-        const value = this._detail.hasValue() ? this._detail.value() : null;
-        return value !== null && value.id === this._selectedId() ? value : null;
-    });
+    detail = detailOf(this._detail, this._selectedId);
     detailFailed = computed(() => this._detail.status() === 'error');
 
     constructor() {
@@ -117,6 +112,22 @@ export class ClientService {
     async findByPhone(phone: string, exceptId: string | null): Promise<ClientListItem | null> {
         const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL, { params: { search: phone, pageSize: 5 } }));
         return result.value?.items.find((item) => item.id !== exceptId) ?? null;
+    }
+
+    /** Le client qui porte exactement ce numéro (§8.5) : la reconnaissance du formulaire de réservation */
+    async findExactPhone(phone: string): Promise<ClientListItem | null> {
+        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL, { params: { phone, pageSize: 1 } }));
+        return result.value?.items[0] ?? null;
+    }
+
+    /**
+     * Les fiches qui répondent à un morceau de numéro ou de nom, pendant qu'on prend une réservation.
+     * Sans numéro, une fiche n'est pas proposée : la réservation l'exige, et en saisir un créerait une autre fiche
+     */
+    async suggest(search: string): Promise<ClientListItem[]> {
+        const result = await toApiResult(this._http.get<ClientPage>(CLIENTS_URL,
+            { params: { search, withPhone: true, pageSize: MAX_SUGGESTIONS } }));
+        return result.value?.items ?? [];
     }
 
     exportCsv(): Promise<ApiResult<CsvFile>> {

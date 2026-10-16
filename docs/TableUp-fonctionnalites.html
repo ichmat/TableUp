@@ -822,6 +822,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <a class="nv h3" href="#sec-7.6"><i>7.6</i>Le placement</a>
 <a class="nv h3" href="#sec-7.7"><i>7.7</i>Le bouton Allergies</a>
 <a class="nv h3" href="#sec-7.8"><i>7.8</i>Client de passage</a>
+<a class="nv h3" href="#sec-7.9"><i>7.9</i>Nettoyage des tables</a>
 <a class="nv h2" href="#sec-8"><i>8</i>Service — Agenda</a>
 <a class="nv h2" href="#sec-9"><i>9</i>Réservations</a>
 <a class="nv h3" href="#sec-9.1"><i>9.1</i>La liste</a>
@@ -942,7 +943,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
-<div class="rg"><b>ROLE-01</b><div>Le bouton « ✎ Éditer le plan » n'est rendu que pour le rôle <code>admin</code>.</div></div>
+<div class="rg"><b>ROLE-01</b><div>Le bouton « ✎ Éditer le plan » de l'écran Service est rendu pour les deux rôles : il bascule l'écran en mode édition sur place. L'éditeur de plan complet reste réservé au rôle <code>admin</code>, atteint depuis Paramètres › Salles et tables.</div></div>
 <div class="rg"><b>ROLE-02</b><div>Fermer le jour courant n'est pas un paramétrage : le panneau de fermeture est atteignable depuis l'Accueil par le rôle Service. Les fermetures <em>futures</em> restent dans les Paramètres, donc administrateur.</div></div>
 <div class="rg"><b>ROLE-03</b><div>Toutes les requêtes sont filtrées par <code>restaurant_id</code>. Un utilisateur n'appartient qu'à un restaurant.</div></div>
 </div>
@@ -959,7 +960,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td><code>retard_grace</code></td><td>Minutes après l'heure avant d'afficher l'anneau « en retard » (ex. 15)</td></tr>
 <tr><td><code>rappel_actif</code>, <code>rappel_delai_h</code></td><td>Rappel avant la réservation, et son délai</td></tr>
 <tr><td><code>confirmation_auto</code></td><td>Confirme d'office une demande web posée sur un créneau franchement libre</td></tr>
-<tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil. Une combinaison active se place toujours comme une table</td></tr>
+<tr><td><code>proposer_rapprochements</code></td><td>Propose de recoller les combinaisons en sommeil et les paires inédites d'une même salle. Une combinaison active se place toujours comme une table</td></tr>
+<tr><td><code>suivre_nettoyage</code></td><td>« Libérer » passe la table « à nettoyer ». <strong>Désactivé par défaut</strong> : un petit restaurant n'a pas à cocher chaque table</td></tr>
 <tr><td><code>delai_min_reservation</code>, <code>horizon_reservation</code></td><td>Fenêtre de réservation du widget, en minutes et en jours (ex. 60 et 60)</td></tr>
 </tbody></table></div>
 
@@ -1056,6 +1058,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td><code>assis_a</code></td><td></td></tr>
 <tr><td><code>termine_a</code></td><td><strong>Nullable</strong> — une clôture automatique ne connaît pas l'heure de fin</td></tr>
 <tr><td><code>cloture_auto</code></td><td>Vrai si close par l'ouverture du service suivant</td></tr>
+<tr><td><code>cree_le</code></td><td>Trie la file des demandes</td></tr>
 </tbody></table></div>
 
 <div class="gr2">
@@ -1071,7 +1074,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <p><strong>Journal d'événements</strong> — une ligne par fait.</p>
 <div class="tw"><table><tbody>
 <tr><td><code>id</code>, <code>reservation_id</code>, <code>horodatage</code></td><td></td></tr>
-<tr><td><code>type</code></td><td>création · acceptation · refus · rappel · confirmation client · placement · déplacement · arrivée · libération · no-show · annulation · modification</td></tr>
+<tr><td><code>type</code></td><td>création · acceptation · refus · rappel · confirmation client · placement · déplacement · arrivée · libération · no-show · annulation · modification · réouverture</td></tr>
 <tr><td><code>auteur_id</code></td><td>Null si l'auteur est le système</td></tr>
 <tr><td><code>details</code></td><td>Ce qui a changé</td></tr>
 </tbody></table></div>
@@ -1319,6 +1322,9 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>COMB-05</b><div>Contrainte en base : <code>(active = true AND a_active_le IS NULL) OR (active = false AND a_desactive_le IS NULL)</code>. Au plus une action en attente à la fois.</div></div>
 <div class="rg"><b>COMB-06</b><div><strong>Aucun rappel n'expire.</strong> Il reste affiché tant que personne n'a répondu. Pas de délai, pas de bascule automatique.</div></div>
 <div class="rg"><b>COMB-07</b><div>Trois rappels existent : <em>rapprochement</em> (oui c'est fait / pas encore, dans 10 min / finalement non), <em>séparation</em> (oui / non), et <em>après no-show</em> (« Nguyen ne s'est pas présenté. Séparer 12 et 13 ? »).</div></div>
+<div class="rg"><b>COMB-08</b><div><em>Pas encore</em> reporte le rappel de 10 minutes. <em>Finalement non</em> renvoie la réservation dans « À placer ».</div></div>
+<div class="rg"><b>COMB-09</b><div><em>Non, les laisser ensemble</em> vaut pour la réservation qui réclamait la table ; une autre le fait revenir.</div></div>
+<div class="rg"><b>COMB-10</b><div>Les rappels s'affichent en cartes sur l'écran Service, avec un <code>!</code> violet sur leurs tables et, ailleurs, un point violet sur l'icône du rail.</div></div>
 </div>
 
 <h3 id="sec-4.6"><span class="hn">4.6</span>Propositions de rapprochement</h3>
@@ -1328,6 +1334,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>RAPP-02</b><div><strong>Aucun filtre de proximité.</strong> Toutes les combinaisons possibles sont candidates.</div></div>
 <div class="rg"><b>RAPP-03</b><div>Les candidats sont <strong>triés par distance croissante</strong>, calculée depuis les <code>x/y</code> des tables physiques.</div></div>
 <div class="rg"><b>RAPP-04</b><div>Un rapprochement inédit accepté ouvre le popup de création : nom pré-rempli (« 12-13 »), capacité pré-remplie à la somme, les deux modifiables. Si la combinaison existe déjà, aucune question n'est posée.</div></div>
+<div class="rg"><b>RAPP-05</b><div>Les rapprochements proposés sont les combinaisons en sommeil et les paires inédites de la même salle. Au-delà de deux tables, on colle d'abord sur le plan.</div></div>
+<div class="rg"><b>RAPP-06</b><div>Ils se listent dans la fiche, du plus proche au plus loin. Toucher une ligne relie ses tables sur le plan ; la toucher encore vaut un dépôt.</div></div>
 </div>
 <h2 id="sec-5"><span class="hn">5</span>Navigation</h2>
 
@@ -1579,6 +1587,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>FRISE-02</b><div>Le créneau actif est <strong>orange plein</strong>. Le plan affiche l'état des tables <em>à cette heure</em>, pas à l'heure courante.</div></div>
 <div class="rg"><b>FRISE-03</b><div>Un badge <strong><code>!</code> violet</strong> signale les créneaux portant des réservations non placées. <strong>Pas de compteur</strong> — le nombre est dans « À placer ».</div></div>
 <div class="rg"><b>FRISE-04</b><div>Sélectionner une réservation <strong>déplace la frise sur son créneau</strong>.</div></div>
+<div class="rg"><b>FRISE-05</b><div>Les couverts d'un créneau sont ceux des convives <strong>présents à cette heure</strong>, placés ou non ; la barre dit la part des tables tenues.</div></div>
+<div class="rg"><b>FRISE-06</b><div>Le service affiché par défaut : en cours (y compris celui de la veille qui passe minuit), sinon le prochain du jour, sinon le dernier, sinon le premier du prochain jour ouvert. Hors de lui, l'en-tête change de ton et propose <strong>« Aujourd'hui »</strong>.</div></div>
 </div>
 
 <h3 id="sec-7.3"><span class="hn">7.3</span>Onglets de zone</h3>
@@ -1587,7 +1597,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>ZONE-01</b><div>Une pastille par zone, avec son taux d'occupation. L'onglet actif est orange.</div></div>
 <div class="rg"><b>ZONE-02</b><div>Pendant un placement, chaque onglet porte <strong>le meilleur niveau qu'il contient</strong> : vert s'il a du <code>✓</code>, vert-jaune s'il n'a que du <code>~✓</code>, estompé s'il n'a rien.</div></div>
 <div class="rg"><b>ZONE-03</b><div>Une zone vide mais sans table assez grande est <strong>estompée, pas badgée</strong> : le badge dit « compatible », pas « libre ».</div></div>
-<div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible en mode admin seulement, et <strong>estompé pendant un placement</strong>.</div></div>
+<div class="rg"><b>ZONE-04</b><div>Le bouton « ✎ Éditer le plan » est poussé à droite, visible pour les deux rôles, et <strong>estompé pendant un placement</strong>. Il bascule l'écran en mode édition : déplacer, coller, séparer, sur place.</div></div>
+<div class="rg"><b>ZONE-05</b><div>Le taux d'un onglet compte les tables réservées ou occupées <strong>à l'heure du créneau actif</strong>, sur ses tables actives.</div></div>
 </div>
 
 <h3 id="sec-7.4"><span class="hn">7.4</span>Le plan et les marques</h3>
@@ -1602,12 +1613,13 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PLAN-04</b><div>Ces marques appartiennent à la <strong>réservation</strong>, pas à la table : une pastille suit un déplacement.</div></div>
 <div class="rg"><b>PLAN-05</b><div>Sur la <em>fiche</em>, l'allergie reste écrite en toutes lettres et épinglée, jamais réduite à une icône.</div></div>
 <div class="rg"><b>PLAN-06</b><div>Icônes : SVG dessinés, <strong>jamais d'emoji</strong>. Allergie = un couvert, blanc sur corail.</div></div>
+<div class="rg"><b>PLAN-07</b><div>Sur la table, <strong>seule l'allergie est dessinée</strong>, avec le nom et l'heure de la réservation en dessous ; une table assise qui déborde sa durée reste occupée <strong>jusqu'à ce qu'on la libère</strong>, sur tous les créneaux suivants.</div></div>
 </div>
 
 <h3 id="sec-7.5"><span class="hn">7.5</span>Colonne « À placer »</h3>
 
 <div class="rules">
-<div class="rg"><b>COL-01</b><div>126 px, repliable. <strong>Deux groupes, deux compteurs</strong> : « À placer » (confirmées sans table) et « En attente » (demandes non répondues, bordure violette).</div></div>
+<div class="rg"><b>COL-01</b><div>189 px, repliable. <strong>Deux groupes, deux compteurs</strong> : « À placer » (confirmées sans table) et « En attente » (demandes non répondues, bordure violette).</div></div>
 <div class="rg"><b>COL-02</b><div>Une pastille par réservation : nom, couverts, heure, source. <strong>Les deux groupes sont glissables.</strong></div></div>
 <div class="rg"><b>COL-03</b><div>Sélectionner une pastille la met en orange et estompe les autres.</div></div>
 </div>
@@ -1637,6 +1649,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PLACE-09</b><div>Si la réservation déposée est <code>en_attente</code>, elle est <strong>acceptée du même geste</strong> ; la table est réservée immédiatement, le message au client part avec 8 s de délai annulable.</div></div>
 <div class="rg"><b>PLACE-10</b><div><strong>Pas de voile sur le plan</strong> pendant un placement : le plan est l'objet de l'action.</div></div>
 <div class="rg"><b>PLACE-11</b><div><strong>Le plan se recompose uniquement quand quelque chose y est désigné.</strong> La fiche ouverte pour un placement décale le plan ; le formulaire de création, lui, survole.</div></div>
+<div class="rg"><b>PLACE-12</b><div>Moins de <strong>15 min</strong> entre la fin prévue et la réservation suivante de la table : <code>~✓</code> « Réservée juste après ». À 15 min ou plus, la table reste <code>✓</code> et le plan écrit « Ensuite 22:30 · marge 30 min ». Les 15 min sont fixes.</div></div>
+<div class="rg"><b>PLACE-13</b><div>Une table seule <strong>collée dans une combinaison active</strong> est <code>~✓</code> « Table collée » : il faudra les séparer. La combinaison active elle-même peut être <code>✓</code>.</div></div>
+<div class="rg"><b>PLACE-14</b><div><strong>Toucher</strong> une table allumée vaut un dépôt, comme glisser la pastille. Une table estompée ne réagit pas.</div></div>
+<div class="rg"><b>PLACE-15</b><div><strong>Changer de table</strong> : le lien de la fiche (réservation confirmée placée, ou assise), ou glisser l'occupation d'une table vers une autre. Le journal note « 5 → 7 » ; « Annuler » remet l'ancienne table, sauf si elle a été prise entre-temps. Lâcher sur sa propre table ne fait rien ; des clients assis qu'on déplace laissent leur table « à nettoyer ».</div></div>
 </div>
 
 <h3 id="sec-7.7"><span class="hn">7.7</span>Le bouton Allergies</h3>
@@ -1655,6 +1671,17 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>WALK-01</b><div>Un walk-in ne passe <strong>pas</strong> par le formulaire de création : <strong>toucher une table libre sur le plan → « Asseoir maintenant » → couverts</strong>. Deux gestes.</div></div>
 <div class="rg"><b>WALK-02</b><div>Ni nom, ni téléphone demandés. <strong>Aucune fiche client n'est créée.</strong></div></div>
 <div class="rg"><b>WALK-03</b><div>La réservation créée porte <code>source = sur_place</code>, <code>client_id = null</code>, et passe directement en <code>assise</code>.</div></div>
+<div class="rg"><b>WALK-04</b><div>Une table libre maintenant mais <strong>réservée plus tard pendant la durée du repas</strong> le dit d'abord (« Réservée à 21:00 · Legrand · 4 p — 1 h devant vous ») : rien ne part sans « Asseoir quand même ».</div></div>
+<div class="rg"><b>WALK-05</b><div>Possible <strong>pendant un service et avant le prochain du jour</strong> (celui que l'écran montre par défaut), jamais pour demain ni pour un service passé. Avant l'ouverture, le client rejoint ce service <strong>comme une arrivée en avance</strong> : le repas compte depuis l'ouverture, la table est prise dès maintenant, et WALK-04 regarde jusqu'à la fin de ce repas. Entre le déjeuner et le dîner, la table reste donc prise jusqu'à « Départ ».</div></div>
+</div>
+
+<h3 id="sec-7.9"><span class="hn">7.9</span>Nettoyage des tables</h3>
+
+<div class="rules">
+<div class="rg"><b>NET-01</b><div>Le suivi du nettoyage est un réglage du restaurant, <strong>désactivé par défaut</strong>. Désactivé, « Libérer » rend la table libre et « à nettoyer » n'apparaît nulle part.</div></div>
+<div class="rg"><b>NET-02</b><div>Activé, toucher une table « à nettoyer » ouvre une bulle <strong>« Nettoyée »</strong> : la table redevient libre, avec le bandeau « Annuler » 8 s.</div></div>
+<div class="rg"><b>NET-03</b><div>Désactiver le réglage <strong>ne vide pas</strong> les tables marquées : elles sont ignorées, et reviennent si on le réactive.</div></div>
+<div class="rg"><b>NET-04</b><div>Une table occupée à l'heure regardée montre son occupation, même si elle est marquée « à nettoyer ».</div></div>
 </div>
 
 <h2 id="sec-8"><span class="hn">8</span>Service — Agenda</h2>
@@ -1760,7 +1787,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <div class="rules">
 <div class="rg"><b>SRC-01</b><div>Le champ <code>source</code> n'est demandé <strong>qu'à la création manuelle depuis l'écran Réservations</strong>. Partout ailleurs le logiciel l'écrit lui-même.</div></div>
-<div class="rg"><b>SRC-02</b><div>Quand la question est posée, les valeurs sont affichées <strong>côte à côte, une seule allumée</strong> — jamais un menu déroulant.</div></div>
+<div class="rg"><b>SRC-02</b><div>Quand la question est posée, les valeurs sont affichées <strong>côte à côte, une seule allumée</strong> — jamais un menu déroulant. À la création manuelle : Téléphone (par défaut), Sur place, Plateforme, Autre.</div></div>
 </div>
 
 <h3 id="sec-9.4"><span class="hn">9.4</span>Colonne « Action »</h3>
@@ -1776,7 +1803,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <div class="rg"><b>ACT-01</b><div><strong>Jamais deux actions concurrentes</strong>, sauf <code>en_attente</code> où accepter et refuser sont symétriques.</div></div>
 <div class="rg"><b>ACT-02</b><div><code>✓</code> et <code>✗</code> sont <strong>dessinés et teintés</strong>, jamais des emojis.</div></div>
-<div class="rg"><b>ACT-03</b><div><strong>Toute action rapide est annulable</strong> par le bandeau différé de 8 s.</div></div>
+<div class="rg"><b>ACT-03</b><div><strong>Toute action rapide est annulable</strong> 8 s : l'action part tout de suite, « Annuler » la défait.</div></div>
 </div>
 
 <h3 id="sec-9.5"><span class="hn">9.5</span>La fiche réservation</h3>
@@ -1825,8 +1852,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>FICHE-02</b><div><strong>L'orange est réservé à ce qui n'est pas encore fait.</strong> <em>Placer</em> et <em>Accepter</em> sont oranges ; <em>Marquer l'arrivée</em> et <em>Libérer</em> passent en encre.</div></div>
 <div class="rg"><b>FICHE-03</b><div>Les boutons ne sont <strong>jamais réordonnés selon le contexte</strong>. Une position stable prime sur une hiérarchie juste.</div></div>
 <div class="rg"><b>FICHE-04</b><div>L'allergie vient de la <strong>fiche client</strong> et suit le client à toutes ses réservations, y compris celles saisies par quelqu'un qui ne le connaît pas. Elle est épinglée sous le nom, en corail, jamais repliée.</div></div>
-<div class="rg"><b>FICHE-05</b><div>Le bouton <strong>« No-show » n'apparaît qu'une fois l'heure dépassée de <code>retard_grace</code></strong>. Sa confirmation nomme la conséquence : « 2<sup>e</sup> no-show pour ce client ».</div></div>
+<div class="rg"><b>FICHE-05</b><div>Le bouton <strong>« No-show » n'apparaît qu'une fois l'heure dépassée de <code>retard_grace</code></strong>. Le bandeau qui suit nomme la conséquence : « 2<sup>e</sup> no-show pour ce client ».</div></div>
 <div class="rg"><b>FICHE-06</b><div>Une modification qui invalide l'affectation (4 → 6 couverts sur une table de 4) <strong>ne déplace ni ne libère rien</strong> : la fiche garde la table, affiche « la table 12 ne suffit plus », et propose de replacer.</div></div>
+<div class="rg"><b>FICHE-07</b><div><strong>Rouvrir</strong> : un no-show redevient confirmé, une terminée redevient assise, une annulée redevient confirmée — ou une demande si c'était un refus.</div></div>
+<div class="rg"><b>FICHE-08</b><div><strong>Annuler la réservation</strong> se déplie dans la fiche : « Le client annule » / « Le restaurant annule ». Pas de popup.</div></div>
 </div>
 
 <h3 id="sec-9.6"><span class="hn">9.6</span>Le journal</h3>
@@ -1835,6 +1864,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>JRN-01</b><div>Une ligne <strong>horodatée et signée</strong> par événement, sur chaque réservation. L'auteur est une personne, ou <em>système</em>.</div></div>
 <div class="rg"><b>JRN-02</b><div>S'y inscrivent : création (avec la source) · acceptation ou refus · rappel envoyé · confirmation du client · placement et déplacements · arrivée · libération · no-show · annulation avec <code>annule_par</code> · toute modification d'heure, de date ou de couverts · acceptation des conditions avec leur numéro de version.</div></div>
 <div class="rg"><b>JRN-03</b><div>Le journal trace chaque transition. Les compteurs client ne se recalculent pas à partir de lui : ils sont justes par construction (CPT-03).</div></div>
+<div class="rg"><b>JRN-04</b><div>Une action défaite par le bandeau ne laisse <strong>aucune trace au journal</strong>.</div></div>
 </div>
 <h2 id="sec-10"><span class="hn">10</span>Clients — le mini-CRM</h2>
 
@@ -1947,7 +1977,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <div class="rg"><b>FORM-01</b><div><strong>Couverts → date → heure → identité.</strong> L'ordre de l'appel téléphonique.</div></div>
 <div class="rg"><b>FORM-02</b><div><strong>Un seul formulaire</strong>, pas d'assistant en deux étapes. La réponse de disponibilité arrive dès que couverts et date sont saisis.</div></div>
-<div class="rg"><b>FORM-03</b><div><strong>Nom et téléphone sont obligatoires</strong> pour une réservation à venir. L'e-mail est facultatif, mais il conditionne la confirmation automatique.</div></div>
+<div class="rg"><b>FORM-03</b><div><strong>Nom et téléphone sont obligatoires</strong> pour une réservation à venir. L'e-mail est facultatif, mais il conditionne la confirmation automatique. Le nom n'est jamais une clé : un prénom suffit.</div></div>
 <div class="rg"><b>FORM-04</b><div><strong>Pas de champ « table »</strong>, sauf ouverture depuis une table. Le bouton dit <strong>« Créer et placer »</strong> et enchaîne sur le plan. « Créer » seul reste possible : la réservation tombe dans « À placer ».</div></div>
 <div class="rg"><b>FORM-05</b><div>La <strong>durée</strong> est affichée, pré-remplie depuis <code>rotation_defaut</code>, et modifiable à la création.</div></div>
 </div>
@@ -1976,7 +2006,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
 <div class="rg"><b>FORM-06</b><div>Le vocabulaire est <strong>celui du placement, réutilisé tel quel</strong> : vert plein / ambre pointillé / gris barré. Lisible en noir et blanc.</div></div>
-<div class="rg"><b>FORM-07</b><div><strong>« Complet » n'est jamais un verrou.</strong> Toucher un créneau complet reste possible : le formulaire prévient — « aucune table pour 4 à 20:30 » — et laisse passer. La réservation part en « À placer » avec sa marque.</div></div>
+<div class="rg"><b>FORM-07</b><div><strong>« Complet » n'est jamais un verrou.</strong> Toucher un créneau complet reste possible : le formulaire prévient — « aucune table pour 4 à 20:30 » — et laisse passer. La réservation part en « À placer » avec sa marque. Seuls un jour passé, un jour fermé ou une heure hors service sont refusés. Un jour passé se compte en jours de service : à 00:20, le dîner de la veille qui passe minuit est encore « aujourd'hui », il se réserve et le formulaire s'ouvre sur lui.</div></div>
 <div class="rg"><b>FORM-08</b><div>Le formulaire <strong>nomme la condition</strong> d'un créneau serré. Il informe, il ne demande pas.</div></div>
 <div class="rg"><b>FORM-09</b><div>La longueur de la bande suit <code>pas_creneau</code>. Passer de 30 à 15 min la double.</div></div>
 </div>
@@ -1984,7 +2014,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <h3 id="sec-11.4"><span class="hn">11.4</span>Reconnaissance du client</h3>
 
 <div class="rules">
-<div class="rg"><b>FORM-10</b><div>Dès que le numéro saisi correspond à une fiche, <strong>la fiche s'attache et l'allergie s'affiche dans le formulaire</strong>.</div></div>
+<div class="rg"><b>FORM-10</b><div>Dès que le numéro saisi correspond à une fiche, <strong>la fiche s'attache et l'allergie s'affiche dans le formulaire</strong>. Avant cela, les fiches connues se proposent dès trois chiffres ou trois lettres du nom, dans une liste déroulante (20 au plus) qui attend 2 s sans frappe — une jauge annonce son arrivée ; en choisir une l'attache. Seules les fiches qui ont un numéro sont proposées.</div></div>
 <div class="rg"><b>FORM-11</b><div>Le ratio <code>2 / 41</code> apparaît au même moment, pendant qu'on décide d'accepter.</div></div>
 </div>
 
@@ -1994,12 +2024,15 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>FORM-12</b><div>Panneau de ~322 px. Il <strong>remplace</strong> le panneau déjà ouvert s'il y en a un.</div></div>
 <div class="rg"><b>FORM-13</b><div>Il <strong>recouvre le plan, il ne le pousse pas</strong> — il ne désigne rien sur le plan.</div></div>
 <div class="rg"><b>FORM-14</b><div>Au moment de « Créer et placer », le formulaire se ferme, le placement s'ouvre, <strong>et là le plan se recompose</strong>.</div></div>
-<div class="rg"><b>FORM-15</b><div>La case « envoyer la confirmation » est <strong>cochée d'office si un e-mail est connu</strong>. L'envoi suit la règle des 8 s annulables.</div></div>
+<div class="rg"><b>FORM-15</b><div>La case « envoyer la confirmation » est cochée d'office si un e-mail est connu. Elle arrivera avec les messages ; la création, elle, se défait 8 s.</div></div>
+<div class="rg"><b>FORM-16</b><div><strong>Modifier</strong> rouvre le même panneau, pré-rempli. L'identité ne s'y modifie pas ; une assise garde sa date et son heure ; une close ne se modifie plus.</div></div>
+<div class="rg"><b>FORM-17</b><div>Si un autre poste a changé la réservation pendant la saisie, l'enregistrement est refusé et le formulaire propose de <strong>recharger</strong>.</div></div>
+<div class="rg"><b>FORM-18</b><div><strong>Pas de doublon.</strong> Un client ne tient pas deux tables à la fois : une création, une modification ou une réouverture qui chevaucherait une autre de ses réservations actives est refusée. Bout à bout, ou midi et soir, c'est permis ; un client de passage n'est jamais concerné.</div></div>
 </div>
 
 <h2 id="sec-12"><span class="hn">12</span>Éditeur de plan</h2>
 
-<p>Plein écran, atteint par le crayon, <strong>réservé au rôle administrateur</strong>.</p>
+<p>Plein écran, atteint depuis Paramètres › Salles et tables, <strong>réservé au rôle administrateur</strong>. Le crayon de l'écran Service n'ouvre pas l'éditeur : il bascule en mode édition (ZONE-04).</p>
 
 <figure class="fig pleine" id="fig-15">
   <div class="fig-n">Figure 15 · §12</div>
@@ -2098,6 +2131,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>EDIT-15</b><div><strong>L'éditeur est la seule exception à la règle de l'action immédiate.</strong> On modifie un brouillon, et on publie.</div></div>
 <div class="rg"><b>EDIT-16</b><div>L'en-tête porte en permanence <strong>« Brouillon · N modifications »</strong>, une annulation par étapes (↶ ↷) et un « Abandonner » qui remet tout.</div></div>
 <div class="rg"><b>EDIT-17</b><div><strong>Le plan publié reste celui du service en cours jusqu'à la publication.</strong> L'équipe en service ne voit jamais les tables bouger sous ses doigts.</div></div>
+<div class="rg"><b>EDIT-21</b><div>Le mode édition du service écrit le plan publié et le brouillon ouvert ; l'éditeur ouvert reprend ou prévient.</div></div>
 </div>
 
 <h3 id="sec-12.6"><span class="hn">12.6</span>Désactiver une table</h3>
@@ -2200,7 +2234,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <div class="rg"><b>PAR-08</b><div><code>tolerance_places</code>, <code>rotation_defaut</code>, <code>retard_grace</code> : chacun affiche son <strong>aperçu sur les vraies tables</strong> du restaurant.</div></div>
 <div class="rg"><b>PAR-09</b><div>Changer <code>rotation_defaut</code> est <strong>sans effet</strong> sur les réservations existantes, qui gardent la durée reçue à leur création.</div></div>
 <div class="rg"><b>PAR-10</b><div>La <strong>fenêtre de réservation</strong> — délai minimum avant une réservation, horizon maximum — gouverne les jours et heures proposés par le widget.</div></div>
-<div class="rg"><b>PAR-11</b><div><code>proposer_rapprochements</code> ne concerne que les combinaisons <strong>en sommeil</strong>. Une combinaison active est déjà collée : elle se place toujours comme une table, quel que soit ce réglage.</div></div>
+<div class="rg"><b>PAR-11</b><div><code>proposer_rapprochements</code> concerne les combinaisons <strong>en sommeil</strong> et les paires inédites d'une même salle. Une combinaison active est déjà collée : elle se place toujours comme une table, quel que soit ce réglage.</div></div>
 </div>
 
 <h3 id="sec-13.5"><span class="hn">13.5</span>Conditions d'annulation</h3>
@@ -2382,7 +2416,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <figure class="fig" id="fig-20">
   <div class="fig-n">Figure 20 · §15</div>
-  <figcaption class="fig-cap">Le bandeau différé. L'effet local est <b>immédiat</b> — la table est réservée, le statut change ; seul ce qui sort du logiciel attend 8 secondes.</figcaption>
+  <figcaption class="fig-cap">Le bandeau d'annulation. L'action est <b>déjà faite</b> ; « Annuler » la défait.</figcaption>
   <div class="differe">
     <div class="df-b">
       <span class="df-ic">✓</span>
@@ -2403,9 +2437,9 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 
 <div class="rules">
 <span class="rules-t">Règles de gestion</span>
-<div class="rg"><b>NOTIF-01</b><div><strong>Aucune popup de confirmation sur un geste conséquent.</strong> L'envoi est <strong>différé de 8 secondes</strong> et un bandeau propose « Annuler ».</div></div>
-<div class="rg"><b>NOTIF-02</b><div><strong>L'effet local est immédiat</strong> : la table est réservée, le statut change. Seul le message attend.</div></div>
-<div class="rg"><b>NOTIF-03</b><div>Le bandeau différé couvre : accepter, refuser, marquer un no-show, envoyer une confirmation, envoyer les messages de fermeture — depuis la fiche, la colonne Action ou l'Accueil.</div></div>
+<div class="rg"><b>NOTIF-01</b><div><strong>Aucune popup de confirmation sur un geste conséquent.</strong> L'action part tout de suite ; pendant 8 s, un bandeau propose « Annuler », qui défait l'action.</div></div>
+<div class="rg"><b>NOTIF-02</b><div><strong>L'effet est immédiat</strong>, sur tous les postes. Les messages sortants passeront par une file d'envoi différé côté serveur, qui ne part qu'à la fin du délai.</div></div>
+<div class="rg"><b>NOTIF-03</b><div>Le bandeau couvre tous les gestes de la fiche et de la colonne Action, la création et la modification — pour ces deux-là, « Annuler » rouvre le formulaire avec la saisie.</div></div>
 <div class="rg"><b>NOTIF-04</b><div>Quand plusieurs messages partent ensemble, <strong>le bandeau dit le compte</strong> : « 3 messages partent dans 8 s ».</div></div>
 <div class="rg"><b>NOTIF-05</b><div>La popup de raisons d'un dépôt <code>~✓</code> <strong>n'est pas concernée</strong> : elle informe, elle ne demande pas confirmation.</div></div>
 <div class="rg"><b>NOTIF-06</b><div><code>notes_internes</code>, <code>motif</code> et <code>motif_detail</code> <strong>ne figurent dans aucun message sortant</strong>, jamais.</div></div>
@@ -2544,8 +2578,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
 <tr><td>Hauteur de l'agenda</td><td>Au-delà d'une vingtaine de tables, les lignes ne tiennent plus. Défilement vertical présumé, non conçu</td></tr>
 <tr><td>Agenda et salles</td><td>Les onglets de salle filtrent-ils l'agenda, ou l'agenda montre-t-il toutes les salles groupées ?</td></tr>
 <tr><td>Rapprochements en chaîne</td><td>Le modèle supporte <code>12-13-14</code>. L'ergonomie de création à trois tables ou plus n'est pas dessinée</td></tr>
-<tr><td>File d'envoi différé</td><td>Comportement si l'application est fermée pendant les 8 secondes</td></tr>
-<tr><td>Écran de modification d'une réservation</td><td>Le comportement est défini (RG FICHE-06), l'écran ne l'est pas</td></tr>
 <tr><td>Retour après « Placer » depuis la liste</td><td>L'action bascule vers la vue Plan. Le retour vers la liste n'est pas conçu</td></tr>
 <tr><td>Prévision de départ non tenue</td><td>Ce que fait le logiciel quand le départ attendu n'a pas lieu — prévenir ? proposer une autre table ?</td></tr>
 <tr><td>Deux demandes sur le même créneau serré</td><td>Le comportement métier est arrêté (RG RES-03) ; l'affichage de ce cas ne l'est pas</td></tr>

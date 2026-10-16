@@ -2,8 +2,8 @@ import { afterRenderEffect, Component, computed, ElementRef, inject, input, link
 import { FormValueControl } from '@angular/forms/signals';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Time03Icon } from '@hugeicons/core-free-icons';
-import { twMerge } from 'tailwind-merge';
-import { DEFAULT_INPUT_STYLE, INPUT_DISABLED_STYLE, INPUT_ERROR_STYLE } from '../../constants/input-style';
+import { inputWrapperClass } from '../../constants/input-style';
+import { twoDigits } from '../../../utils/number';
 import { TimePicker } from '../../pickers/time-picker/time-picker';
 
 @Component({
@@ -52,10 +52,8 @@ export class TimeInput implements FormValueControl<string> {
 
   showError = computed(() => this.invalid() && this.touched());
 
-  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none', this.inputClass(),
-    this.showError() ? INPUT_ERROR_STYLE : '',
-    this.disabled() ? INPUT_DISABLED_STYLE : '',
-  ));
+  wrapperClass = computed(() =>
+    inputWrapperClass(this.showError(), this.disabled(), '[&>input]:focus:outline-none', this.inputClass()));
 
   /** Heure affichée : suit la dernière des deux valeurs modifiées par le parent (`timeValue` ou `value`) */
   private currentTime = linkedSignal<{ date?: Date; text: string }, Date | undefined>({
@@ -97,8 +95,8 @@ export class TimeInput implements FormValueControl<string> {
 
   private resetInputs(time: Date | undefined){
     this.displayedTime = formatTime(time);
-    this.inputHour().nativeElement.value = time ? twoDigitNumber(time.getHours()) : '';
-    this.inputMin().nativeElement.value = time ? twoDigitNumber(time.getMinutes()) : '';
+    this.inputHour().nativeElement.value = time ? twoDigits(time.getHours()) : '';
+    this.inputMin().nativeElement.value = time ? twoDigits(time.getMinutes()) : '';
   }
 
   private setTime(time: Date | undefined){
@@ -187,12 +185,8 @@ export class TimeInput implements FormValueControl<string> {
   }
 }
 
-function twoDigitNumber(number: number): string {
-  return number.toString().padStart(2, '0');
-}
-
 function formatTime(time: Date | undefined): string {
-  return time ? twoDigitNumber(time.getHours()) + ':' + twoDigitNumber(time.getMinutes()) : '';
+  return time ? twoDigits(time.getHours()) + ':' + twoDigits(time.getMinutes()) : '';
 }
 
 /**

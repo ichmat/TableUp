@@ -7,7 +7,7 @@ import { ModalService } from '../../../core/services/modal/modal.service';
 import { ClientList } from './client-list';
 
 const item = (change: Partial<ClientListItem>): ClientListItem => ({
-  id: 'c1', name: 'Sophie Marchand', phone: '0612345678', tags: [], hasAllergy: false,
+  id: 'c1', name: 'Sophie Marchand', phone: '0612345678', tags: [], hasAllergy: false, allergies: null,
   visitCount: 41, noShowCount: 2, atRisk: false, lastServiceDay: null, ...change,
 });
 

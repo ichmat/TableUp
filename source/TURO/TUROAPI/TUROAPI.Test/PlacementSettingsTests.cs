@@ -4,12 +4,13 @@ namespace TUROAPI.Test
     [TestClass]
     public sealed class PlacementSettingsTests
     {
-        private static PlacementSettingsRequest Placement(int rotation = 105, int tolerance = 3, int grace = 10, bool suggest = false) => new()
+        private static PlacementSettingsRequest Placement(int rotation = 105, int tolerance = 3, int grace = 10, bool suggest = false, bool track = false) => new()
         {
             DefaultRotation = rotation,
             SeatTolerance = tolerance,
             LateGrace = grace,
             SuggestCombinations = suggest,
+            TrackTableCleaning = track,
         };
 
         private static Task<HttpResponseMessage> PutPlacementAsync(HttpClient admin, PlacementSettingsRequest request) =>
@@ -40,6 +41,19 @@ namespace TUROAPI.Test
             Restaurant stored = await StoredAsync(restaurant.Id);
             Assert.AreEqual(105, stored.DefaultRotation);
             Assert.IsFalse(stored.SuggestCombinations);
+        }
+
+        [TestMethod]
+        public async Task Table_cleaning_is_not_tracked_until_turned_on()
+        {
+            TestRestaurant restaurant = await TestRestaurant.CreateAsync();
+            using HttpClient admin = restaurant.AdminClient();
+            Assert.IsFalse((await StoredAsync(restaurant.Id)).TrackTableCleaning);
+
+            RestaurantReponses saved = await ApiAssert.OkAsync<RestaurantReponses>(await PutPlacementAsync(admin, Placement(track: true)));
+
+            Assert.IsTrue(saved.TrackTableCleaning);
+            Assert.IsTrue((await StoredAsync(restaurant.Id)).TrackTableCleaning);
         }
 
         [TestMethod]

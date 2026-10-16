@@ -4,9 +4,9 @@ import { DecorType, DraftDecor, PlanDecor, Zone } from '../../../models';
 import { Button } from '../../../shared/components/button/button';
 import { Input } from '../../../shared/components/inputs/input/input';
 import { NumberInput } from '../../../shared/components/inputs/number-input/number-input';
-import { normalizeRotation, ROTATION_STEP } from './logic/geometry';
+import { normalizeRotation, ROTATION_STEP } from '../../../shared/components/floor-plan/logic/geometry';
 import { DECOR_LABELS } from './logic/palette';
-import { PlanError, PlanField } from './logic/plan-rules';
+import { PlanError, PlanField } from '../../../shared/components/floor-plan/logic/plan-rules';
 import { fromCentimetres, toCentimetres } from './logic/units';
 
 interface DecorFields {

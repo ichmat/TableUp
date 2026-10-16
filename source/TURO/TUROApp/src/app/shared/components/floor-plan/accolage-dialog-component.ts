@@ -1,9 +1,9 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { PlanCombination, PlanTable } from '../../../models';
-import { Button } from '../../../shared/components/button/button';
-import { Input } from '../../../shared/components/inputs/input/input';
-import { NumberInput } from '../../../shared/components/inputs/number-input/number-input';
+import { Button } from '../button/button';
+import { Input } from '../inputs/input/input';
+import { NumberInput } from '../inputs/number-input/number-input';
 import { defaultCombinationName } from './logic/accolage';
 import { combinationErrors, PlanError, PlanField } from './logic/plan-rules';
 

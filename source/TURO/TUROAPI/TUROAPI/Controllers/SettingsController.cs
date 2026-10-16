@@ -101,6 +101,8 @@ namespace TUROAPI.Controllers
             restaurant.SeatTolerance = request.SeatTolerance;
             restaurant.LateGrace = request.LateGrace;
             restaurant.SuggestCombinations = request.SuggestCombinations;
+            // Désactiver ne vide pas les tables déjà marquées : elles sont ignorées, et reviennent si on réactive
+            restaurant.TrackTableCleaning = request.TrackTableCleaning;
 
             await context.SaveChangesAsync();
             await NotifyChangedAsync(DataScope.Restaurant);
@@ -199,16 +201,13 @@ namespace TUROAPI.Controllers
 
             CheckSlotSettings(request);
 
-            var conflictServices = await context.Services
-                .Where(s =>
-                    s.RestaurantId == CurrentRestaurantId && s.Day == day
-                    && (!excludeId.HasValue || s.Id != excludeId.Value)
-                    && (
-                        (request.Opening >= s.Opening && request.Opening < s.Closing) ||
-                        (request.Closing > s.Opening && request.Closing <= s.Closing) ||
-                        (request.Opening <= s.Opening && request.Closing >= s.Closing))
-                    )
-                .FirstOrDefaultAsync();
+            // Comparées sur la semaine : un service qui passe minuit occupe aussi le début du lendemain
+            (int Start, int End) span = WeeklyHours.SpanOf(day, request.Opening, request.Closing);
+            List<Service> others = await context.Services
+                .Where(s => s.RestaurantId == CurrentRestaurantId && (!excludeId.HasValue || s.Id != excludeId.Value))
+                .AsNoTracking()
+                .ToListAsync();
+            Service? conflictServices = others.FirstOrDefault(s => WeeklyHours.Overlap(span, WeeklyHours.SpanOf(s.Day, s.Opening, s.Closing)));
 
             if (conflictServices != null)
             {

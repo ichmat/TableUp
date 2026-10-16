@@ -29,6 +29,9 @@ namespace TUROAPI.Models
         // Propose de recoller les combinaisons en sommeil (IsActive = false). Une combinaison active compte toujours
         public bool SuggestCombinations { get; set; } = true;
 
+        // NET-01 : « Libérer » passe la table « à nettoyer » seulement si le restaurant suit le nettoyage. Désactivé par défaut
+        public bool TrackTableCleaning { get; set; }
+
         // Fenêtre de réservation du widget (PAR-10) : pas de réservation à moins de ce délai…
         public int MinBookingNoticeMinutes { get; set; } = 60;
 

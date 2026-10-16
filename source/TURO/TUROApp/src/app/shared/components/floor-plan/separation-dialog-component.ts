@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { PlanCombination } from '../../../models';
-import { Button } from '../../../shared/components/button/button';
+import { Button } from '../button/button';
 
 /** Une table vient d'être écartée de sa combinaison active : on demande avant de séparer, les deux réponses pèsent autant */
 @Component({
