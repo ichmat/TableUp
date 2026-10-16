@@ -13,7 +13,7 @@
     <!-- Même version que l'API : chez elle, Relational vient de EntityFrameworkCore.Design (PrivateAssets) et ne descend pas jusqu'ici -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
     <PackageReference Include="MSTest" Version="4.0.2" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
   </ItemGroup>
 
   <ItemGroup>
