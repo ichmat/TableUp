@@ -1,3 +1,4 @@
+import { Combination } from './combination.model';
 import { PlanCombination, PlanDecor, PlanTable } from './floor-plan.model';
 import { ReservationListClient, ReservationSource, ReservationStatus } from './reservation.model';
 
@@ -51,6 +52,8 @@ export interface TableOccupation {
     lateFrom: string | null,
     /** « 12-13 » pour une combinaison */
     placeName: string,
+    /** `null` : la table seule */
+    combinationId: string | null,
     /** `null` : client de passage */
     guestName: string | null,
     covers: number,
@@ -72,6 +75,8 @@ export interface ServiceZone {
     decors: PlanDecor[],
     /** Les combinaisons collées en ce moment */
     combinations: PlanCombination[],
+    /** Les combinaisons actives à un moment du service (AGD-03), collées comprises seulement s'il est en cours */
+    agendaCombinations: Combination[],
 }
 
 /** Une pastille de la colonne « À placer » (§5.7) */

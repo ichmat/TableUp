@@ -2,7 +2,7 @@ import { ServiceTable, TableOccupation } from '../../models';
 import { bookedLater, bookedLaterText } from './walk-in';
 
 const occupation = (start: string, guest: string | null = 'Legrand'): TableOccupation => ({
-  reservationId: 'r9', start, end: '2026-10-10T21:00:00Z', status: 'Confirmed', lateFrom: null, placeName: '5', guestName: guest, covers: 4, hasAllergy: false,
+  reservationId: 'r9', start, end: '2026-10-10T21:00:00Z', status: 'Confirmed', lateFrom: null, placeName: '5', combinationId: null, guestName: guest, covers: 4, hasAllergy: false,
 });
 const table = (...occupations: TableOccupation[]) => ({ id: 't5', occupations } as unknown as ServiceTable);
 const now = new Date('2026-10-10T18:00:00Z');

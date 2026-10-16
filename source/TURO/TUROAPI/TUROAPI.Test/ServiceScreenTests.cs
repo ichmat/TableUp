@@ -219,6 +219,35 @@ namespace TUROAPI.Test
         }
 
         [TestMethod]
+        public async Task The_agenda_learns_which_combination_holds_each_occupation_and_which_combinations_to_show()
+        {
+            TestRestaurant restaurant = await SaturdayRestaurantAsync();
+            using HttpClient staff = restaurant.StaffClient();
+            (Guid zoneId, List<Table> tables) = await ReservationApi.AddTablesAsync(restaurant.Id, "Salle", ("T1", 4), ("T12", 4), ("T13", 4), ("T14", 4), ("T15", 4));
+            Guid held = await ReservationApi.AddCombinationAsync(zoneId, "12-13", 8, tables[1].Id, tables[2].Id);
+            await ReservationApi.AddCombinationAsync(zoneId, "14-15", 8, tables[3].Id, tables[4].Id);
+            Guid approach = await ReservationApi.AddCombinationAsync(zoneId, "1-12", 8, tables[0].Id, tables[1].Id);
+            Guid glued = await ReservationApi.AddCombinationAsync(zoneId, "13-14", 8, tables[2].Id, tables[3].Id);
+            await TestApi.WithDbAsync(db => db.Combinations.Where(c => c.Id == approach)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.ActivateAt, Dates.ToUtc(Saturday, new TimeOnly(20, 45)))));
+            await TestApi.WithDbAsync(db => db.Combinations.Where(c => c.Id == glued)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, true)));
+            Reservation group = await restaurant.AddReservationAsync(Saturday, 21, covers: 8, clientName: "Nguyen");
+            Reservation walkIn = await restaurant.AddReservationAsync(Saturday, 19, 30, clientName: null);
+            await ReservationApi.AssignAsync(group.Id, combinationId: held);
+            await ReservationApi.AssignAsync(walkIn.Id, tableId: tables[1].Id);
+
+            ServiceSnapshotResponse snapshot = await ServiceApi.GetAsync(staff, $"?day={Day(Saturday)}&opening=19:00");
+
+            ServiceZoneResponse zone = snapshot.Zones.Single();
+            Dictionary<string, ServiceTableResponse> byName = zone.Tables.ToDictionary(t => t.Name);
+            Assert.AreEqual(held, byName["T13"].Occupations.Single().CombinationId);
+            Assert.IsNull(byName["T12"].Occupations.Single(o => o.ReservationId == walkIn.Id).CombinationId);
+            CollectionAssert.AreEquivalent(new[] { "12-13", "1-12" }, zone.AgendaCombinations.Select(c => c.Name).ToArray());
+            CollectionAssert.AreEquivalent(new[] { "13-14" }, zone.Combinations.Select(c => c.Name).ToArray());
+        }
+
+        [TestMethod]
         public async Task An_overrunning_seated_table_stays_occupied_until_released_and_a_finished_one_until_it_was()
         {
             TestRestaurant restaurant = await SaturdayRestaurantAsync();
