@@ -41,7 +41,7 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.12",
-    "typescript": "~6.0.0"
+    "typescript": "~7.0.2"
   },
   "allowScripts": {
     "@parcel/watcher@2.6.0": true,
