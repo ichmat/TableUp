@@ -36,6 +36,9 @@ import { entityId, nextText, reasonsMessage, targetOf } from './placement-reason
 import { DropTarget, PlacementDrag } from './placement-drag';
 import { bookedLater, bookedLaterText } from './walk-in';
 import { LayoutDrop, LayoutEdit, LayoutScene, movedMessage } from './layout-edit';
+import { ServiceViewKind, ViewTabs } from './view-tabs/view-tabs';
+import { ServiceAgenda } from './service-agenda/service-agenda';
+import { AgendaLegend } from './agenda-legend/agenda-legend';
 
 export const TABLE_UNDO_TOO_LATE = 'Trop tard : la table a changé entre-temps';
 export const PLAN_UNDO_TOO_LATE = 'Trop tard : le plan a changé entre-temps';
@@ -92,7 +95,7 @@ function isPlaceable(id: string, snapshot: ServiceSnapshot): boolean {
  * Toucher une table prise ou une pastille ouvre la fiche à la place de la colonne (§6.7) ; le formulaire « + » survole
  */
 @Component({
-  imports: [ServiceHeader, ServiceTimeline, ZoneTabs, FloorPlanCanvasComponent, PlanLegend, CombinationReminders, ToPlaceColumn, ReservationSheet, ClientSheet, ReservationForm, ApproachList, ApproachDialog, AccolageDialogComponent, SeparationDialogComponent, Button],
+  imports: [ServiceHeader, ViewTabs, ServiceTimeline, ZoneTabs, FloorPlanCanvasComponent, PlanLegend, ServiceAgenda, AgendaLegend, CombinationReminders, ToPlaceColumn, ReservationSheet, ClientSheet, ReservationForm, ApproachList, ApproachDialog, AccolageDialogComponent, SeparationDialogComponent, Button],
   selector: 'app-service-component',
   templateUrl: './service-component.html',
   host: { class: 'block h-full', '(document:keydown.escape)': 'onEscape()' },
@@ -118,6 +121,11 @@ export class ServiceComponent implements OnDestroy {
   // L'anneau « en retard » avance avec l'heure, sans attendre de rechargement
   private _now = signal(Date.now());
   private _clock = inject(NgZone).runOutsideAngular(() => setInterval(() => this._now.set(Date.now()), NOW_MS));
+  /** L'instant présent de l'Agenda : `now` de l'API couvre l'horloge locale en retard */
+  protected present = computed(() => Math.max(this._now(), Date.parse(this.snapshot()?.now ?? '0')));
+
+  /** La vue (Plan ou Agenda) vit dans l'adresse : un rechargement, un autre service ou « Aujourd'hui » la gardent (NAV-08) */
+  view = computed<ServiceViewKind>(() => (this._params().get('view') === 'agenda' ? 'agenda' : 'plan'));
 
   // ---- Le créneau : celui de l'adresse, sinon maintenant (service en cours) ou le premier ----
 
@@ -195,6 +203,11 @@ export class ServiceComponent implements OnDestroy {
   protected stack = signal<PanelEntry[]>([]);
   protected top = computed(() => this.stack().at(-1) ?? null);
   protected origin = computed(() => (this.stack().length > 1 ? this.stack()[0].label : null));
+  /** La réservation dont la fiche est ouverte : son bloc s'allume dans l'Agenda, même ouverte depuis une bande fantôme (AGD-02) */
+  protected openReservationId = computed(() => {
+    const top = this.top();
+    return top?.kind === 'reservation' ? top.id : null;
+  });
   protected client = this._reservations.client;
   protected clientFailed = this._reservations.clientFailed;
   /** Les tables de la réservation ouverte, en orange : la sélection, jamais un statut */
@@ -532,14 +545,30 @@ export class ServiceComponent implements OnDestroy {
     void this._router.navigate([], { queryParams: { at: snapshot.slots[index].time.slice(0, 5) }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
+  /** L'édition du plan ne se quitte pas par l'onglet : elle n'existe que dans la vue Plan */
+  selectView(kind: ServiceViewKind) {
+    if (this.editing()) {
+      return;
+    }
+    // Les bulles sont posées sur le plan : elles ne survivent pas à un changement de vue
+    this.bubble.set(null);
+    this.seatBubble.set(null);
+    void this._router.navigate([], { queryParams: { view: kind === 'agenda' ? 'agenda' : null }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  /** Le Plan n'écrit rien dans l'adresse : `view: null` y est omis */
+  private _viewParam() {
+    return this.view() === 'agenda' ? 'agenda' : null;
+  }
+
   protected choose(choice: ServiceChoice) {
     this.closeAll();
-    void this._router.navigate([], { queryParams: { day: choice.day, opening: choice.opening, at: null } });
+    void this._router.navigate([], { queryParams: { day: choice.day, opening: choice.opening, at: null, view: this._viewParam() } });
   }
 
   protected backToToday() {
     this.closeAll();
-    void this._router.navigate([], { queryParams: {} });
+    void this._router.navigate([], { queryParams: { view: this._viewParam() } });
   }
 
   /** FRISE-04 : ouvrir une réservation déplace la frise sur son créneau */
@@ -703,12 +732,36 @@ export class ServiceComponent implements OnDestroy {
     this.placing.set({ reservationId: placing.reservationId, placement: result.value });
   }
 
-  /** En placement, toucher une entité allumée vaut un dépôt ; une écartée ne fait rien */
-  protected async dropOn(target: { tableId?: string, combinationId?: string }) {
+  /**
+   * En placement, toucher une entité allumée vaut un dépôt ; une écartée ne fait rien. L'Agenda dépose aussi sur un rapprochement :
+   * une ligne proposée (sa clé), ou une combinaison en sommeil que le moteur propose (son id, sans entité à elle)
+   */
+  protected async dropOn(target: DropTarget) {
     await this._placementLoad;
+    // Un rapprochement écarté ne reçoit rien, comme une table écartée
+    const approaches = (this.placing()?.placement?.approaches ?? []).filter((a) => a.level !== 'Excluded');
+    if (target.approachKey !== undefined) {
+      const approach = approaches.find((a) => approachKey(a) === target.approachKey);
+      if (approach !== undefined) {
+        await this.dropApproach(approach);
+      }
+      return;
+    }
     const entity = this.entityAt(target);
     if (entity !== null) {
       await this.drop(entity);
+      return;
+    }
+    const approach = target.combinationId === undefined ? undefined : approaches.find((a) => a.combinationId === target.combinationId);
+    if (approach !== undefined) {
+      await this.dropApproach(approach);
+    }
+  }
+
+  /** Une ligne de l'Agenda pressée : un dépôt en placement, rien sinon (ouvrir passe par `opened`) */
+  protected onRowPressed(target: DropTarget) {
+    if (this.placing() !== null) {
+      void this.dropOn(target);
     }
   }
 

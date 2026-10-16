@@ -18,7 +18,9 @@ import { ReservationActions } from '../booking-component/reservation-actions';
 import { Button } from '../../shared/components/button/button';
 import { ReservationFormMode, ReservationSaved } from '../booking-component/reservation-draft';
 import { PLAN_UNDO_TOO_LATE, ServiceComponent, TABLE_UNDO_TOO_LATE } from './service-component';
-import { PlacementDrag } from './placement-drag';
+import { DropTarget, PlacementDrag } from './placement-drag';
+import { approachKey } from './approach-list/approach-list';
+import { ServiceViewKind } from './view-tabs/view-tabs';
 import { LayoutDrop, LayoutEdit } from './layout-edit';
 import { occupation, serviceReservation, serviceSnapshot, serviceTable, serviceZone, utc } from './testing/service-fixtures';
 
@@ -76,6 +78,16 @@ class AccolageStub {
 }
 @Component({ selector: 'app-separation-dialog-component', template: 'SEPARATION' })
 class SeparationStub { combination = input.required<unknown>(); reactivated = input<unknown>(null); separate = output<void>(); dismiss = output<void>(); }
+@Component({ selector: 'app-service-agenda', template: 'AGENDA VIEW' })
+class AgendaStub {
+  snapshot = input.required<ServiceSnapshot>(); now = input.required<number>(); placement = input<Placement | null>(null);
+  hovered = input<DropTarget | null>(null); selectedReservationId = input<string | null>(null); timeZone = input.required<string>();
+  opened = output<string>(); rowPressed = output<DropTarget>();
+}
+@Component({ selector: 'app-agenda-legend', template: 'AGENDA LEGEND' })
+class AgendaLegendStub {}
+@Component({ selector: 'app-view-tabs', template: 'VIEW TABS {{ active() }} {{ disabled() }}' })
+class ViewTabsStub { active = input.required<ServiceViewKind>(); disabled = input(false); selected = output<ServiceViewKind>(); }
 @Component({ selector: 'app-reservation-form', template: 'FORM {{ mode().kind }}' })
 class FormStub { mode = input.required<ReservationFormMode>(); saved = output<ReservationSaved>(); cancelled = output<void>(); }
 
@@ -87,6 +99,9 @@ type Page = {
   entityAt(target: { tableId?: string, combinationId?: string }): Placement['entities'][number] | null,
   placing: () => { reservationId: string, placement: Placement | null } | null,
   drag: PlacementDrag,
+  choose(choice: { day: string, opening: string }): void, backToToday(): void,
+  dropOn(target: DropTarget): Promise<void>, selectView(kind: ServiceViewKind): void,
+  approachDialog: () => unknown, editing: { set(value: boolean): void },
 };
 
 const PLACEMENT = (levels: Record<string, PlacementLevel>, reasons: PlacementReason[] = []): Placement => ({
@@ -194,7 +209,7 @@ describe('ServiceComponent', () => {
         { provide: FloorPlanService, useValue: { zones: signal<FloorPlanZone[]>([]) } },
       ],
     }).overrideComponent(ServiceComponent, {
-      set: { imports: [HeaderStub, TimelineStub, TabsStub, CanvasStub, LegendStub, RemindersStub, ColumnStub, SheetStub, ClientStub, FormStub, ApproachListStub, ApproachDialogStub, AccolageStub, SeparationStub, Button] },
+      set: { imports: [HeaderStub, TimelineStub, TabsStub, CanvasStub, LegendStub, RemindersStub, ColumnStub, SheetStub, ClientStub, FormStub, ApproachListStub, ApproachDialogStub, AccolageStub, SeparationStub, AgendaStub, AgendaLegendStub, ViewTabsStub, Button] },
     }).compileComponents();
     // L'horloge de l'écran vit le samedi des fixtures : le créneau en cours se lit à 20:07, quel que soit le jour réel
     spyOn(Date, 'now').and.returnValue(Date.parse(utc('20:07')));
@@ -948,6 +963,185 @@ describe('ServiceComponent', () => {
 
       expect(modal.infoModal).not.toHaveBeenCalled();
       expect(view.reloadReminders).toHaveBeenCalled();
+    });
+  });
+
+  describe('agenda', () => {
+    const PAIR: PlacementApproach = {
+      combinationId: null, tableIds: ['t1', 't2'], zoneId: 'z1', name: 'T1-T2', capacity: 8, level: 'WithReserve',
+      reasons: [{ kind: 'Approach', with: ['T1', 'T2'] }], next: null, distance: 1.5,
+    };
+    const DORMANT: PlacementApproach = { ...PAIR, combinationId: 'c9', name: 'Banquette' };
+    const agenda = () => fixture.debugElement.query(By.directive(AgendaStub))?.componentInstance as AgendaStub | undefined;
+    const viewTabs = () => fixture.debugElement.query(By.directive(ViewTabsStub)).componentInstance as ViewTabsStub;
+    const showAgenda = () => {
+      params.next(convertToParamMap({ day: '2026-10-10', opening: '19:00', view: 'agenda' }));
+      load(SNAPSHOT);
+    };
+
+    it('shows the agenda instead of the plan when the address says so', () => {
+      load(SNAPSHOT);
+      expect(agenda()).toBeUndefined();
+      expect(text()).toContain('VIEW TABS plan');
+      expect(text()).toContain('TIMELINE');
+
+      showAgenda();
+
+      expect(element().querySelector('app-service-agenda')).not.toBeNull();
+      expect(text()).toContain('VIEW TABS agenda');
+      expect(text()).not.toContain('TIMELINE');
+      expect(fixture.debugElement.query(By.directive(TabsStub))).toBeNull();
+      expect(text()).not.toContain('CANVAS');
+      expect(text()).toContain('AGENDA LEGEND');
+      expect(fixture.debugElement.query(By.directive(LegendStub))).toBeNull();
+      expect(text()).toContain('COLUMN');
+      expect(agenda()!.snapshot()).toBe(SNAPSHOT);
+      expect(agenda()!.timeZone()).toBe('UTC');
+      // L'horloge locale (20:07) est en avance sur l'instantané : elle l'emporte
+      expect(agenda()!.now()).toBe(Date.parse(utc('20:07')));
+    });
+
+    it('switches the view through the address', () => {
+      load(SNAPSHOT);
+
+      viewTabs().selected.emit('agenda');
+      expect(router.navigate).toHaveBeenCalledWith([], { queryParams: { view: 'agenda' }, queryParamsHandling: 'merge', replaceUrl: true });
+
+      page().selectView('plan');
+      expect(router.navigate).toHaveBeenCalledWith([], { queryParams: { view: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    });
+
+    it('keeps the view when choosing another service', () => {
+      showAgenda();
+      router.navigate.calls.reset();
+
+      page().choose({ day: '2026-10-17', opening: '12:00' });
+      expect(router.navigate).toHaveBeenCalledWith([], { queryParams: { day: '2026-10-17', opening: '12:00', at: null, view: 'agenda' } });
+
+      page().backToToday();
+      expect(router.navigate).toHaveBeenCalledWith([], { queryParams: { view: 'agenda' } });
+    });
+
+    it('leaves no view in the address when choosing from the plan', () => {
+      load(SNAPSHOT);
+      router.navigate.calls.reset();
+
+      page().choose({ day: '2026-10-17', opening: '12:00' });
+      page().backToToday();
+
+      expect(router.navigate.calls.argsFor(0)).toEqual([[], { queryParams: { day: '2026-10-17', opening: '12:00', at: null, view: null } }]);
+      expect(router.navigate.calls.argsFor(1)).toEqual([[], { queryParams: { view: null } }]);
+    });
+
+    it('opens the reservation the agenda points to, and highlights it', () => {
+      showAgenda();
+
+      agenda()!.opened.emit('moreau');
+      fixture.detectChanges();
+
+      expect(selectedId()).toBe('moreau');
+      expect(text()).toContain('SHEET');
+      expect(agenda()!.selectedReservationId()).toBe('moreau');
+    });
+
+    it('drops on the row pressed during a placement, and ignores it otherwise', async () => {
+      showAgenda();
+      view.placement.and.resolveTo({ value: PLACEMENT({ t2: 'Perfect' }), error: null });
+      actions.placeOn.and.resolveTo({ value: { reservation: DETAIL(), eventId: 'e1' }, error: null });
+
+      agenda()!.rowPressed.emit({ tableId: 't2' });
+      await fixture.whenStable();
+      expect(actions.placeOn).not.toHaveBeenCalled();
+
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+      expect(agenda()!.placement()).toEqual(PLACEMENT({ t2: 'Perfect' }));
+      agenda()!.rowPressed.emit({ tableId: 't2' });
+      await fixture.whenStable();
+
+      expect(actions.placeOn).toHaveBeenCalledOnceWith('chen', { tableId: 't2' }, false);
+    });
+
+    it('hands the drag hover to the agenda', () => {
+      showAgenda();
+      const hovered = { tableId: 't2' };
+      spyOn(page().drag, 'hovered').and.returnValue(hovered);
+      // Le signal espionné n'est pas suivi : on force la relecture du gabarit
+      snapshot.set({ ...SNAPSHOT });
+      fixture.detectChanges();
+
+      expect(agenda()!.hovered()).toBe(hovered);
+    });
+
+    it('places on a proposed approach dropped from the agenda', async () => {
+      showAgenda();
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [PAIR] }, error: null });
+      await page().startPlacing('chen');
+
+      await page().dropOn({ approachKey: approachKey(PAIR) });
+
+      expect(page().approachDialog()).toEqual(jasmine.objectContaining({ approach: PAIR, guest: 'Moreau', covers: 4 }));
+    });
+
+    it('places on a dormant combination row dropped from the agenda', async () => {
+      showAgenda();
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [DORMANT] }, error: null });
+      modal.confirmModal.and.resolveTo(true);
+      actions.placeOn.and.resolveTo({ value: {}, error: null });
+      await page().startPlacing('chen');
+
+      await page().dropOn({ combinationId: 'c9' });
+
+      expect(modal.confirmModal).toHaveBeenCalledWith('Placer Moreau sur Banquette ?', jasmine.stringContaining('Rapprochement nécessaire'), 'Placer', 'Annuler');
+      expect(actions.placeOn).toHaveBeenCalledWith('chen', { combinationId: 'c9' }, false, ' (à rapprocher)');
+    });
+
+    it('ignores an excluded approach dropped from the agenda', async () => {
+      showAgenda();
+      const excluded = { ...DORMANT, level: 'Excluded' as const };
+      view.placement.and.resolveTo({ value: { ...PLACEMENT({}), approaches: [excluded, { ...PAIR, level: 'Excluded' }] }, error: null });
+      await page().startPlacing('chen');
+
+      await page().dropOn({ combinationId: 'c9' });
+      await page().dropOn({ approachKey: approachKey(PAIR) });
+
+      expect(modal.confirmModal).not.toHaveBeenCalled();
+      expect(page().approachDialog()).toBeNull();
+    });
+
+    it('rebuilds the agenda on a realtime reload without losing the placement', async () => {
+      showAgenda();
+      const first = PLACEMENT({ t1: 'Perfect' });
+      const second = PLACEMENT({ t1: 'Excluded', t2: 'Perfect' });
+      view.placement.and.resolveTo({ value: first, error: null });
+      await page().startPlacing('chen');
+      fixture.detectChanges();
+      expect(agenda()!.placement()).toEqual(first);
+
+      view.placement.and.resolveTo({ value: second, error: null });
+      const reloaded = { ...SNAPSHOT };
+      snapshot.set(reloaded);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(view.placement).toHaveBeenCalledTimes(2);
+      expect(page().placing()!.reservationId).toBe('chen');
+      expect(agenda()!.snapshot()).toBe(reloaded);
+      expect(agenda()!.placement()).toEqual(second);
+    });
+
+    it('does not switch view while editing', () => {
+      load(SNAPSHOT);
+      page().editing.set(true);
+      fixture.detectChanges();
+
+      page().selectView('agenda');
+      fixture.detectChanges();
+
+      expect(router.navigate).not.toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { view: 'agenda' } }));
+      expect(viewTabs().disabled()).toBeTrue();
+      expect(text()).toContain('VIEW TABS plan true');
     });
   });
 });

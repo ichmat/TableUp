@@ -2,7 +2,9 @@
     @if (snapshot(); as s) {
         <app-service-header [snapshot]="s" [timeZone]="timeZone()" [hasServices]="hasServices()"
             (chosen)="choose($event)" (today)="backToToday()" (create)="startCreate()" />
-        @if (s.slots.length > 0) {
+        <!-- Plan ou Agenda : on ne quitte pas l'édition du plan par l'onglet -->
+        <app-view-tabs [active]="view()" [disabled]="editing()" (selected)="selectView($event)" />
+        @if (view() === 'plan' && s.slots.length > 0) {
             <app-service-timeline [slots]="s.slots" [activeIndex]="activeIndex()" [tableCount]="tableCount()" (picked)="pickSlot($event)" />
         }
         @if (failed()) {
@@ -11,27 +13,38 @@
                 Le service n'a pas pu être rechargé : les tables affichées datent du dernier chargement.
             </p>
         }
-        <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [editing]="editing()" [levels]="zoneLevels()" (selected)="zoneId.set($event)" (editToggle)="toggleEditing()" />
+        @if (view() === 'plan') {
+            <app-zone-tabs [tabs]="tabs()" [activeId]="zoneId()" [editing]="editing()" [levels]="zoneLevels()" (selected)="zoneId.set($event)" (editToggle)="toggleEditing()" />
+        }
 
         <div class="flex flex-row grow min-h-0 gap-2">
             <div #planArea class="relative grow min-w-0 flex flex-col gap-2">
-                @if (zone(); as z) {
-                    <app-floor-plan-canvas class="grow min-h-0 rounded-xl" theme="slate" [showGrid]="editing()"
-                        [zone]="z" [tables]="planTables()" [contactIds]="layoutEdit.contactIds()" [decors]="z.decors" [combinations]="z.combinations"
-                        [tableMarks]="marks()" [selectedIds]="selectedTableIds()" [placementMarks]="placementMarks()" [approachLine]="approachLine()"
-                        (tablePointerDown)="onTable($event)" (combinationPointerDown)="onCombination($event)" (backgroundClick)="editing() || closeAll()" />
+                @if (view() === 'agenda') {
+                    <!-- L'Agenda défile lui-même : il lui faut une hauteur bornée -->
+                    <app-service-agenda class="grow min-h-0" [snapshot]="s" [now]="present()" [placement]="placing()?.placement ?? null"
+                        [hovered]="drag.hovered()" [selectedReservationId]="openReservationId()" [timeZone]="timeZone()"
+                        (opened)="focusOn($event)" (rowPressed)="onRowPressed($event)" />
+                    <app-agenda-legend />
                 } @else {
-                    <p class="grow rounded-xl bg-slate p-6 text-plan-free-text">
-                        Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.
-                    </p>
+                    @if (zone(); as z) {
+                        <app-floor-plan-canvas class="grow min-h-0 rounded-xl" theme="slate" [showGrid]="editing()"
+                            [zone]="z" [tables]="planTables()" [contactIds]="layoutEdit.contactIds()" [decors]="z.decors" [combinations]="z.combinations"
+                            [tableMarks]="marks()" [selectedIds]="selectedTableIds()" [placementMarks]="placementMarks()" [approachLine]="approachLine()"
+                            (tablePointerDown)="onTable($event)" (combinationPointerDown)="onCombination($event)" (backgroundClick)="editing() || closeAll()" />
+                    } @else {
+                        <p class="grow rounded-xl bg-slate p-6 text-plan-free-text">
+                            Aucune salle pour l'instant : le plan se dessine dans Paramètres › Plan de salle.
+                        </p>
+                    }
+                    <app-plan-legend [trackCleaning]="s.trackTableCleaning" />
                 }
-                <app-plan-legend [trackCleaning]="s.trackTableCleaning" />
                 @if (reminders().length > 0) {
                     <app-combination-reminders class="absolute right-2 top-2 z-10" [reminders]="reminders()" [timeZone]="timeZone()"
                         (answered)="answerReminder($event)" />
                 }
 
-                @if (seatBubble(); as b) {
+                <!-- Les bulles sont posées sur le plan : l'Agenda n'en a pas -->
+                @if (view() === 'plan' && seatBubble(); as b) {
                     <div data-seat-bubble class="absolute z-10 flex w-64 flex-col gap-2 rounded-xl bg-surface p-3 shadow-2xl"
                         [style.left.px]="b.x" [style.top.px]="b.y">
                         <p class="text-sm font-bold">Table {{ b.name }} · Asseoir maintenant</p>
@@ -49,7 +62,7 @@
                         }
                     </div>
                 }
-                @if (bubble(); as b) {
+                @if (view() === 'plan' && bubble(); as b) {
                     <div data-clean-bubble class="absolute z-10 flex flex-col gap-2 rounded-xl bg-surface p-3 shadow-2xl"
                         [style.left.px]="b.x" [style.top.px]="b.y">
                         <p class="text-sm font-bold">Table {{ b.name }} · à nettoyer</p>
