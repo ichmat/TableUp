@@ -1,3 +1,5 @@
+import { clamp } from '../../../utils/number';
+
 /** Grille de 25 cm et rotation par pas de 15° (§12.1, EDIT-02) */
 export const GRID_STEP = 0.25;
 export const ROTATION_STEP = 15;
@@ -76,7 +78,7 @@ function placeOnAxis(start: number, length: number, room: number, edges: readonl
     }
   }
   const snapped = placed ?? Math.round(round(start / GRID_STEP)) * GRID_STEP;
-  return round(Math.min(Math.max(snapped, 0), Math.max(0, room - length)));
+  return round(clamp(snapped, 0, Math.max(0, room - length)));
 }
 
 /**

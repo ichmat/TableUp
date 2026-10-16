@@ -2,6 +2,7 @@ import { AfterViewInit, Component, computed, input, output, signal, Signal } fro
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '../../button/button';
+import { clamp, twoDigits } from '../../../utils/number';
 import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
 
 type CalendarDay = {
@@ -311,13 +312,9 @@ function sameTime(a: Date, b: Date): boolean {
 }
 
 function formatDate(date: Date): string {
-  return String(date.getDate()).padStart(2, '0') + '/'
-    + String(date.getMonth() + 1).padStart(2, '0') + '/'
+  return twoDigits(date.getDate()) + '/'
+    + twoDigits(date.getMonth() + 1) + '/'
     + date.getFullYear();
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /** Entiers de `start` (inclus) à `end` (exclu) */

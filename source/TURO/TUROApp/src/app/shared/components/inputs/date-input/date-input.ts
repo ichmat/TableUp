@@ -2,9 +2,9 @@ import { afterRenderEffect, Component, computed, ElementRef, inject, input, link
 import { FormValueControl } from '@angular/forms/signals';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { Calendar03Icon } from '@hugeicons/core-free-icons';
-import { twMerge } from 'tailwind-merge';
 import { MAX_YEAR, MIN_YEAR } from '../../constants/date-limits';
-import { DEFAULT_INPUT_STYLE, INPUT_DISABLED_STYLE, INPUT_ERROR_STYLE } from '../../constants/input-style';
+import { inputWrapperClass } from '../../constants/input-style';
+import { clamp, twoDigits } from '../../../utils/number';
 import { DatePicker } from '../../pickers/date-picker/date-picker';
 
 @Component({
@@ -55,10 +55,8 @@ export class DateInput implements FormValueControl<string> {
 
   showError = computed(() => this.invalid() && this.touched());
 
-  wrapperClass = computed(() => twMerge(DEFAULT_INPUT_STYLE, '[&>input]:focus:outline-none', this.inputClass(),
-    this.showError() ? INPUT_ERROR_STYLE : '',
-    this.disabled() ? INPUT_DISABLED_STYLE : '',
-  ));
+  wrapperClass = computed(() =>
+    inputWrapperClass(this.showError(), this.disabled(), '[&>input]:focus:outline-none', this.inputClass()));
 
   /** Date affichée : suit la dernière des deux valeurs modifiées par le parent (`dateValue` ou `value`) */
   private currentDate = linkedSignal<{ date?: Date; text: string }, Date | undefined>({
@@ -102,8 +100,8 @@ export class DateInput implements FormValueControl<string> {
 
   private resetInputs(date: Date | undefined){
     this.displayedDate = date;
-    setInputValue(this.inputDay().nativeElement, date ? twoDigitNumber(date.getDate()) : '');
-    setInputValue(this.inputMonth().nativeElement, date ? twoDigitNumber(date.getMonth() + 1) : '');
+    setInputValue(this.inputDay().nativeElement, date ? twoDigits(date.getDate()) : '');
+    setInputValue(this.inputMonth().nativeElement, date ? twoDigits(date.getMonth() + 1) : '');
     setInputValue(this.inputYear().nativeElement, date ? date.getFullYear().toString() : '');
   }
 
@@ -167,14 +165,10 @@ export class DateInput implements FormValueControl<string> {
   }
 }
 
-function twoDigitNumber(number: number): string {
-  return number.toString().padStart(2, '0');
-}
-
 function toIsoDate(date: Date): string {
   return date.getFullYear().toString().padStart(4, '0') + '-'
-    + twoDigitNumber(date.getMonth() + 1) + '-'
-    + twoDigitNumber(date.getDate());
+    + twoDigits(date.getMonth() + 1) + '-'
+    + twoDigits(date.getDate());
 }
 
 /** `AAAA-MM-JJ` → Date à minuit (heure locale), ou `undefined` si la chaîne n'est pas une date valide */
@@ -197,10 +191,6 @@ function parseIsoDate(text: string | undefined): Date | undefined {
 function parseNumber(text: string): number | undefined {
   const number = Number(text);
   return text === '' || isNaN(number) ? undefined : Math.trunc(number);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /** N'écrit que si la valeur change, pour ne pas perdre la sélection d'un champ focus */

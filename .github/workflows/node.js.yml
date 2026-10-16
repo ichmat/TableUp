@@ -3,7 +3,7 @@
 
 name: 🔄️ Angular CI
 
-# Lancé uniquement par dotnet.yml (job « node »), après le succès du build .NET
+# Lancé uniquement par ci.yml (job « node »), après le succès de la CI .NET
 on:
   workflow_call:
 
@@ -38,7 +38,7 @@ jobs:
       run: npm run build --if-present
       working-directory: source/TURO/TUROApp
     - name: 📝 Test Karma
-      run: npm test -- --no-watch --browsers=ChromeHeadless
+      # CHROME_BIN vient de l'image du runner. Sans sandbox : Chrome ne peut pas en créer une
+      # dans un conteneur Docker sans privilèges (lanceur fourni par @angular/build)
+      run: npm test -- --no-watch --browsers=ChromeHeadlessNoSandbox
       working-directory: source/TURO/TUROApp
-      env:
-        CHROME_BIN: /usr/local/bin/chrome-headless

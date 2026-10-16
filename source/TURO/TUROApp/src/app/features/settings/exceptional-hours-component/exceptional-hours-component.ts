@@ -3,7 +3,7 @@ import { DayWeek, ExceptionalClosure } from '../../../models';
 import { ClosureService } from '../../../core/services/closure/closure.service';
 import { ModalService } from '../../../core/services/modal/modal.service';
 import { RestaurantService } from '../../../core/services/restaurant/restaurant-service';
-import { dayOfWeek, monthGrid, parseIsoDate, todayIn } from '../../../shared/utils/calendar-date';
+import { dayOfWeek, monthGrid, parseIsoDate, todayIn, toIsoDate } from '../../../shared/utils/calendar-date';
 import { ClosureEditorComponent } from '../closure-editor-component/closure-editor-component';
 
 /** `usual-closed` : aucun service ce jour de la semaine. Un jour normal ne porte aucune marque (PAR-01) */
@@ -83,8 +83,8 @@ export class ExceptionalHoursComponent {
     const months = new Set<number>();
     for (const closure of this.closureService.closures()) {
       for (let month = 1; month <= 12; month++) {
-        const first = `${year}-${String(month).padStart(2, '0')}-01`;
-        const last = `${year}-${String(month).padStart(2, '0')}-31`;
+        const first = toIsoDate(year, month, 1);
+        const last = toIsoDate(year, month, 31);
         if (closure.from <= last && closure.to >= first) {
           months.add(month);
         }

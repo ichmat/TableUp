@@ -1,4 +1,4 @@
-import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import {
     CancelledBy, ClientDetail, DataScope, RESERVATION_LIMITS, ReservationActionResult, ReservationDetail, ReservationGesture,
@@ -7,6 +7,7 @@ import {
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { detailOf, lastValue } from '../resource';
 
 const RESERVATIONS_URL = '/api/reservations';
 
@@ -39,11 +40,7 @@ export class ReservationService {
         this._auth.isConnected() ? { url: RESERVATIONS_URL, params: listParams(this._query()) } : undefined
     );
     // La page précédente reste affichée pendant qu'un filtre se charge : pas de clignotement
-    private _page = linkedSignal<ReservationPage | undefined, ReservationPage | null>({
-        source: () => (this._list.hasValue() ? this._list.value() : undefined),
-        computation: (value, previous) => value ?? previous?.value ?? null,
-    });
-    page = this._page.asReadonly();
+    page = lastValue(this._list);
     listFailed = computed(() => this._list.status() === 'error');
 
     private _selectedId = signal<string | null>(null);
@@ -52,11 +49,7 @@ export class ReservationService {
         const id = this._selectedId();
         return this._auth.isConnected() && id !== null ? `${RESERVATIONS_URL}/${id}` : undefined;
     });
-    // `value()` lève une exception quand la ressource est en erreur ; la fiche d'une autre réservation ne s'affiche jamais
-    detail = computed(() => {
-        const value = this._detail.hasValue() ? this._detail.value() : null;
-        return value !== null && value.id === this._selectedId() ? value : null;
-    });
+    detail = detailOf(this._detail, this._selectedId);
     detailFailed = computed(() => this._detail.status() === 'error');
 
     // Une fiche client lue depuis une fiche réservation : la sélection de l'écran Clients n'est pas touchée
@@ -66,10 +59,7 @@ export class ReservationService {
         const id = this._clientId();
         return this._auth.isConnected() && id !== null ? `/api/clients/${id}` : undefined;
     });
-    client = computed(() => {
-        const value = this._client.hasValue() ? this._client.value() : null;
-        return value !== null && value.id === this._clientId() ? value : null;
-    });
+    client = detailOf(this._client, this._clientId);
     clientFailed = computed(() => this._client.status() === 'error');
 
     constructor() {

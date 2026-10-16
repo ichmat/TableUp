@@ -1,4 +1,5 @@
 import { DAYS_OF_WEEK, DayWeek } from '../../models';
+import { twoDigits } from './number';
 
 /**
  * Jours de calendrier au format `AAAA-MM-JJ` (un `DateOnly` de l'API). Les calculs passent par UTC :
@@ -8,7 +9,7 @@ import { DAYS_OF_WEEK, DayWeek } from '../../models';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function toIsoDate(year: number, month: number, day: number): string {
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return `${year}-${twoDigits(month)}-${twoDigits(day)}`;
 }
 
 /** `'2026-12-24'` → `{ year: 2026, month: 12, day: 24 }` (mois de 1 à 12) */

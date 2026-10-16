@@ -16,6 +16,8 @@ import { DateInput } from '../../../shared/components/inputs/date-input/date-inp
 import { toIsoDate } from '../../../shared/utils/calendar-date';
 import { formatDuration } from '../../../shared/utils/time-of-day';
 import { formatPhone } from '../../../shared/utils/phone';
+import { clamp } from '../../../shared/utils/number';
+import { valueOrNull } from '../../../core/services/resource';
 import { currentServiceDay, isBookableDay } from '../reservation-display';
 import { initialDraft, ReservationDraft, ReservationFormMode, ReservationSaved, toRequest } from '../reservation-draft';
 import { apiErrorText } from '../../../shared/utils/api-error-text';
@@ -104,7 +106,7 @@ export class ReservationForm {
     params: () => this._draft().serviceDay,
     loader: async ({ params }) => (await this._reservations.slots(params)).value ?? [],
   });
-  protected bands = computed(() => (this.windows.hasValue() ? this.windows.value() : []));
+  protected bands = computed(() => valueOrNull(this.windows) ?? []);
   /** En modification, une heure hors de la grille reste affichée, sélectionnée */
   protected offGrid = computed(() => {
     const time = this._draft().time;
@@ -227,7 +229,7 @@ export class ReservationForm {
 
   protected setCovers(covers: number) {
     if (Number.isInteger(covers)) {
-      this._draft.update((draft) => ({ ...draft, covers: Math.min(Math.max(covers, 1), L.maxCovers) }));
+      this._draft.update((draft) => ({ ...draft, covers: clamp(covers, 1, L.maxCovers) }));
     }
   }
 
@@ -250,7 +252,7 @@ export class ReservationForm {
   }
 
   protected changeDuration(delta: number) {
-    const next = Math.min(Math.max(this.duration() + delta, L.minDuration), L.maxDuration);
+    const next = clamp(this.duration() + delta, L.minDuration, L.maxDuration);
     this._draft.update((draft) => ({ ...draft, duration: next }));
   }
 

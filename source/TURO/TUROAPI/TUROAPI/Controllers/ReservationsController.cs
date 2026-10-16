@@ -486,8 +486,9 @@ namespace TUROAPI.Controllers
         }
 
         /// <summary>
-        /// WALK : un client de passage, assis maintenant sur une table libre maintenant, sans nom ni numéro. Une table
-        /// réservée plus tard dans la durée du repas n'est prise qu'avec l'accord explicite du restaurateur
+        /// WALK : un client de passage, assis maintenant sur une table libre maintenant, sans nom ni numéro, pendant un service
+        /// ou avant le prochain du jour. Une table réservée plus tard dans la durée du repas n'est prise qu'avec l'accord
+        /// explicite du restaurateur
         /// </summary>
         [HttpPost("/api/service/tables/{tableId:guid}/seat")]
         [ProducesResponseType<ReservationActionResponse>(StatusCodes.Status201Created)]
@@ -502,9 +503,14 @@ namespace TUROAPI.Controllers
                 .FirstOrDefaultAsync()
                 ?? throw new ApiErrorException(ApiError.NotFound, "Table not found.");
             DateOnly serviceDay = await ServiceDayAsync(restaurant, timeZone);
-            ReservationClock.Window window = (await WindowsAsync(restaurant, serviceDay))
-                .FirstOrDefault(w => ServiceView.StateOf(ServiceView.BoundsOf(serviceDay, w, timeZone), now) == ServiceState.InProgress)
-                ?? throw new ApiErrorException(ApiError.OutsideService, "no service is open now.");
+            List<ReservationClock.Window> windows = await WindowsAsync(restaurant, serviceDay);
+            // WALK-05 : avant un service, le client rejoint la prochaine plage du jour, comme une arrivée en avance
+            ReservationClock.Window window =
+                windows.FirstOrDefault(w => ServiceView.StateOf(ServiceView.BoundsOf(serviceDay, w, timeZone), now) == ServiceState.InProgress)
+                ?? windows.FirstOrDefault(w => ServiceView.StateOf(ServiceView.BoundsOf(serviceDay, w, timeZone), now) == ServiceState.Upcoming)
+                ?? throw new ApiErrorException(ApiError.OutsideService, "no service is open or left today.");
+            DateTime opening = ServiceView.BoundsOf(serviceDay, window, timeZone).OpeningUtc;
+            DateTime start = opening > now ? opening : now;
             if (request.Covers < 1 || request.Covers > table.Capacity)
             {
                 throw new ApiErrorException(ApiError.InvalidRequest, $"covers must be between 1 and {table.Capacity}.");
@@ -518,7 +524,7 @@ namespace TUROAPI.Controllers
             {
                 throw new ApiErrorException(ApiError.PlacementUnavailable, table.Name);
             }
-            DateTime end = now.AddMinutes(window.Duration);
+            DateTime end = start.AddMinutes(window.Duration);
             PlacementEngine.Occupied? later = onTable.Where(o => o.Start > now && o.Start < end).MinBy(o => o.Start);
             if (later != null && !request.AcceptBookedLater)
             {
@@ -529,7 +535,7 @@ namespace TUROAPI.Controllers
             {
                 Id = Guid.NewGuid(),
                 RestaurantId = CurrentRestaurantId,
-                Start = now,
+                Start = start,
                 SeatedAt = now,
                 Duration = window.Duration,
                 ServiceDay = serviceDay,

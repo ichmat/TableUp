@@ -1,3 +1,5 @@
+import { twoDigits } from './number';
+
 /** Heures d'un service, manipulées en minutes depuis minuit. Les chaînes viennent d'un `TimeOnly` de l'API */
 
 const MINUTES_PER_DAY = 24 * 60;
@@ -12,7 +14,7 @@ export function toMinutes(time: string): number {
 export function formatMinutes(minutes: number): string {
     const inDay = ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
     const hours = Math.floor(inDay / 60);
-    return `${String(hours).padStart(2, '0')}:${String(inDay % 60).padStart(2, '0')}`;
+    return `${twoDigits(hours)}:${twoDigits(inDay % 60)}`;
 }
 
 /** `105` → `'1 h 45'`, `120` → `'2 h'`, `45` → `'45 min'` */
@@ -22,7 +24,7 @@ export function formatDuration(minutes: number): string {
     if (hours === 0) {
         return `${rest} min`;
     }
-    return rest === 0 ? `${hours} h` : `${hours} h ${String(rest).padStart(2, '0')}`;
+    return rest === 0 ? `${hours} h` : `${hours} h ${twoDigits(rest)}`;
 }
 
 /** Durée d'un service en minutes. Un service peut passer minuit : `22:00` → `02:00` dure 4 h */

@@ -560,8 +560,44 @@ describe('ServiceComponent', () => {
       expect(element().querySelector('[data-seat-bubble]')!.textContent).toContain('Asseoir quand même');
     });
 
-    it('should not offer to seat when the service is not in progress', () => {
-      snapshot.set({ ...snapshot()!, service: { ...snapshot()!.service!, state: 'Upcoming' } });
+    describe('before the service', () => {
+      // 18:00, le service de 19:00 est le prochain du jour ; réservée à 20:30 : avant la fin d'un repas compté depuis l'ouverture
+      const EARLY_TABLE = serviceTable({
+        id: 't5', name: '5', capacity: 2, occupations: [occupation({ reservationId: 'petit', guestName: 'Petit', start: utc('20:30'), end: utc('22:30') })],
+      });
+      const upcoming = (isDefault: boolean) => {
+        const base = serviceSnapshot({ zones: [serviceZone({ id: 'z1', tables: [FREE_TABLE, EARLY_TABLE] })] });
+        load({ ...base, now: utc('18:00'), isDefault, service: { ...base.service!, state: 'Upcoming' } });
+        clockAt('18:00');
+      };
+
+      it('should offer to seat before the next service of the day', () => {
+        upcoming(true);
+        tap(FREE_TABLE);
+        fixture.detectChanges();
+
+        expect(element().querySelector('[data-seat-bubble]')!.textContent).toContain('Asseoir maintenant');
+      });
+
+      it('should count the meal from the opening when warning of a later booking', () => {
+        upcoming(true);
+        tap(EARLY_TABLE);
+        fixture.detectChanges();
+
+        expect(element().querySelector('[data-seat-bubble]')!.textContent).toContain('Réservée à 20:30 · Petit');
+      });
+
+      it('should not offer to seat for a service that is not the next one of today', () => {
+        upcoming(false);
+        tap(FREE_TABLE);
+        fixture.detectChanges();
+
+        expect(element().querySelector('[data-seat-bubble]')).toBeNull();
+      });
+    });
+
+    it('should not offer to seat once the service is finished', () => {
+      snapshot.set({ ...snapshot()!, service: { ...snapshot()!.service!, state: 'Finished' } });
       fixture.detectChanges();
       tap(FREE_TABLE);
       fixture.detectChanges();

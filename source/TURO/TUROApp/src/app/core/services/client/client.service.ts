@@ -1,10 +1,11 @@
-import { computed, inject, linkedSignal, Service, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { map } from 'rxjs';
 import { CLIENT_LIMITS, ClientDetail, ClientListItem, ClientPage, ClientQuery, ClientRequest, DataScope } from '../../../models';
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { detailOf, lastValue } from '../resource';
 
 const CLIENTS_URL = '/api/clients';
 /** La liste déroulante du formulaire de réservation : au-delà, il vaut mieux taper une lettre de plus */
@@ -51,22 +52,14 @@ export class ClientService {
         this._auth.isConnected() ? { url: CLIENTS_URL, params: listParams(this._query()) } : undefined
     );
     // La page précédente reste affichée pendant qu'une recherche se charge : pas de clignotement à chaque frappe
-    private _page = linkedSignal<ClientPage | undefined, ClientPage | null>({
-        source: () => (this._list.hasValue() ? this._list.value() : undefined),
-        computation: (value, previous) => value ?? previous?.value ?? null,
-    });
-    page = this._page.asReadonly();
+    page = lastValue(this._list);
     listFailed = computed(() => this._list.status() === 'error');
 
     private _detail = httpResource<ClientDetail>(() => {
         const id = this._selectedId();
         return this._auth.isConnected() && id !== null ? `${CLIENTS_URL}/${id}` : undefined;
     });
-    // `value()` lève une exception quand la ressource est en erreur ; la fiche d'un autre client ne s'affiche jamais
-    detail = computed(() => {
-        const value = this._detail.hasValue() ? this._detail.value() : null;
-        return value !== null && value.id === this._selectedId() ? value : null;
-    });
+    detail = detailOf(this._detail, this._selectedId);
     detailFailed = computed(() => this._detail.status() === 'error');
 
     constructor() {

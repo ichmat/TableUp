@@ -4,6 +4,7 @@ import { ClosureRequest, DataScope, ExceptionalClosure, ImpactedReservation } fr
 import { AuthService } from '../auth/auth.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ApiResult, toApiResult } from '../api-result';
+import { valueOrNull } from '../resource';
 
 const CLOSURES_URL = '/api/restaurant/closures';
 
@@ -17,8 +18,7 @@ export class ClosureService {
         this._authService.isConnected() ? CLOSURES_URL : undefined
     );
 
-    // `value()` lève une exception quand la ressource est en erreur : elle figerait tout écran qui la lit
-    closures = computed(() => this._closures.hasValue() ? this._closures.value() : []);
+    closures = computed(() => valueOrNull(this._closures) ?? []);
     isLoading = this._closures.isLoading;
     error = this._closures.error;
     loadFailed = computed(() => this._closures.status() === 'error');
