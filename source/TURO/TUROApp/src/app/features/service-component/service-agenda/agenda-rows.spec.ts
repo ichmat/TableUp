@@ -36,10 +36,13 @@ function rows(snapshot: ServiceSnapshot, change: Partial<AgendaInput> = {}): Age
   return agendaRows({ snapshot, now, placement: null, toggled: new Map(), ...change });
 }
 
-function row<K extends AgendaRow['kind']>(all: AgendaRow[], key: string): Extract<AgendaRow, { kind: K }> {
+function row<K extends AgendaRow['kind']>(all: AgendaRow[], kind: K, key: string): Extract<AgendaRow, { kind: K }> {
   const found = all.find((r) => r.key === key);
   if (found === undefined) {
     throw new Error(`Aucune ligne ${key}`);
+  }
+  if (found.kind !== kind) {
+    throw new Error(`La ligne ${key} est de type ${found.kind}, pas ${kind}`);
   }
   return found as Extract<AgendaRow, { kind: K }>;
 }
@@ -79,6 +82,16 @@ describe('agendaAxis', () => {
     // L'horloge de l'API est déjà au lendemain : elle l'emporte sur celle du poste
     expect(agendaAxis(serviceSnapshot({ now: '2026-10-11T12:00:00Z' }), now)?.now).toBeNull();
   });
+
+  it('keeps now on the axis when an overrunning seated block ends last', () => {
+    const late = Date.parse(utc('23:30'));
+    const snapshot = serviceSnapshot({
+      zones: [serviceZone({ tables: [serviceTable({ occupations: [occupation({ status: 'Seated', lateFrom: null, start: utc('21:00'), end: OVERRUN })] })] })],
+    });
+
+    expect(agendaAxis(snapshot, late)).toEqual(jasmine.objectContaining({ end: late, now: late }));
+    expect(row(agendaRows({ snapshot, now: late, placement: null, toggled: new Map() }), 'Table', 'table:t1').blocks[0].end).toBe(late);
+  });
 });
 
 describe('agendaRows', () => {
@@ -87,17 +100,31 @@ describe('agendaRows', () => {
       zones: [serviceZone({ tables: [serviceTable({ occupations: [occupation({ status: 'Seated', lateFrom: null, start: utc('19:00'), end: OVERRUN })] })] })],
     });
 
-    const block = row<'Table'>(rows(snapshot), 'table:t1').blocks[0];
+    const block = row(rows(snapshot), 'Table', 'table:t1').blocks[0];
     expect(block.end).toBe(now);
     expect(block.open).toBeTrue();
     expect(Number.isFinite(agendaAxis(snapshot, now)!.end)).toBeTrue();
     expect(agendaAxis(snapshot, now)!.end).toBe(ms('23:00'));
   });
 
+  it('stops an overrun at the scheduled end outside the service in progress', () => {
+    const finished = serviceSnapshot().service!;
+    const snapshot = serviceSnapshot({
+      now: '2026-10-11T12:00:00Z',
+      service: { ...finished, state: 'Finished' },
+      zones: [serviceZone({ tables: [serviceTable({ occupations: [occupation({ status: 'Seated', lateFrom: null, start: utc('21:00'), end: OVERRUN })] })] })],
+    });
+
+    const block = row(rows(snapshot), 'Table', 'table:t1').blocks[0];
+    expect(block.end).toBe(ms('23:00'));
+    expect(block.open).toBeTrue();
+    expect(agendaAxis(snapshot, now)).toEqual(jasmine.objectContaining({ end: ms('23:00'), now: null }));
+  });
+
   it('colours blocks with the plan statuses', () => {
     const kindOf = (change: Parameters<typeof occupation>[0]) => {
       const snapshot = serviceSnapshot({ zones: [serviceZone({ tables: [serviceTable({ occupations: [occupation(change)] })] })] });
-      return row<'Table'>(rows(snapshot), 'table:t1').blocks[0];
+      return row(rows(snapshot), 'Table', 'table:t1').blocks[0];
     };
 
     expect(kindOf({ lateFrom: utc('20:15') }).kind).toBe('Late');
@@ -122,12 +149,12 @@ describe('agendaRows', () => {
     const axis = agendaAxis(snapshot, now)!;
 
     expect(all.map((r) => r.key)).toEqual(['zone:z1', 'c:c1213', 'c:c1213/link']);
-    const group = row<'Combination'>(all, 'c:c1213');
+    const group = row(all, 'Combination', 'c:c1213');
     expect(group).toEqual(jasmine.objectContaining({
       combinationId: 'c1213', approachKey: null, name: '12-13', capacity: 8, memberCount: 2, expanded: false, temporary: false, level: null,
     }));
     expect(group.blocks.map((b) => b.label)).toEqual(['Lefèvre · 7p']);
-    expect(row<'Link'>(all, 'c:c1213/link').segments).toEqual([{ kind: 'Glued', start: axis.start, end: axis.end }]);
+    expect(row(all, 'Link', 'c:c1213/link').segments).toEqual([{ kind: 'Glued', start: axis.start, end: axis.end }]);
   });
 
   it('does not draw a glued link outside the service in progress', () => {
@@ -142,32 +169,50 @@ describe('agendaRows', () => {
     const all = rows(glued({ t12: [alone, ofCombination()], t13: [ofCombination()] }));
 
     expect(all.map((r) => r.key)).toEqual(['zone:z1', 'c:c1213', 'c:c1213/link', 'c:c1213/t12', 'c:c1213/t13']);
-    expect(row<'Combination'>(all, 'c:c1213').expanded).toBeTrue();
-    const t12 = row<'Table'>(all, 'c:c1213/t12');
+    expect(row(all, 'Combination', 'c:c1213').expanded).toBeTrue();
+    const t12 = row(all, 'Table', 'c:c1213/t12');
     expect(t12).toEqual(jasmine.objectContaining({ tableId: 't12', name: 'T12', nested: true }));
     expect(t12.blocks.map((b) => b.reservationId)).toEqual(['r7']);
     expect(t12.ghosts).toEqual([{ reservationId: 'r5', start: ms('20:00'), end: ms('22:00'), label: 'via 12-13' }]);
-    expect(row<'Table'>(all, 'c:c1213/t13').blocks).toEqual([]);
-    expect(row<'Table'>(all, 'c:c1213/t13').ghosts.length).toBe(1);
+    expect(row(all, 'Table', 'c:c1213/t13').blocks).toEqual([]);
+    expect(row(all, 'Table', 'c:c1213/t13').ghosts.length).toBe(1);
   });
 
   it('honours the chevron over the default', () => {
     const folded = glued({ t12: [ofCombination()], t13: [ofCombination()] });
-    expect(row<'Combination'>(rows(folded, { toggled: new Map([['c:c1213', true]]) }), 'c:c1213').expanded).toBeTrue();
+    expect(row(rows(folded, { toggled: new Map([['c:c1213', true]]) }), 'Combination', 'c:c1213').expanded).toBeTrue();
 
     const alone = occupation({ reservationId: 'r7', start: utc('19:00'), end: utc('20:00') });
     const unfolded = glued({ t12: [alone, ofCombination()], t13: [ofCombination()] });
     const all = rows(unfolded, { toggled: new Map([['c:c1213', false]]) });
-    expect(row<'Combination'>(all, 'c:c1213').expanded).toBeFalse();
+    expect(row(all, 'Combination', 'c:c1213').expanded).toBeFalse();
     expect(all.some((r) => r.key === 'c:c1213/t12')).toBeFalse();
   });
 
   it('draws a planned approach from activateAt to the first reservation', () => {
     const planned = { isActive: false, activateAt: utc('20:45') };
     const withReservation = glued({ t12: [ofCombination({ start: utc('21:00'), end: utc('23:00') })], t13: [] }, planned);
-    expect(row<'Link'>(rows(withReservation), 'c:c1213/link').segments).toEqual([{ kind: 'Planned', start: ms('20:45'), end: ms('21:00') }]);
+    expect(row(rows(withReservation), 'Link', 'c:c1213/link').segments).toEqual([{ kind: 'Planned', start: ms('20:45'), end: ms('21:00') }]);
 
-    expect(row<'Link'>(rows(glued({}, planned)), 'c:c1213/link').segments).toEqual([{ kind: 'Planned', start: ms('20:45'), end: ms('20:55') }]);
+    expect(row(rows(glued({}, planned)), 'Link', 'c:c1213/link').segments).toEqual([{ kind: 'Planned', start: ms('20:45'), end: ms('20:55') }]);
+  });
+
+  it('clamps link segments to the axis', () => {
+    const separated = glued({}, { deactivateAt: utc('21:30') });
+    const axis = agendaAxis(separated, now)!;
+    expect(row(rows(separated), 'Link', 'c:c1213/link').segments).toEqual([{ kind: 'Glued', start: axis.start, end: ms('21:30') }]);
+
+    // Séparée avant l'ouverture : il ne reste rien du lien sur l'axe
+    expect(rows(glued({}, { deactivateAt: utc('18:00') })).some((r) => r.kind === 'Link')).toBeFalse();
+  });
+
+  it('keeps row keys unique when the engine repeats an approach', () => {
+    const snapshot = serviceSnapshot({ zones: [serviceZone({ tables: ['t1', 't2', 't3'].map((id) => serviceTable({ id, name: id.toUpperCase() })) })] });
+    const approaches = [approach(), approach({ tableIds: ['t2', 't1'] }), approach({ tableIds: ['t2', 't3'], name: '2-3' })];
+
+    const all = rows(snapshot, { placement: placement({ approaches }) });
+    expect(all.filter((r) => r.kind === 'Combination').map((r) => r.key)).toEqual(['a:t1|t2', 'a:t2|t3']);
+    expect(new Set(all.map((r) => r.key)).size).toBe(all.length);
   });
 
   it('unfolds a combination during a placement when a member can take the reservation', () => {
@@ -175,8 +220,8 @@ describe('agendaRows', () => {
     const can = placement({ entities: [entity({ tableId: 't13', name: 'T13', level: 'WithReserve' })] });
     const cannot = placement({ entities: [entity({ tableId: 't13', name: 'T13', level: 'Excluded' })] });
 
-    expect(row<'Combination'>(rows(snapshot, { placement: can }), 'c:c1213').expanded).toBeTrue();
-    expect(row<'Combination'>(rows(snapshot, { placement: cannot }), 'c:c1213').expanded).toBeFalse();
+    expect(row(rows(snapshot, { placement: can }), 'Combination', 'c:c1213').expanded).toBeTrue();
+    expect(row(rows(snapshot, { placement: cannot }), 'Combination', 'c:c1213').expanded).toBeFalse();
   });
 
   it('shows only the first three proposed approaches as rows', () => {
@@ -202,12 +247,12 @@ describe('agendaRows', () => {
     expect(all.some((r) => r.key === 'c:c34/link')).toBeFalse();
     // Les membres d'une ligne temporaire n'ont plus de ligne de premier niveau
     expect(all.some((r) => r.key === 'table:t1')).toBeFalse();
-    expect(row<'Table'>(all, 'a:t1|t2/t1').nested).toBeTrue();
+    expect(row(all, 'Table', 'a:t1|t2/t1').nested).toBeTrue();
 
     const shown = approach({ combinationId: 'c1213', tableIds: ['t12', 't13'], name: '12-13', level: 'NotAdvised' });
     const enriched = rows(snapshot, { placement: placement({ approaches: [shown] }) });
     expect(enriched.filter((r) => r.kind === 'Combination').length).toBe(1);
-    expect(row<'Combination'>(enriched, 'c:c1213')).toEqual(jasmine.objectContaining({
+    expect(row(enriched, 'Combination', 'c:c1213')).toEqual(jasmine.objectContaining({
       temporary: false, approachKey: 'c1213', level: 'NotAdvised',
     }));
   });
@@ -243,7 +288,7 @@ describe('agendaRows', () => {
 
     const all = rows(snapshot);
     expect(all.map((r) => r.key)).toEqual(['zone:z1', 'table:t1', 'c:c1213', 'c:c1213/link', 'table:t2', 'zone:z2', 'table:t20']);
-    expect(row<'Zone'>(all, 'zone:z2').name).toBe('Terrasse');
+    expect(row(all, 'Zone', 'zone:z2').name).toBe('Terrasse');
   });
 
   it('places a combination whose members are all claimed right after the one claiming its first member', () => {
@@ -274,8 +319,8 @@ describe('agendaRows', () => {
     });
 
     const all = rows(snapshot, { placement: levels });
-    expect(row<'Table'>(all, 'table:t1').level).toBe('Perfect');
-    expect(row<'Combination'>(all, 'c:c1213').level).toBe('NotAdvised');
+    expect(row(all, 'Table', 'table:t1').level).toBe('Perfect');
+    expect(row(all, 'Combination', 'c:c1213').level).toBe('NotAdvised');
 
     const none = rows(snapshot, { toggled: new Map([['c:c1213', true]]) });
     expect(none.filter((r) => r.kind === 'Table' || r.kind === 'Combination').every((r) => r.level === null)).toBeTrue();

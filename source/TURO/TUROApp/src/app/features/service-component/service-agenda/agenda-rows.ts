@@ -66,14 +66,30 @@ function overruns(occupation: TableOccupation): boolean {
   return occupation.end.startsWith('9999');
 }
 
-/** La fin dessinée : une assise qui déborde s'arrête au présent */
-function endOf(occupation: TableOccupation, now: number): number {
-  return overruns(occupation) ? now : Date.parse(occupation.end);
+/** La fin dessinée : une assise qui déborde s'arrête à `overrunEnd` */
+function endOf(occupation: TableOccupation, overrunEnd: number): number {
+  return overruns(occupation) ? Math.max(Date.parse(occupation.start), overrunEnd) : Date.parse(occupation.end);
 }
 
 /** L'horloge du poste, rattrapée par celle de l'API si le poste retarde (comme `defaultSlot`) */
 function presentOf(snapshot: ServiceSnapshot, now: number): number {
   return Math.max(now, Date.parse(snapshot.now));
+}
+
+/** Fin prévue du service : le dernier créneau plus un pas ; `null` sans service ni créneau */
+function scheduledEnd(snapshot: ServiceSnapshot): number | null {
+  if (snapshot.service === null || snapshot.slots.length === 0) {
+    return null;
+  }
+  return Date.parse(snapshot.slots[snapshot.slots.length - 1].at) + snapshot.service.slotStep * MINUTE;
+}
+
+/**
+ * Où s'arrête une assise qui déborde : au présent pendant le service en cours ; sinon à la fin prévue, pour qu'un service
+ * passé ou à venir ne s'étire pas jusqu'à aujourd'hui
+ */
+function overrunEndOf(snapshot: ServiceSnapshot, present: number): number {
+  return snapshot.service?.state === 'InProgress' ? present : scheduledEnd(snapshot) ?? present;
 }
 
 function allOccupations(snapshot: ServiceSnapshot): TableOccupation[] {
@@ -82,21 +98,20 @@ function allOccupations(snapshot: ServiceSnapshot): TableOccupation[] {
 
 /** De l'ouverture à la plus tardive des fins, fermeture comprise ; `null` sans service ni créneau */
 export function agendaAxis(snapshot: ServiceSnapshot, now: number): AgendaAxis | null {
-  const service = snapshot.service;
-  if (service === null || snapshot.slots.length === 0) {
+  const scheduled = scheduledEnd(snapshot);
+  if (snapshot.service === null || scheduled === null) {
     return null;
   }
   const present = presentOf(snapshot, now);
+  const overrunEnd = overrunEndOf(snapshot, present);
   const occupations = allOccupations(snapshot);
   const start = Math.min(Date.parse(snapshot.slots[0].at), ...occupations.map((o) => Date.parse(o.start)));
-  const end = Math.max(
-    Date.parse(snapshot.slots[snapshot.slots.length - 1].at) + service.slotStep * MINUTE,
-    ...occupations.map((o) => endOf(o, present)),
-  );
-  return { start, end, now: start <= present && present < end ? present : null, slotStep: service.slotStep };
+  const end = Math.max(scheduled, ...occupations.map((o) => endOf(o, overrunEnd)));
+  // Borne de fin incluse : une assise qui déborde, dernière à finir, s'arrête pile au présent
+  return { start, end, now: start <= present && present <= end ? present : null, slotStep: snapshot.service.slotStep };
 }
 
-function blockOf(occupation: TableOccupation, now: number): AgendaBlock {
+function blockOf(occupation: TableOccupation, now: number, overrunEnd: number): AgendaBlock {
   let kind: AgendaBlockKind;
   switch (occupation.status) {
     case 'Seated': kind = 'Occupied'; break;
@@ -106,7 +121,7 @@ function blockOf(occupation: TableOccupation, now: number): AgendaBlock {
   return {
     reservationId: occupation.reservationId,
     start: Date.parse(occupation.start),
-    end: endOf(occupation, now),
+    end: endOf(occupation, overrunEnd),
     kind,
     label: `${guestName(occupation.guestName === null ? null : { name: occupation.guestName })} · ${occupation.covers}p`,
     allergy: occupation.hasAllergy,
@@ -155,17 +170,22 @@ function shownOf(zone: ServiceZone, approaches: readonly PlacementApproach[]): S
 export function agendaRows(input: AgendaInput): AgendaRow[] {
   const { snapshot, placement, toggled } = input;
   const now = presentOf(snapshot, input.now);
+  const overrunEnd = overrunEndOf(snapshot, now);
   const axis = agendaAxis(snapshot, input.now);
   const inProgress = snapshot.service?.state === 'InProgress';
-  const approaches = (placement?.approaches ?? []).filter((a) => a.level !== 'Excluded').slice(0, APPROACH_ROWS);
+  // Un même rapprochement en double ne doit pas donner deux lignes de même clé
+  const approaches = (placement?.approaches ?? [])
+    .filter((a) => a.level !== 'Excluded')
+    .filter((a, i, all) => all.findIndex((other) => approachKey(other) === approachKey(a)) === i)
+    .slice(0, APPROACH_ROWS);
 
   const tableLevel = (tableId: string) => placement?.entities.find((e) => e.tableId === tableId)?.level ?? null;
 
   const tableRow = (table: ServiceTable, key: string, nested: boolean): AgendaRow => ({
     kind: 'Table', key, tableId: table.id, name: table.name, capacity: table.capacity, nested,
-    blocks: table.occupations.filter((o) => o.combinationId === null).map((o) => blockOf(o, now)),
+    blocks: table.occupations.filter((o) => o.combinationId === null).map((o) => blockOf(o, now, overrunEnd)),
     ghosts: table.occupations.filter((o) => o.combinationId !== null).map((o) => ({
-      reservationId: o.reservationId, start: Date.parse(o.start), end: endOf(o, now), label: `via ${o.placeName}`,
+      reservationId: o.reservationId, start: Date.parse(o.start), end: endOf(o, overrunEnd), label: `via ${o.placeName}`,
     })),
     level: tableLevel(table.id),
   });
@@ -205,7 +225,7 @@ export function agendaRows(input: AgendaInput): AgendaRow[] {
       const own = s.combinationId === null ? [] : occupations.filter((o) => o.combinationId === s.combinationId);
       const blocks = own
         .filter((o, i) => own.findIndex((other) => other.reservationId === o.reservationId) === i)
-        .map((o) => blockOf(o, now));
+        .map((o) => blockOf(o, now, overrunEnd));
       const byDefault = s.temporary
         || occupations.some((o) => o.combinationId !== s.combinationId)
         || (placement !== null && members.some((table) => {
@@ -244,18 +264,29 @@ export function agendaRows(input: AgendaInput): AgendaRow[] {
   return rows;
 }
 
-/** Collées : du début de l'axe à la séparation ; prévu : de `activateAt` à la première réservation de la combinaison */
+/**
+ * Collées : du début de l'axe à la séparation ; prévu : de `activateAt` à la première réservation de la combinaison.
+ * Le segment est borné à l'axe, et disparaît s'il n'en reste rien
+ */
 function linkOf(s: Shown, own: TableOccupation[], axis: AgendaAxis | null, inProgress: boolean): AgendaLinkSegment[] {
-  if (s.isActive) {
-    return inProgress && axis !== null
-      ? [{ kind: 'Glued', start: axis.start, end: s.deactivateAt === null ? axis.end : Date.parse(s.deactivateAt) }]
-      : [];
-  }
-  if (s.activateAt === null) {
+  if (axis === null) {
     return [];
   }
-  const start = Date.parse(s.activateAt);
-  const firstAfter = Math.min(...own.map((o) => Date.parse(o.start)).filter((t) => t >= start));
-  const minimum = start + PLANNED_MIN_MINUTES * MINUTE;
-  return [{ kind: 'Planned', start, end: Number.isFinite(firstAfter) ? Math.max(minimum, firstAfter) : minimum }];
+  let segment: AgendaLinkSegment;
+  if (s.isActive) {
+    if (!inProgress) {
+      return [];
+    }
+    segment = { kind: 'Glued', start: axis.start, end: s.deactivateAt === null ? axis.end : Date.parse(s.deactivateAt) };
+  } else if (s.activateAt !== null) {
+    const start = Date.parse(s.activateAt);
+    const firstAfter = Math.min(...own.map((o) => Date.parse(o.start)).filter((t) => t >= start));
+    const minimum = start + PLANNED_MIN_MINUTES * MINUTE;
+    segment = { kind: 'Planned', start, end: Number.isFinite(firstAfter) ? Math.max(minimum, firstAfter) : minimum };
+  } else {
+    return [];
+  }
+  const start = Math.max(segment.start, axis.start);
+  const end = Math.min(segment.end, axis.end);
+  return start < end ? [{ kind: segment.kind, start, end }] : [];
 }
