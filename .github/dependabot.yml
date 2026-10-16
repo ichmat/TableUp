@@ -1,4 +1,8 @@
 version: 2
+
+# Limiter la charge sur le runner auto-hébergé : un passage par mois,
+# les mises à jour mineures et correctifs regroupés en une seule PR par écosystème,
+# les versions majeures en PR séparées (elles cassent plus souvent) et plafonnées.
 updates:
   - package-ecosystem: "nuget"
     directories:
@@ -6,28 +10,46 @@ updates:
       - "/source/TURO/TUROAPI/TUROAPI.Test"
     target-branch: "dev"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     groups:
       dotnet:
-        patterns: ["Microsoft.*", "Npgsql*"]
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/source/TURO/TUROApp"
     target-branch: "dev"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     groups:
-      angular:
-        patterns: ["@angular/*", "@angular-devkit/*", "typescript", "zone.js"]
+      npm:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Karma est voué à être remplacé par Vitest : on ne suit plus ses versions majeures
+    ignore:
+      - dependency-name: "karma*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jasmine-core"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/jasmine"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "dev"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
 
   - package-ecosystem: "docker"
     directory: "/source/TURO"
     target-branch: "dev"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      docker:
+        patterns: ["*"]
