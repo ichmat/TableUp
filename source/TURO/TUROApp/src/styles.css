@@ -95,6 +95,11 @@
   --color-place-perfect: #5FBF7A;
   --color-place-reserve: #B3BE4E;
   --color-place-advised: #D9765C;
+  /* Agenda, sur l'ardoise : le violet clair des combinaisons (le violet du plan ne se lit pas sur le fond sombre), le vert des tables collées */
+  --color-agenda-combination: #B9A6E8;
+  --color-agenda-glued: rgb(111 191 138 / 0.22);
+  --color-agenda-glued-line: #6FBF8A;
+  --color-agenda-glued-text: #A9E0BC;
 
   /* La jauge des propositions de clients : elle se remplit pendant l'attente (durée posée par le composant) */
   --animate-fill: fill linear forwards;

@@ -121,9 +121,13 @@ namespace TUROAPI.Controllers
                     Assignment? assignment = r.LatestAssignment();
                     IEnumerable<Table> held = assignment?.Table is Table table ? [table] : assignment?.Combination?.Tables ?? [];
                     return new ServiceView.Booking(r, ServiceView.OccupationOf(r, now), assignment != null,
-                        held.Select(t => t.Id).Where(activeTables.Contains).ToList());
+                        held.Select(t => t.Id).Where(activeTables.Contains).ToList(), assignment?.CombinationId);
                 })
                 .ToList();
+            HashSet<Guid> heldCombinations = bookings
+                .Where(b => b.Interval != null && b.CombinationId != null)
+                .Select(b => b.CombinationId!.Value)
+                .ToHashSet();
 
             if (chosen != null)
             {
@@ -158,6 +162,9 @@ namespace TUROAPI.Controllers
                     }).ToList();
             }
 
+            ServiceView.Bounds? chosenBounds = chosen == null ? null : ServiceView.BoundsOf(chosen.Day, chosen.Window, timeZone);
+            bool inProgress = chosenBounds != null && ServiceView.StateOf(chosenBounds, now) == ServiceState.InProgress;
+
             response.Zones = zones.Select(z => new ServiceZoneResponse
             {
                 Id = z.Id,
@@ -166,6 +173,9 @@ namespace TUROAPI.Controllers
                 Height = z.Height,
                 Decors = z.Decors.Select(d => d.ToResponse()).ToList(),
                 Combinations = z.Combinations.Where(c => c.IsActive).Select(c => c.ToResponse()).ToList(),
+                AgendaCombinations = chosenBounds == null ? [] : z.Combinations
+                    .Where(c => ServiceView.ShowsOnAgenda(c, chosenBounds, inProgress, heldCombinations))
+                    .OrderBy(c => c.Name).Select(c => c.ToResponse()).ToList(),
                 Tables = z.Tables.Where(t => t.IsActive).OrderBy(t => t.Name).Select(t => new ServiceTableResponse
                 {
                     Id = t.Id,
@@ -189,6 +199,7 @@ namespace TUROAPI.Controllers
                             Status = b.Reservation.Status,
                             LateFrom = b.Reservation.Status == ReservationStatus.Confirmed ? b.Reservation.Start.AddMinutes(restaurant.LateGrace) : null,
                             PlaceName = PlaceNameOf(b.Reservation) ?? t.Name,
+                            CombinationId = b.CombinationId,
                             GuestName = b.Reservation.Client?.Name,
                             Covers = b.Reservation.Covers,
                             HasAllergy = !string.IsNullOrWhiteSpace(b.Reservation.Client?.Allergies),

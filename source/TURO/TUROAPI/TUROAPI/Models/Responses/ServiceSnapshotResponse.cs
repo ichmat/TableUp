@@ -63,6 +63,8 @@ namespace TUROAPI.Models.Responses
         public List<ServiceTableResponse> Tables { get; set; } = [];
         public List<DecorResponse> Decors { get; set; } = [];
         public List<CombinationResponse> Combinations { get; set; } = [];
+        /// <summary>Les combinaisons actives à un moment du service (AGD-03), collées comprises seulement s'il est en cours</summary>
+        public List<CombinationResponse> AgendaCombinations { get; set; } = [];
     }
 
     public class ServiceTableResponse
@@ -91,6 +93,8 @@ namespace TUROAPI.Models.Responses
         public DateTime? LateFrom { get; set; }
         /// <summary>La table ou la combinaison affectée : « 12-13 »</summary>
         public string PlaceName { get; set; } = string.Empty;
+        /// <summary>La combinaison qui tient la réservation ; null : la table seule</summary>
+        public Guid? CombinationId { get; set; }
         /// <summary>Null : client de passage</summary>
         public string? GuestName { get; set; }
         public int Covers { get; set; }
